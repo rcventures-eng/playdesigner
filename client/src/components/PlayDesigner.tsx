@@ -93,6 +93,23 @@ export default function PlayDesigner() {
   const colors = playType === "offense" ? offenseColors : defenseColors;
 
   useEffect(() => {
+    setIsDrawingRoute(false);
+    setCurrentRoutePoints([]);
+    setIsDraggingStraightRoute(false);
+    setLassoStart(null);
+    setLassoEnd(null);
+    setIsDrawingShape(false);
+    setShapeStart(null);
+    setSelectedPlayer(null);
+    setSelectedRoute(null);
+    setSelectedShape(null);
+    setSelectedFootball(false);
+    setSelectedElements({ players: [], routes: [] });
+    setIsDragging(false);
+    setDraggingRoutePoint(null);
+  }, [tool]);
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Delete" || e.key === "Backspace") {
         if (editingPlayer) return;
@@ -248,7 +265,7 @@ export default function PlayDesigner() {
       }
     }
     
-    if (isDraggingStraightRoute && currentRoutePoints.length >= 1) {
+    if (tool === "route" && isDraggingStraightRoute && currentRoutePoints.length >= 1) {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (rect) {
         const x = e.clientX - rect.left;
@@ -273,7 +290,7 @@ export default function PlayDesigner() {
       }
     }
     
-    if (lassoStart && !isDragging && !draggingRoutePoint && !isDraggingStraightRoute) {
+    if (tool === "select" && lassoStart && !isDragging && !draggingRoutePoint && !isDraggingStraightRoute) {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (rect) {
         const x = e.clientX - rect.left;
@@ -287,13 +304,13 @@ export default function PlayDesigner() {
     setIsDragging(false);
     setDraggingRoutePoint(null);
     
-    if (isDraggingStraightRoute && currentRoutePoints.length === 2) {
+    if (tool === "route" && isDraggingStraightRoute && currentRoutePoints.length === 2) {
       finishRoute();
       setIsDraggingStraightRoute(false);
       return;
     }
     
-    if (lassoStart) {
+    if (tool === "select" && lassoStart) {
       if (lassoEnd) {
         const minX = Math.min(lassoStart.x, lassoEnd.x);
         const maxX = Math.max(lassoStart.x, lassoEnd.x);
@@ -321,7 +338,7 @@ export default function PlayDesigner() {
   };
 
   const handleCanvasClick = (e: React.MouseEvent) => {
-    if (isDrawingRoute && routeStyle === "curved") {
+    if (tool === "route" && isDrawingRoute && routeStyle === "curved") {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (rect) {
         const x = e.clientX - rect.left;
@@ -347,7 +364,7 @@ export default function PlayDesigner() {
   };
 
   const handleCanvasDoubleClick = (e: React.MouseEvent) => {
-    if (isDrawingRoute && routeStyle === "curved") {
+    if (tool === "route" && isDrawingRoute && routeStyle === "curved") {
       finishRoute();
     }
   };
