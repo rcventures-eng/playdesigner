@@ -83,6 +83,7 @@ export default function PlayDesigner() {
   const [lassoStart, setLassoStart] = useState<{ x: number; y: number } | null>(null);
   const [lassoEnd, setLassoEnd] = useState<{ x: number; y: number } | null>(null);
   const [selectedElements, setSelectedElements] = useState<{ players: string[]; routes: string[] }>({ players: [], routes: [] });
+  const [isDraggingStraightRoute, setIsDraggingStraightRoute] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -137,10 +138,6 @@ export default function PlayDesigner() {
       color,
     };
     setPlayers([...players, newPlayer]);
-    setTool("select");
-    setIsDrawingRoute(false);
-    setCurrentRoutePoints([]);
-    setSelectedPlayer(null);
   };
 
   const addFootball = () => {
@@ -188,6 +185,7 @@ export default function PlayDesigner() {
       }
     } else if (tool === "route") {
       e.stopPropagation();
+      console.log('[DEBUG] Starting route from player', { tool, routeStyle });
       setIsDrawingRoute(true);
       setSelectedPlayer(playerId);
       setSelectedElements({ players: [], routes: [] });
@@ -204,6 +202,12 @@ export default function PlayDesigner() {
           const edgeX = player.x + radius * Math.cos(angle);
           const edgeY = player.y + radius * Math.sin(angle);
           setCurrentRoutePoints([{ x: edgeX, y: edgeY }]);
+          console.log('[DEBUG] Set initial route point', { edgeX, edgeY });
+          
+          if (routeStyle === "straight") {
+            console.log('[DEBUG] Setting isDraggingStraightRoute = true');
+            setIsDraggingStraightRoute(true);
+          }
         } else {
           setCurrentRoutePoints([{ x: player.x, y: player.y }]);
         }
@@ -247,6 +251,16 @@ export default function PlayDesigner() {
       }
     }
     
+    if (isDraggingStraightRoute && currentRoutePoints.length >= 1) {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (rect) {
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        console.log('[DEBUG] Updating straight route endpoint', { x, y, points: currentRoutePoints.length });
+        setCurrentRoutePoints([currentRoutePoints[0], { x, y }]);
+      }
+    }
+    
     if (draggingRoutePoint) {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (rect) {
@@ -263,7 +277,7 @@ export default function PlayDesigner() {
       }
     }
     
-    if (lassoStart && !isDragging && !draggingRoutePoint) {
+    if (lassoStart && !isDragging && !draggingRoutePoint && !isDraggingStraightRoute) {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (rect) {
         const x = e.clientX - rect.left;
@@ -274,8 +288,16 @@ export default function PlayDesigner() {
   };
 
   const handleCanvasMouseUp = () => {
+    console.log('[DEBUG] handleCanvasMouseUp called', { isDraggingStraightRoute, currentRoutePoints: currentRoutePoints.length, isDrawingRoute });
     setIsDragging(false);
     setDraggingRoutePoint(null);
+    
+    if (isDraggingStraightRoute && currentRoutePoints.length === 2) {
+      console.log('[DEBUG] Finishing straight route');
+      finishRoute();
+      setIsDraggingStraightRoute(false);
+      return;
+    }
     
     if (lassoStart) {
       if (lassoEnd) {
@@ -305,7 +327,7 @@ export default function PlayDesigner() {
   };
 
   const handleCanvasClick = (e: React.MouseEvent) => {
-    if (isDrawingRoute) {
+    if (isDrawingRoute && routeStyle === "curved") {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (rect) {
         const x = e.clientX - rect.left;
@@ -331,7 +353,7 @@ export default function PlayDesigner() {
   };
 
   const handleCanvasDoubleClick = (e: React.MouseEvent) => {
-    if (isDrawingRoute) {
+    if (isDrawingRoute && routeStyle === "curved") {
       finishRoute();
     }
   };
@@ -410,6 +432,7 @@ export default function PlayDesigner() {
     setIsDrawingRoute(false);
     setCurrentRoutePoints([]);
     setSelectedElements({ players: [], routes: [] });
+    setIsDraggingStraightRoute(false);
   };
 
   const exportAsImage = async () => {
@@ -1148,19 +1171,19 @@ export default function PlayDesigner() {
                 <line x1="24" y1="504" x2="664" y2="504" stroke="white" strokeWidth="6" />
               </svg>
 
-              <svg className="absolute inset-0 w-full h-full">
+              <svg className="absolute inset-0 w-full h-full" style={{ pointerEvents: "none" }}>
                 <defs>
-                  <marker id="arrowhead-primary" markerWidth="2" markerHeight="2" refX="1.8" refY="0.6" orient="auto">
-                    <polygon points="0 0, 2 0.6, 0 1.2" fill="#ef4444" />
+                  <marker id="arrowhead-primary" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+                    <polygon points="0 0, 8 3, 0 6" fill="#ef4444" />
                   </marker>
-                  <marker id="arrowhead-decision" markerWidth="2" markerHeight="2" refX="1.8" refY="0.6" orient="auto">
-                    <polygon points="0 0, 2 0.6, 0 1.2" fill="#3b82f6" />
+                  <marker id="arrowhead-decision" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+                    <polygon points="0 0, 8 3, 0 6" fill="#3b82f6" />
                   </marker>
-                  <marker id="arrowhead-blocking" markerWidth="2" markerHeight="2" refX="1.8" refY="0.6" orient="auto">
-                    <polygon points="0 0, 2 0.6, 0 1.2" fill="#f97316" />
+                  <marker id="arrowhead-blocking" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+                    <polygon points="0 0, 8 3, 0 6" fill="#f97316" />
                   </marker>
-                  <marker id="arrowhead-secondary" markerWidth="2" markerHeight="2" refX="1.8" refY="0.6" orient="auto">
-                    <polygon points="0 0, 2 0.6, 0 1.2" fill="#000000" />
+                  <marker id="arrowhead-secondary" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+                    <polygon points="0 0, 8 3, 0 6" fill="#000000" />
                   </marker>
                 </defs>
                 
@@ -1196,6 +1219,7 @@ export default function PlayDesigner() {
                         setSelectedElements({ players: [], routes: [] });
                       }}
                       className="cursor-pointer"
+                      style={{ pointerEvents: "auto" }}
                       data-testid={`route-${route.id}`}
                     />
                     {route.priority && route.points.length > 0 && (
