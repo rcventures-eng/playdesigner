@@ -1,0 +1,54 @@
+**1. Problem Statement**
+
+→ There are limited free tools on the market that allow amateur football coaches the ability to design plays for their teams at various levels. Whether it be 5-on-5 flag football, 7-on-7 flag football, or 11-on-11 high school / college sports. 
+
+---
+
+**2. Target User**
+
+→ The target user of this app is likely a coach or member of the coaching team who is designing either offensive, defensive or special teams plays. Please note that sophistication here can vary greatly, so we need to err on the side of ease of use and simplicity.
+
+---
+
+**3. Core Use Case / User Flow**
+
+1. Design plays for offense (75%), Design plays for Defense (24%), Design Plays for Special Teams (1%)
+2. Label Each position with text
+3. Export plays to images that can be adjusted to various sizes - For examples: maybe I want the graphical representation of the play be 694 x 392, or really small such as 100 x 40. I want the ability for the image to be exported by many different sizes. If I can also “copy” the play and then paste it somewhere else that would be great.
+
+---
+
+**4. MVP Feature List**
+
+1. This should be a single page experience - I can do everything I listed here from one page
+2. On Offense: Name/Label Plays by: Name, Formation, Concept (ex: Outside Run, Inside Run, Short Pass, RPO, Screen Pass etc), Personnel (ex: 1RB, 3WR, 1TE).
+3. On Defense: Name/ Label plays by: Name, Personnel. I should be able to create shapes that map to any of the colors so that I can demonstrate where players may need to cover a certain zone .
+4. Move color coded circles that represent positions/players on a canvas. On offense, colors should be Green, Blue, Red, Yellow, Black, Orange and Gray. For defense, colors should be Brown (Defensive Line), Magenta (Linebackers), Purple (Cornerbacks and Safeties). There should also be an option to pick whatever colors I want via some kind of color spectrum widget for both offense and defense. A smaller football (smaller in size that the circles should also be an option to drag as well as a “football tee” like icon.
+5. Differentiate between Primary Routes (via a Red line), and 2nd, 3rd, 4th options (Black lines) with a small badge concept where a 2nd, 3rd, 4th option could be marked. A Blue line 
+6. The “line” types for routes should be straight lines or rounded. There should also be lines that represent blocking but they can be hidden unless a toggle is pushed or something.
+7. Dotted lines represent players in Motion behind the line of scrimmage. Solid lines represent routes run beyond line of scrimmage
+8. There should be a background that looks like a football field with hashmarks. The line of scrimmage should have a max of 10 yards behind it. There should be 20 yards beyond the line of scrimmage
+
+---
+
+**7. Design Vibe / UX Constraints** 
+
+- All fonts and background color schemas should mirror some of the concepts you see in the attached screenshot.
+    - 
+    
+    ![Screenshot 2025-11-23 at 5.29.26 PM.png](attachment:85aeab21-fd13-47ca-9b64-2db5b6d165f3:Screenshot_2025-11-23_at_5.29.26_PM.png)
+    
+- No login needed for MVP
+- Whatever we build should be use-able on a mobile device as well as a desktop or Ipad
+- Needs to be easy to use and preferably drag and drop for shapes and routes.
+
+---
+
+---
+
+## **9. Stretch Ideas / Future Features**
+
+- An “Animate” option, where players circles will move along their assigned route and the quarterback circle will deliver the football to represent what the play might look like during live actions. Defensive coverages will move as well in line with the plays created on that side of the ball.
+- Share play feature where you can send a play to a friend for their feedback.
+- AI functionality that allows me to do things like: “Design a play that will beat Cover 1”. Explain why this play will work and who the primary option is. Also describe a defensive formation that would be best suited to stifle the play for reference.
+- Login to an account that has play folders for lots of different teams one might coach and other functionality in time.
