@@ -702,11 +702,13 @@ export default function PlayDesigner() {
                     className="h-9 w-9"
                     disabled={football !== null}
                   >
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                      <ellipse cx="8" cy="8" rx="6" ry="4" fill="#8B4513" />
-                      <line x1="8" y1="4" x2="8" y2="12" stroke="white" strokeWidth="0.5" />
-                      <line x1="6" y1="5" x2="6" y2="11" stroke="white" strokeWidth="0.5" />
-                      <line x1="10" y1="5" x2="10" y2="11" stroke="white" strokeWidth="0.5" />
+                    <svg width="16" height="16" viewBox="0 0 16 32" fill="currentColor">
+                      <ellipse cx="8" cy="16" rx="7" ry="15" fill="#8B4513" stroke="#654321" strokeWidth="1" />
+                      <line x1="3" y1="11" x2="13" y2="11" stroke="#FFFFFF" strokeWidth="0.5" />
+                      <line x1="2" y1="13.5" x2="14" y2="13.5" stroke="#FFFFFF" strokeWidth="0.5" />
+                      <line x1="1.5" y1="16" x2="14.5" y2="16" stroke="#FFFFFF" strokeWidth="0.5" />
+                      <line x1="2" y1="18.5" x2="14" y2="18.5" stroke="#FFFFFF" strokeWidth="0.5" />
+                      <line x1="3" y1="21" x2="13" y2="21" stroke="#FFFFFF" strokeWidth="0.5" />
                     </svg>
                   </Button>
                 </div>
