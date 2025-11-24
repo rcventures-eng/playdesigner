@@ -69,7 +69,7 @@ export default function PlayDesigner() {
     concept: "",
     personnel: "",
   });
-  const [exportWidth, setExportWidth] = useState("640");
+  const [exportWidth, setExportWidth] = useState("688");
   const [exportHeight, setExportHeight] = useState("660");
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -111,7 +111,7 @@ export default function PlayDesigner() {
   const addPlayer = (color: string) => {
     const newPlayer: Player = {
       id: `player-${Date.now()}`,
-      x: 320,
+      x: 344,
       y: 540,
       color,
     };
@@ -194,7 +194,7 @@ export default function PlayDesigner() {
         const newX = e.clientX - rect.left - dragOffset.x;
         const newY = e.clientY - rect.top - dragOffset.y;
         setPlayers(players.map(p =>
-          p.id === selectedPlayer ? { ...p, x: Math.max(48, Math.min(592, newX)), y: Math.max(48, Math.min(612, newY)) } : p
+          p.id === selectedPlayer ? { ...p, x: Math.max(48, Math.min(640, newX)), y: Math.max(48, Math.min(612, newY)) } : p
         ));
       }
     }
@@ -899,12 +899,12 @@ export default function PlayDesigner() {
           </div>
         </div>
 
-        <div className="flex-1 bg-muted/30 p-4 overflow-auto flex items-center justify-center">
-          <div className="bg-background rounded-lg shadow-lg p-4">
+        <div className="flex-1 bg-muted/30 p-2 overflow-auto flex items-center justify-center">
+          <div className="bg-background rounded-lg shadow-lg p-2">
             <div
               ref={canvasRef}
               className="relative bg-gradient-to-r from-green-700 to-green-600 rounded cursor-crosshair"
-              style={{ width: 640, height: 660 }}
+              style={{ width: 688, height: 660 }}
               onMouseMove={(e) => {
                 handleCanvasMouseMove(e);
                 handleShapeMouseMove(e);
@@ -927,7 +927,7 @@ export default function PlayDesigner() {
                       key={`yard-${i}`}
                       x1="24"
                       y1={y}
-                      x2="616"
+                      x2="664"
                       y2={y}
                       stroke="white"
                       strokeWidth="4"
@@ -959,9 +959,9 @@ export default function PlayDesigner() {
                   return (
                     <line
                       key={`right-tick-${i}`}
-                      x1="604"
+                      x1="652"
                       y1={y}
-                      x2="616"
+                      x2="664"
                       y2={y}
                       stroke="white"
                       strokeWidth="2"
@@ -970,19 +970,19 @@ export default function PlayDesigner() {
                   );
                 })}
                 
-                {/* Hash marks in middle (NCAA style - 20 yards from each sideline) */}
+                {/* Hash marks in middle (NCAA style - 40 feet / 13.33 yards from each sideline) */}
                 {Array.from({ length: 51 }, (_, i) => {
                   const y = 24 + i * 12;
                   return (
                     <g key={`hash-${i}`}>
-                      <line x1="258" y1={y} x2="270" y2={y} stroke="white" strokeWidth="2" opacity="0.6" />
-                      <line x1="370" y1={y} x2="382" y2={y} stroke="white" strokeWidth="2" opacity="0.6" />
+                      <line x1="178" y1={y} x2="190" y2={y} stroke="white" strokeWidth="2" opacity="0.6" />
+                      <line x1="498" y1={y} x2="510" y2={y} stroke="white" strokeWidth="2" opacity="0.6" />
                     </g>
                   );
                 })}
                 
                 {/* Line of scrimmage (8 yards from bottom = y=540) */}
-                <line x1="24" y1="540" x2="616" y2="540" stroke="white" strokeWidth="6" />
+                <line x1="24" y1="540" x2="664" y2="540" stroke="white" strokeWidth="6" />
               </svg>
 
               <svg className="absolute inset-0 w-full h-full">
@@ -1096,7 +1096,7 @@ export default function PlayDesigner() {
 
               <div
                 className="absolute"
-                style={{ left: 305, top: 532.5, width: 30, height: 15 }}
+                style={{ left: 329, top: 532.5, width: 30, height: 15 }}
                 data-testid="football"
               >
                 <svg width="30" height="15" viewBox="0 0 30 15">
