@@ -80,6 +80,9 @@ export default function PlayDesigner() {
   const [isDrawingShape, setIsDrawingShape] = useState(false);
   const [shapeStart, setShapeStart] = useState<{ x: number; y: number } | null>(null);
   const [draggingRoutePoint, setDraggingRoutePoint] = useState<{ routeId: string; pointIndex: number } | null>(null);
+  const [lassoStart, setLassoStart] = useState<{ x: number; y: number } | null>(null);
+  const [lassoEnd, setLassoEnd] = useState<{ x: number; y: number } | null>(null);
+  const [selectedElements, setSelectedElements] = useState<{ players: string[]; routes: string[] }>({ players: [], routes: [] });
   const canvasRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -92,6 +95,17 @@ export default function PlayDesigner() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Delete" || e.key === "Backspace") {
         if (editingPlayer) return;
+        
+        if (selectedElements.players.length > 0 || selectedElements.routes.length > 0) {
+          setPlayers(prev => prev.filter(p => !selectedElements.players.includes(p.id)));
+          setRoutes(prev => prev.filter(r => 
+            !selectedElements.routes.includes(r.id) && 
+            !selectedElements.players.includes(r.playerId)
+          ));
+          setSelectedElements({ players: [], routes: [] });
+          return;
+        }
+        
         if (selectedPlayer) {
           setPlayers(prev => prev.filter(p => p.id !== selectedPlayer));
           setRoutes(prev => prev.filter(r => r.playerId !== selectedPlayer));
@@ -113,7 +127,7 @@ export default function PlayDesigner() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedPlayer, selectedRoute, selectedShape, selectedFootball, editingPlayer]);
+  }, [selectedPlayer, selectedRoute, selectedShape, selectedFootball, editingPlayer, selectedElements]);
 
   const addPlayer = (color: string) => {
     const newPlayer: Player = {
@@ -124,6 +138,9 @@ export default function PlayDesigner() {
     };
     setPlayers([...players, newPlayer]);
     setTool("select");
+    setIsDrawingRoute(false);
+    setCurrentRoutePoints([]);
+    setSelectedPlayer(null);
   };
 
   const addFootball = () => {
@@ -159,6 +176,7 @@ export default function PlayDesigner() {
         setSelectedPlayer(playerId);
         setSelectedRoute(null);
         setSelectedShape(null);
+        setSelectedElements({ players: [], routes: [] });
         setIsDragging(true);
         const rect = canvasRef.current?.getBoundingClientRect();
         if (rect) {
@@ -172,6 +190,7 @@ export default function PlayDesigner() {
       e.stopPropagation();
       setIsDrawingRoute(true);
       setSelectedPlayer(playerId);
+      setSelectedElements({ players: [], routes: [] });
       const player = players.find(p => p.id === playerId);
       if (player) {
         const rect = canvasRef.current?.getBoundingClientRect();
@@ -243,11 +262,46 @@ export default function PlayDesigner() {
         }));
       }
     }
+    
+    if (lassoStart && !isDragging && !draggingRoutePoint) {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (rect) {
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        setLassoEnd({ x, y });
+      }
+    }
   };
 
   const handleCanvasMouseUp = () => {
     setIsDragging(false);
     setDraggingRoutePoint(null);
+    
+    if (lassoStart) {
+      if (lassoEnd) {
+        const minX = Math.min(lassoStart.x, lassoEnd.x);
+        const maxX = Math.max(lassoStart.x, lassoEnd.x);
+        const minY = Math.min(lassoStart.y, lassoEnd.y);
+        const maxY = Math.max(lassoStart.y, lassoEnd.y);
+        
+        const selectedPlayerIds = players
+          .filter(p => p.x >= minX && p.x <= maxX && p.y >= minY && p.y <= maxY)
+          .map(p => p.id);
+        
+        const selectedRouteIds = routes
+          .filter(r => r.points.some(point => 
+            point.x >= minX && point.x <= maxX && point.y >= minY && point.y <= maxY
+          ))
+          .map(r => r.id);
+        
+        setSelectedElements({ players: selectedPlayerIds, routes: selectedRouteIds });
+      } else {
+        setSelectedElements({ players: [], routes: [] });
+      }
+      
+      setLassoStart(null);
+      setLassoEnd(null);
+    }
   };
 
   const handleCanvasClick = (e: React.MouseEvent) => {
@@ -283,7 +337,20 @@ export default function PlayDesigner() {
   };
 
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
-    if (tool === "shape" && playType === "defense") {
+    if (tool === "select") {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (rect) {
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        setLassoStart({ x, y });
+        setLassoEnd({ x, y });
+        setSelectedElements({ players: [], routes: [] });
+        setSelectedPlayer(null);
+        setSelectedRoute(null);
+        setSelectedShape(null);
+        setSelectedFootball(false);
+      }
+    } else if (tool === "shape" && playType === "defense") {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (rect) {
         const x = e.clientX - rect.left;
@@ -342,6 +409,7 @@ export default function PlayDesigner() {
     }
     setIsDrawingRoute(false);
     setCurrentRoutePoints([]);
+    setSelectedElements({ players: [], routes: [] });
   };
 
   const exportAsImage = async () => {
@@ -452,11 +520,15 @@ export default function PlayDesigner() {
           stroke={strokeColor}
           strokeWidth="3"
           className="cursor-pointer"
+          onMouseDown={(e) => {
+            e.stopPropagation();
+          }}
           onClick={(e) => {
             e.stopPropagation();
             setSelectedShape(shape.id);
             setSelectedPlayer(null);
             setSelectedRoute(null);
+            setSelectedElements({ players: [], routes: [] });
           }}
           data-testid={`shape-${shape.id}`}
         />
@@ -474,11 +546,15 @@ export default function PlayDesigner() {
           stroke={strokeColor}
           strokeWidth="3"
           className="cursor-pointer"
+          onMouseDown={(e) => {
+            e.stopPropagation();
+          }}
           onClick={(e) => {
             e.stopPropagation();
             setSelectedShape(shape.id);
             setSelectedPlayer(null);
             setSelectedRoute(null);
+            setSelectedElements({ players: [], routes: [] });
           }}
           data-testid={`shape-${shape.id}`}
         />
@@ -497,11 +573,15 @@ export default function PlayDesigner() {
           stroke={strokeColor}
           strokeWidth="3"
           className="cursor-pointer"
+          onMouseDown={(e) => {
+            e.stopPropagation();
+          }}
           onClick={(e) => {
             e.stopPropagation();
             setSelectedShape(shape.id);
             setSelectedPlayer(null);
             setSelectedRoute(null);
+            setSelectedElements({ players: [], routes: [] });
           }}
           data-testid={`shape-${shape.id}`}
         />
@@ -519,11 +599,15 @@ export default function PlayDesigner() {
           stroke={strokeColor}
           strokeWidth="3"
           className="cursor-pointer"
+          onMouseDown={(e) => {
+            e.stopPropagation();
+          }}
           onClick={(e) => {
             e.stopPropagation();
             setSelectedShape(shape.id);
             setSelectedPlayer(null);
             setSelectedRoute(null);
+            setSelectedElements({ players: [], routes: [] });
           }}
           data-testid={`shape-${shape.id}`}
         />
@@ -1066,17 +1150,17 @@ export default function PlayDesigner() {
 
               <svg className="absolute inset-0 w-full h-full">
                 <defs>
-                  <marker id="arrowhead-primary" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-                    <polygon points="0 0, 10 3, 0 6" fill="#ef4444" />
+                  <marker id="arrowhead-primary" markerWidth="2" markerHeight="2" refX="1.8" refY="0.6" orient="auto">
+                    <polygon points="0 0, 2 0.6, 0 1.2" fill="#ef4444" />
                   </marker>
-                  <marker id="arrowhead-decision" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-                    <polygon points="0 0, 10 3, 0 6" fill="#3b82f6" />
+                  <marker id="arrowhead-decision" markerWidth="2" markerHeight="2" refX="1.8" refY="0.6" orient="auto">
+                    <polygon points="0 0, 2 0.6, 0 1.2" fill="#3b82f6" />
                   </marker>
-                  <marker id="arrowhead-blocking" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-                    <polygon points="0 0, 10 3, 0 6" fill="#f97316" />
+                  <marker id="arrowhead-blocking" markerWidth="2" markerHeight="2" refX="1.8" refY="0.6" orient="auto">
+                    <polygon points="0 0, 2 0.6, 0 1.2" fill="#f97316" />
                   </marker>
-                  <marker id="arrowhead-secondary" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-                    <polygon points="0 0, 10 3, 0 6" fill="#000000" />
+                  <marker id="arrowhead-secondary" markerWidth="2" markerHeight="2" refX="1.8" refY="0.6" orient="auto">
+                    <polygon points="0 0, 2 0.6, 0 1.2" fill="#000000" />
                   </marker>
                 </defs>
                 
@@ -1084,19 +1168,32 @@ export default function PlayDesigner() {
 
                 {routes.filter(r => showBlocking || r.type !== "blocking").map((route) => (
                   <g key={route.id}>
+                    {selectedElements.routes.includes(route.id) && (
+                      <path
+                        d={getRoutePath(route)}
+                        stroke="#06b6d4"
+                        strokeWidth="6"
+                        fill="none"
+                        opacity="0.4"
+                      />
+                    )}
                     <path
                       d={getRoutePath(route)}
                       stroke={getRouteColor(route.type)}
-                      strokeWidth="9"
+                      strokeWidth="3.6"
                       fill="none"
                       strokeDasharray={route.isMotion ? "5,5" : "none"}
                       {...(route.isMotion ? {} : { markerEnd: `url(#arrowhead-${route.type})` })}
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                      }}
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedRoute(route.id);
                         setSelectedPlayer(null);
                         setSelectedShape(null);
                         setSelectedFootball(false);
+                        setSelectedElements({ players: [], routes: [] });
                       }}
                       className="cursor-pointer"
                       data-testid={`route-${route.id}`}
@@ -1148,13 +1245,26 @@ export default function PlayDesigner() {
                     <path
                       d={getRoutePath({ points: currentRoutePoints, type: routeType, style: routeStyle } as Route)}
                       stroke={getRouteColor(routeType)}
-                      strokeWidth="9"
+                      strokeWidth="3.6"
                       fill="none"
                       strokeDasharray={isMotion ? "5,5" : "none"}
                       {...(isMotion ? {} : { markerEnd: `url(#arrowhead-${routeType})` })}
                       opacity="0.5"
                     />
                   </g>
+                )}
+                
+                {lassoStart && lassoEnd && (
+                  <rect
+                    x={Math.min(lassoStart.x, lassoEnd.x)}
+                    y={Math.min(lassoStart.y, lassoEnd.y)}
+                    width={Math.abs(lassoEnd.x - lassoStart.x)}
+                    height={Math.abs(lassoEnd.y - lassoStart.y)}
+                    stroke="#06b6d4"
+                    strokeWidth="2"
+                    fill="rgba(6, 182, 212, 0.1)"
+                    strokeDasharray="5,5"
+                  />
                 )}
               </svg>
 
@@ -1174,7 +1284,7 @@ export default function PlayDesigner() {
                 >
                   <div
                     className={`w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs ${
-                      selectedPlayer === player.id ? "ring-2 ring-cyan-400" : ""
+                      (selectedPlayer === player.id || selectedElements.players.includes(player.id)) ? "ring-2 ring-cyan-400" : ""
                     }`}
                     style={{ backgroundColor: player.color }}
                   >
