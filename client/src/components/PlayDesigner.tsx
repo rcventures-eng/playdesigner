@@ -118,7 +118,7 @@ export default function PlayDesigner() {
     const newPlayer: Player = {
       id: `player-${Date.now()}`,
       x: 344,
-      y: 492,
+      y: 504,
       color,
     };
     setPlayers([...players, newPlayer]);
@@ -126,7 +126,7 @@ export default function PlayDesigner() {
   };
 
   const addFootball = () => {
-    setFootball({ x: 344, y: 492 });
+    setFootball({ x: 344, y: 504 });
     setTool("select");
   };
 
@@ -702,13 +702,14 @@ export default function PlayDesigner() {
                     className="h-9 w-9"
                     disabled={football !== null}
                   >
-                    <svg width="16" height="16" viewBox="0 0 16 32" fill="currentColor">
-                      <ellipse cx="8" cy="16" rx="7" ry="15" fill="#8B4513" stroke="#654321" strokeWidth="1" />
-                      <line x1="3" y1="11" x2="13" y2="11" stroke="#FFFFFF" strokeWidth="0.5" />
-                      <line x1="2" y1="13.5" x2="14" y2="13.5" stroke="#FFFFFF" strokeWidth="0.5" />
-                      <line x1="1.5" y1="16" x2="14.5" y2="16" stroke="#FFFFFF" strokeWidth="0.5" />
-                      <line x1="2" y1="18.5" x2="14" y2="18.5" stroke="#FFFFFF" strokeWidth="0.5" />
-                      <line x1="3" y1="21" x2="13" y2="21" stroke="#FFFFFF" strokeWidth="0.5" />
+                    <svg width="16" height="16" viewBox="0 0 20 40" fill="currentColor">
+                      <ellipse cx="10" cy="20" rx="9.5" ry="19.5" fill="#8B4513" stroke="#654321" strokeWidth="1" />
+                      <line x1="10" y1="2" x2="10" y2="38" stroke="#FFFFFF" strokeWidth="1.2" />
+                      <line x1="4" y1="13" x2="16" y2="13" stroke="#FFFFFF" strokeWidth="0.6" />
+                      <line x1="3" y1="16.5" x2="17" y2="16.5" stroke="#FFFFFF" strokeWidth="0.6" />
+                      <line x1="2.5" y1="20" x2="17.5" y2="20" stroke="#FFFFFF" strokeWidth="0.6" />
+                      <line x1="3" y1="23.5" x2="17" y2="23.5" stroke="#FFFFFF" strokeWidth="0.6" />
+                      <line x1="4" y1="27" x2="16" y2="27" stroke="#FFFFFF" strokeWidth="0.6" />
                     </svg>
                   </Button>
                 </div>
@@ -1013,8 +1014,8 @@ export default function PlayDesigner() {
                   );
                 })}
                 
-                {/* Line of scrimmage (10 yards from bottom = y=492) */}
-                <line x1="24" y1="492" x2="664" y2="492" stroke="white" strokeWidth="6" />
+                {/* Line of scrimmage (9 yards from bottom = y=504) */}
+                <line x1="24" y1="504" x2="664" y2="504" stroke="white" strokeWidth="6" />
               </svg>
 
               <svg className="absolute inset-0 w-full h-full">
@@ -1131,7 +1132,7 @@ export default function PlayDesigner() {
                   className={`absolute cursor-pointer hover:scale-110 transition-transform ${
                     selectedFootball ? "ring-2 ring-cyan-400 rounded-full" : ""
                   }`}
-                  style={{ left: football.x - 3.75, top: football.y - 7.5, width: 7.5, height: 15 }}
+                  style={{ left: football.x - 5, top: football.y - 10, width: 10, height: 20 }}
                   onClick={() => {
                     setSelectedFootball(true);
                     setSelectedPlayer(null);
@@ -1140,13 +1141,14 @@ export default function PlayDesigner() {
                   }}
                   data-testid="football"
                 >
-                  <svg width="7.5" height="15" viewBox="0 0 15 30">
-                    <ellipse cx="7.5" cy="15" rx="6.5" ry="14" fill="#8B4513" stroke="#654321" strokeWidth="1" />
-                    <line x1="3.5" y1="10" x2="11.5" y2="10" stroke="#FFFFFF" strokeWidth="0.5" />
-                    <line x1="2.5" y1="12.5" x2="12.5" y2="12.5" stroke="#FFFFFF" strokeWidth="0.5" />
-                    <line x1="2" y1="15" x2="13" y2="15" stroke="#FFFFFF" strokeWidth="0.5" />
-                    <line x1="2.5" y1="17.5" x2="12.5" y2="17.5" stroke="#FFFFFF" strokeWidth="0.5" />
-                    <line x1="3.5" y1="20" x2="11.5" y2="20" stroke="#FFFFFF" strokeWidth="0.5" />
+                  <svg width="10" height="20" viewBox="0 0 20 40">
+                    <ellipse cx="10" cy="20" rx="8.75" ry="18.9" fill="#8B4513" stroke="#654321" strokeWidth="1" />
+                    <line x1="10" y1="3" x2="10" y2="37" stroke="#FFFFFF" strokeWidth="1.2" />
+                    <line x1="4.5" y1="13" x2="15.5" y2="13" stroke="#FFFFFF" strokeWidth="0.6" />
+                    <line x1="3.5" y1="16.5" x2="16.5" y2="16.5" stroke="#FFFFFF" strokeWidth="0.6" />
+                    <line x1="3" y1="20" x2="17" y2="20" stroke="#FFFFFF" strokeWidth="0.6" />
+                    <line x1="3.5" y1="23.5" x2="16.5" y2="23.5" stroke="#FFFFFF" strokeWidth="0.6" />
+                    <line x1="4.5" y1="27" x2="15.5" y2="27" stroke="#FFFFFF" strokeWidth="0.6" />
                   </svg>
                 </div>
               )}

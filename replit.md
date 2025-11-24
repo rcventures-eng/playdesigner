@@ -37,12 +37,12 @@ Preferred communication style: Simple, everyday language.
 **HTML Canvas**: The play designer uses HTML5 Canvas and SVG (implementation in `PlayDesigner.tsx`) for rendering the football field, player positions, routes, and shapes.
 
 **Field Layout**: Vertical field orientation (688×660px) showing proper football field proportions:
-- Line of scrimmage: Horizontal white line at y=492 (10 yards from bottom, 6px stroke)
-- Field area: ~10 yards (120px) behind line of scrimmage, ~40 yards (480px) ahead for offensive target area
+- Line of scrimmage: Horizontal white line at y=504 (9 yards from bottom, 6px stroke)
+- Field area: ~9 yards (108px) behind line of scrimmage, ~41 yards (492px) ahead for offensive target area
 - Hash marks: Two sets of short horizontal marks in the middle at x=178-190 and x=498-510 (40 feet / 13.33 yards from each sideline, NCAA style) running vertically down field
 - Yard lines: Horizontal lines every 60px (5-yard increments) with 4px stroke at 30% opacity
 - Edge yard markers: Short horizontal tick marks on left (x=24-36) and right (x=652-664) edges marking each yard (12px spacing) - integral for route distance measurement
-- Football: Optional clickable/removable element at line of scrimmage (7.5×15px vertical orientation when added)
+- Football: Optional clickable/removable element at line of scrimmage (10×20px vertical orientation with white center lace line when added)
 - Field width: 53.33 yards (regulation width), Scale: 12 pixels per yard, 24px padding on all sides
 
 **Rationale**: Vertical layout with proper proportions provides a realistic view of the play area coaches are familiar with. The field shows the most tactically relevant area for play design with the line of scrimmage at the bottom and routes extending upward.
