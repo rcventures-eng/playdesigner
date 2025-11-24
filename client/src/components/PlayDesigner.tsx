@@ -194,7 +194,7 @@ export default function PlayDesigner() {
         const newX = e.clientX - rect.left - dragOffset.x;
         const newY = e.clientY - rect.top - dragOffset.y;
         setPlayers(players.map(p =>
-          p.id === selectedPlayer ? { ...p, x: Math.max(48, Math.min(640, newX)), y: Math.max(48, Math.min(612, newY)) } : p
+          p.id === selectedPlayer ? { ...p, x: Math.max(36, Math.min(652, newX)), y: Math.max(36, Math.min(624, newY)) } : p
         ));
       }
     }
@@ -1058,10 +1058,10 @@ export default function PlayDesigner() {
                   key={player.id}
                   className="absolute cursor-pointer hover:scale-110 transition-transform"
                   style={{
-                    left: player.x - 24,
-                    top: player.y - 24,
-                    width: 48,
-                    height: 48,
+                    left: player.x - 12,
+                    top: player.y - 12,
+                    width: 24,
+                    height: 24,
                   }}
                   onMouseDown={(e) => handlePlayerMouseDown(e, player.id)}
                   onDoubleClick={(e) => handlePlayerDoubleClick(e, player.id)}

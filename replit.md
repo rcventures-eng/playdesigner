@@ -51,7 +51,7 @@ Preferred communication style: Simple, everyday language.
 
 **Rationale**: Allows coaches to export plays at custom dimensions (default 688×660, or custom sizes) for printing, presentations, or digital playbooks.
 
-**Interaction Model**: Drag-and-drop for player positioning (bounds: x 48-640, y 48-612), click-to-draw for routes, and property panels for metadata entry.
+**Interaction Model**: Drag-and-drop for player positioning (24×24px circles, bounds: x 36-652, y 36-624), click-to-draw for routes, and property panels for metadata entry.
 
 **Rationale**: Follows design guidelines emphasizing ease of use and touch-friendly interactions for mobile/tablet support. Drag bounds ensure players stay within the visible field area.
 
