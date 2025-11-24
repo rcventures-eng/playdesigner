@@ -51,9 +51,11 @@ export default function PlayDesigner() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [routes, setRoutes] = useState<Route[]>([]);
   const [shapes, setShapes] = useState<Shape[]>([]);
+  const [football, setFootball] = useState<{ x: number; y: number } | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
   const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
   const [selectedShape, setSelectedShape] = useState<string | null>(null);
+  const [selectedFootball, setSelectedFootball] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<string | null>(null);
   const [editingLabel, setEditingLabel] = useState("");
   const [tool, setTool] = useState<"select" | "player" | "route" | "shape" | "label">("select");
@@ -102,24 +104,37 @@ export default function PlayDesigner() {
           setShapes(prev => prev.filter(s => s.id !== selectedShape));
           setSelectedShape(null);
         }
+        if (selectedFootball) {
+          setFootball(null);
+          setSelectedFootball(false);
+        }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedPlayer, selectedRoute, selectedShape, editingPlayer]);
+  }, [selectedPlayer, selectedRoute, selectedShape, selectedFootball, editingPlayer]);
 
   const addPlayer = (color: string) => {
     const newPlayer: Player = {
       id: `player-${Date.now()}`,
       x: 344,
-      y: 540,
+      y: 492,
       color,
     };
     setPlayers([...players, newPlayer]);
     setTool("select");
   };
 
+  const addFootball = () => {
+    setFootball({ x: 344, y: 492 });
+    setTool("select");
+  };
+
   const deleteSelected = () => {
+    if (selectedFootball) {
+      setFootball(null);
+      setSelectedFootball(false);
+    }
     if (selectedPlayer) {
       setPlayers(players.filter(p => p.id !== selectedPlayer));
       setRoutes(routes.filter(r => r.playerId !== selectedPlayer));
@@ -679,6 +694,21 @@ export default function PlayDesigner() {
                       <Plus className="h-4 w-4 text-white" />
                     </Button>
                   ))}
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    data-testid="button-add-football"
+                    onClick={addFootball}
+                    className="h-9 w-9"
+                    disabled={football !== null}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                      <ellipse cx="8" cy="8" rx="6" ry="4" fill="#8B4513" />
+                      <line x1="8" y1="4" x2="8" y2="12" stroke="white" strokeWidth="0.5" />
+                      <line x1="6" y1="5" x2="6" y2="11" stroke="white" strokeWidth="0.5" />
+                      <line x1="10" y1="5" x2="10" y2="11" stroke="white" strokeWidth="0.5" />
+                    </svg>
+                  </Button>
                 </div>
               </div>
 
@@ -884,7 +914,7 @@ export default function PlayDesigner() {
               </div>
             </Card>
 
-            {(selectedPlayer || selectedRoute || selectedShape) && (
+            {(selectedPlayer || selectedRoute || selectedShape || selectedFootball) && (
               <Button
                 size="sm"
                 variant="destructive"
@@ -981,8 +1011,8 @@ export default function PlayDesigner() {
                   );
                 })}
                 
-                {/* Line of scrimmage (8 yards from bottom = y=540) */}
-                <line x1="24" y1="540" x2="664" y2="540" stroke="white" strokeWidth="6" />
+                {/* Line of scrimmage (10 yards from bottom = y=492) */}
+                <line x1="24" y1="492" x2="664" y2="492" stroke="white" strokeWidth="6" />
               </svg>
 
               <svg className="absolute inset-0 w-full h-full">
@@ -1094,20 +1124,30 @@ export default function PlayDesigner() {
                 </div>
               ))}
 
-              <div
-                className="absolute"
-                style={{ left: 329, top: 532.5, width: 30, height: 15 }}
-                data-testid="football"
-              >
-                <svg width="30" height="15" viewBox="0 0 30 15">
-                  <ellipse cx="15" cy="7.5" rx="14" ry="6.5" fill="#8B4513" stroke="#654321" strokeWidth="1" />
-                  <line x1="10" y1="5" x2="10" y2="10" stroke="#FFFFFF" strokeWidth="0.5" />
-                  <line x1="12.5" y1="4" x2="12.5" y2="11" stroke="#FFFFFF" strokeWidth="0.5" />
-                  <line x1="15" y1="3.5" x2="15" y2="11.5" stroke="#FFFFFF" strokeWidth="0.5" />
-                  <line x1="17.5" y1="4" x2="17.5" y2="11" stroke="#FFFFFF" strokeWidth="0.5" />
-                  <line x1="20" y1="5" x2="20" y2="10" stroke="#FFFFFF" strokeWidth="0.5" />
-                </svg>
-              </div>
+              {football && (
+                <div
+                  className={`absolute cursor-pointer hover:scale-110 transition-transform ${
+                    selectedFootball ? "ring-2 ring-cyan-400 rounded-full" : ""
+                  }`}
+                  style={{ left: football.x - 3.75, top: football.y - 7.5, width: 7.5, height: 15 }}
+                  onClick={() => {
+                    setSelectedFootball(true);
+                    setSelectedPlayer(null);
+                    setSelectedRoute(null);
+                    setSelectedShape(null);
+                  }}
+                  data-testid="football"
+                >
+                  <svg width="7.5" height="15" viewBox="0 0 15 30">
+                    <ellipse cx="7.5" cy="15" rx="6.5" ry="14" fill="#8B4513" stroke="#654321" strokeWidth="1" />
+                    <line x1="3.5" y1="10" x2="11.5" y2="10" stroke="#FFFFFF" strokeWidth="0.5" />
+                    <line x1="2.5" y1="12.5" x2="12.5" y2="12.5" stroke="#FFFFFF" strokeWidth="0.5" />
+                    <line x1="2" y1="15" x2="13" y2="15" stroke="#FFFFFF" strokeWidth="0.5" />
+                    <line x1="2.5" y1="17.5" x2="12.5" y2="17.5" stroke="#FFFFFF" strokeWidth="0.5" />
+                    <line x1="3.5" y1="20" x2="11.5" y2="20" stroke="#FFFFFF" strokeWidth="0.5" />
+                  </svg>
+                </div>
+              )}
             </div>
           </div>
         </div>
