@@ -79,6 +79,7 @@ export default function PlayDesigner() {
   const [currentRoutePoints, setCurrentRoutePoints] = useState<{ x: number; y: number }[]>([]);
   const [isDrawingShape, setIsDrawingShape] = useState(false);
   const [shapeStart, setShapeStart] = useState<{ x: number; y: number } | null>(null);
+  const [draggingRoutePoint, setDraggingRoutePoint] = useState<{ routeId: string; pointIndex: number } | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -173,7 +174,20 @@ export default function PlayDesigner() {
       setSelectedPlayer(playerId);
       const player = players.find(p => p.id === playerId);
       if (player) {
-        setCurrentRoutePoints([{ x: player.x, y: player.y }]);
+        const rect = canvasRef.current?.getBoundingClientRect();
+        if (rect) {
+          const clickX = e.clientX - rect.left;
+          const clickY = e.clientY - rect.top;
+          const dx = clickX - player.x;
+          const dy = clickY - player.y;
+          const angle = Math.atan2(dy, dx);
+          const radius = 12;
+          const edgeX = player.x + radius * Math.cos(angle);
+          const edgeY = player.y + radius * Math.sin(angle);
+          setCurrentRoutePoints([{ x: edgeX, y: edgeY }]);
+        } else {
+          setCurrentRoutePoints([{ x: player.x, y: player.y }]);
+        }
       }
     }
   };
@@ -213,10 +227,27 @@ export default function PlayDesigner() {
         ));
       }
     }
+    
+    if (draggingRoutePoint) {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (rect) {
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        setRoutes(prevRoutes => prevRoutes.map(r => {
+          if (r.id === draggingRoutePoint.routeId) {
+            const newPoints = [...r.points];
+            newPoints[draggingRoutePoint.pointIndex] = { x, y };
+            return { ...r, points: newPoints };
+          }
+          return r;
+        }));
+      }
+    }
   };
 
   const handleCanvasMouseUp = () => {
     setIsDragging(false);
+    setDraggingRoutePoint(null);
   };
 
   const handleCanvasClick = (e: React.MouseEvent) => {
@@ -225,6 +256,21 @@ export default function PlayDesigner() {
       if (rect) {
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
+        
+        if (currentRoutePoints.length === 1 && selectedPlayer) {
+          const player = players.find(p => p.id === selectedPlayer);
+          if (player) {
+            const dx = x - player.x;
+            const dy = y - player.y;
+            const angle = Math.atan2(dy, dx);
+            const radius = 12;
+            const edgeX = player.x + radius * Math.cos(angle);
+            const edgeY = player.y + radius * Math.sin(angle);
+            setCurrentRoutePoints([{ x: edgeX, y: edgeY }, { x, y }]);
+            return;
+          }
+        }
+        
         setCurrentRoutePoints([...currentRoutePoints, { x, y }]);
       }
     }
@@ -1019,6 +1065,21 @@ export default function PlayDesigner() {
               </svg>
 
               <svg className="absolute inset-0 w-full h-full">
+                <defs>
+                  <marker id="arrowhead-primary" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                    <polygon points="0 0, 10 3, 0 6" fill="#ef4444" />
+                  </marker>
+                  <marker id="arrowhead-decision" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                    <polygon points="0 0, 10 3, 0 6" fill="#3b82f6" />
+                  </marker>
+                  <marker id="arrowhead-blocking" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                    <polygon points="0 0, 10 3, 0 6" fill="#f97316" />
+                  </marker>
+                  <marker id="arrowhead-secondary" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                    <polygon points="0 0, 10 3, 0 6" fill="#000000" />
+                  </marker>
+                </defs>
+                
                 {shapes.map(shape => renderShape(shape))}
 
                 {routes.filter(r => showBlocking || r.type !== "blocking").map((route) => (
@@ -1026,24 +1087,20 @@ export default function PlayDesigner() {
                     <path
                       d={getRoutePath(route)}
                       stroke={getRouteColor(route.type)}
-                      strokeWidth="3"
+                      strokeWidth="9"
                       fill="none"
                       strokeDasharray={route.isMotion ? "5,5" : "none"}
-                      markerEnd="url(#arrowhead)"
+                      {...(route.isMotion ? {} : { markerEnd: `url(#arrowhead-${route.type})` })}
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedRoute(route.id);
                         setSelectedPlayer(null);
                         setSelectedShape(null);
+                        setSelectedFootball(false);
                       }}
                       className="cursor-pointer"
                       data-testid={`route-${route.id}`}
                     />
-                    <defs>
-                      <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-                        <polygon points="0 0, 10 3, 0 6" fill={getRouteColor(route.type)} />
-                      </marker>
-                    </defs>
                     {route.priority && route.points.length > 0 && (
                       <g>
                         <circle
@@ -1066,6 +1123,23 @@ export default function PlayDesigner() {
                         </text>
                       </g>
                     )}
+                    {selectedRoute === route.id && route.points.map((point, idx) => (
+                      <circle
+                        key={idx}
+                        cx={point.x}
+                        cy={point.y}
+                        r="6"
+                        fill="#06b6d4"
+                        stroke="#fff"
+                        strokeWidth="2"
+                        className="cursor-move"
+                        onMouseDown={(e) => {
+                          e.stopPropagation();
+                          setDraggingRoutePoint({ routeId: route.id, pointIndex: idx });
+                        }}
+                        data-testid={`route-point-${route.id}-${idx}`}
+                      />
+                    ))}
                   </g>
                 ))}
 
@@ -1074,14 +1148,12 @@ export default function PlayDesigner() {
                     <path
                       d={getRoutePath({ points: currentRoutePoints, type: routeType, style: routeStyle } as Route)}
                       stroke={getRouteColor(routeType)}
-                      strokeWidth="3"
+                      strokeWidth="9"
                       fill="none"
                       strokeDasharray={isMotion ? "5,5" : "none"}
+                      {...(isMotion ? {} : { markerEnd: `url(#arrowhead-${routeType})` })}
                       opacity="0.5"
                     />
-                    {currentRoutePoints.map((point, idx) => (
-                      <circle key={idx} cx={point.x} cy={point.y} r="4" fill="white" stroke="#000" strokeWidth="1" />
-                    ))}
                   </g>
                 )}
               </svg>
