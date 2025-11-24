@@ -34,17 +34,24 @@ Preferred communication style: Simple, everyday language.
 
 ### Canvas and Drawing System
 
-**HTML Canvas**: The play designer uses HTML5 Canvas or SVG (implementation in `PlayDesigner.tsx`) for rendering the football field, player positions, routes, and shapes.
+**HTML Canvas**: The play designer uses HTML5 Canvas and SVG (implementation in `PlayDesigner.tsx`) for rendering the football field, player positions, routes, and shapes.
 
-**Rationale**: Canvas provides performant rendering for complex graphics and enables pixel-perfect control for drawing routes and exporting images. SVG could be an alternative for scalability.
+**Field Layout**: Horizontal field orientation (600×500px) showing proper football field proportions:
+- Line of scrimmage: Horizontal white line at y=160 (approximately 8 yards from top)
+- Field area: ~8 yards (80px) behind line of scrimmage, ~25 yards (340px) ahead for offensive target area
+- Hash marks: Two vertical dashed lines at x=180 and x=420 representing inner hash marks
+- Yard lines: Horizontal pattern every 50px with white lines at 20% opacity
+- Football: Centered at line of scrimmage (position: left 285, top 152.5)
 
-**Export Functionality**: html-to-image library (`toPng` function imported in PlayDesigner.tsx) for converting canvas to downloadable PNG images.
+**Rationale**: Horizontal layout with proper proportions provides a realistic view of the play area coaches are familiar with. The field shows the most tactically relevant area for play design.
 
-**Rationale**: Allows coaches to export plays at custom dimensions (e.g., 694x392 or 100x40) for printing, presentations, or digital playbooks.
+**Export Functionality**: html-to-image library (`toPng` function) for converting canvas to downloadable PNG images at customizable dimensions.
 
-**Interaction Model**: Drag-and-drop for player positioning, click-to-draw for routes, and property panels for metadata entry.
+**Rationale**: Allows coaches to export plays at custom dimensions (default 600×500, or custom sizes) for printing, presentations, or digital playbooks.
 
-**Rationale**: Follows design guidelines emphasizing ease of use and touch-friendly interactions for mobile/tablet support.
+**Interaction Model**: Drag-and-drop for player positioning (bounds: x 24-576, y 24-476), click-to-draw for routes, and property panels for metadata entry.
+
+**Rationale**: Follows design guidelines emphasizing ease of use and touch-friendly interactions for mobile/tablet support. Drag bounds ensure players stay within the visible field area.
 
 ### Backend Architecture
 

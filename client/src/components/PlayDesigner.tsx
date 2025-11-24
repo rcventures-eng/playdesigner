@@ -294,6 +294,7 @@ export default function PlayDesigner() {
           transform: `scale(${parseInt(exportWidth) / 600})`,
           transformOrigin: 'top left',
         },
+        skipFonts: true,
       });
       
       const link = document.createElement("a");
@@ -318,7 +319,9 @@ export default function PlayDesigner() {
     if (!canvasRef.current) return;
     
     try {
-      const dataUrl = await toPng(canvasRef.current);
+      const dataUrl = await toPng(canvasRef.current, {
+        skipFonts: true,
+      });
       const response = await fetch(dataUrl);
       const blob = await response.blob();
       await navigator.clipboard.write([
