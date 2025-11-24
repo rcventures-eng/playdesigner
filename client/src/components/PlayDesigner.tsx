@@ -88,9 +88,9 @@ export default function PlayDesigner() {
   const currentRoutePointsRef = useRef<{ x: number; y: number }[]>([]);
   const { toast } = useToast();
 
-  const offenseColors = ["#22c55e", "#3b82f6", "#ef4444", "#eab308", "#000000", "#f97316", "#6b7280"];
+  const offenseColors = ["#22c55e", "#1d4ed8", "#ef4444", "#eab308", "#000000", "#f97316", "#6b7280"];
   const defenseColors = ["#92400e", "#db2777", "#9333ea"];
-  const shapeColors = ["#ec4899", "#3b82f6", "#86efac"];
+  const shapeColors = ["#ec4899", "#1d4ed8", "#86efac"];
   const colors = playType === "offense" ? offenseColors : defenseColors;
 
   useEffect(() => {
@@ -590,7 +590,7 @@ export default function PlayDesigner() {
   const getRouteColor = (type: string) => {
     switch (type) {
       case "primary": return "#ef4444";
-      case "decision": return "#3b82f6";
+      case "decision": return "#1d4ed8";
       case "blocking": return "#f97316";
       default: return "#000000";
     }
@@ -1248,10 +1248,10 @@ export default function PlayDesigner() {
                     <polygon points="0 0, 8 3, 0 6" fill="#ef4444" />
                   </marker>
                   <marker id="arrowhead-decision" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
-                    <polygon points="0 0, 8 3, 0 6" fill="#3b82f6" />
+                    <polygon points="0 0, 8 3, 0 6" fill="#1d4ed8" />
                   </marker>
-                  <marker id="arrowhead-blocking" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
-                    <polygon points="0 0, 8 3, 0 6" fill="#f97316" />
+                  <marker id="arrowhead-blocking" markerWidth="12" markerHeight="12" refX="1" refY="6" orient="auto">
+                    <line x1="1" y1="0" x2="1" y2="12" stroke="#f97316" strokeWidth="3.6" strokeLinecap="round" />
                   </marker>
                   <marker id="arrowhead-secondary" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
                     <polygon points="0 0, 8 3, 0 6" fill="#000000" />
