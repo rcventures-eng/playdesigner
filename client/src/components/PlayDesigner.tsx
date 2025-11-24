@@ -89,7 +89,19 @@ export default function PlayDesigner() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Delete" || e.key === "Backspace") {
         if (editingPlayer) return;
-        deleteSelected();
+        if (selectedPlayer) {
+          setPlayers(prev => prev.filter(p => p.id !== selectedPlayer));
+          setRoutes(prev => prev.filter(r => r.playerId !== selectedPlayer));
+          setSelectedPlayer(null);
+        }
+        if (selectedRoute) {
+          setRoutes(prev => prev.filter(r => r.id !== selectedRoute));
+          setSelectedRoute(null);
+        }
+        if (selectedShape) {
+          setShapes(prev => prev.filter(s => s.id !== selectedShape));
+          setSelectedShape(null);
+        }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
