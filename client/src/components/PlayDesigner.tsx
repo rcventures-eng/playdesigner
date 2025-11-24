@@ -185,7 +185,6 @@ export default function PlayDesigner() {
       }
     } else if (tool === "route") {
       e.stopPropagation();
-      console.log('[DEBUG] Starting route from player', { tool, routeStyle });
       setIsDrawingRoute(true);
       setSelectedPlayer(playerId);
       setSelectedElements({ players: [], routes: [] });
@@ -202,10 +201,8 @@ export default function PlayDesigner() {
           const edgeX = player.x + radius * Math.cos(angle);
           const edgeY = player.y + radius * Math.sin(angle);
           setCurrentRoutePoints([{ x: edgeX, y: edgeY }]);
-          console.log('[DEBUG] Set initial route point', { edgeX, edgeY });
           
           if (routeStyle === "straight") {
-            console.log('[DEBUG] Setting isDraggingStraightRoute = true');
             setIsDraggingStraightRoute(true);
           }
         } else {
@@ -256,7 +253,6 @@ export default function PlayDesigner() {
       if (rect) {
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-        console.log('[DEBUG] Updating straight route endpoint', { x, y, points: currentRoutePoints.length });
         setCurrentRoutePoints([currentRoutePoints[0], { x, y }]);
       }
     }
@@ -288,12 +284,10 @@ export default function PlayDesigner() {
   };
 
   const handleCanvasMouseUp = () => {
-    console.log('[DEBUG] handleCanvasMouseUp called', { isDraggingStraightRoute, currentRoutePoints: currentRoutePoints.length, isDrawingRoute });
     setIsDragging(false);
     setDraggingRoutePoint(null);
     
     if (isDraggingStraightRoute && currentRoutePoints.length === 2) {
-      console.log('[DEBUG] Finishing straight route');
       finishRoute();
       setIsDraggingStraightRoute(false);
       return;
@@ -359,6 +353,10 @@ export default function PlayDesigner() {
   };
 
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('[data-testid^="player-"]')) {
+      return;
+    }
+    
     if (tool === "select") {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (rect) {
@@ -1104,7 +1102,7 @@ export default function PlayDesigner() {
               onDoubleClick={handleCanvasDoubleClick}
               data-testid="canvas-field"
             >
-              <svg className="absolute inset-0 w-full h-full pointer-events-none">
+              <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }}>
                 {/* 5-yard horizontal lines (thicker) */}
                 {Array.from({ length: 11 }, (_, i) => {
                   const y = 24 + i * 60;
@@ -1171,7 +1169,7 @@ export default function PlayDesigner() {
                 <line x1="24" y1="504" x2="664" y2="504" stroke="white" strokeWidth="6" />
               </svg>
 
-              <svg className="absolute inset-0 w-full h-full" style={{ pointerEvents: "none" }}>
+              <svg className="absolute inset-0 w-full h-full" style={{ pointerEvents: "none", zIndex: 2 }}>
                 <defs>
                   <marker id="arrowhead-primary" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
                     <polygon points="0 0, 8 3, 0 6" fill="#ef4444" />
@@ -1301,6 +1299,8 @@ export default function PlayDesigner() {
                     top: player.y - 12,
                     width: 24,
                     height: 24,
+                    zIndex: 10,
+                    pointerEvents: "auto",
                   }}
                   onMouseDown={(e) => handlePlayerMouseDown(e, player.id)}
                   onDoubleClick={(e) => handlePlayerDoubleClick(e, player.id)}
