@@ -1068,8 +1068,8 @@ export default function PlayDesigner() {
                   data-testid={`player-${player.id}`}
                 >
                   <div
-                    className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold ${
-                      selectedPlayer === player.id ? "ring-4 ring-cyan-400" : ""
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs ${
+                      selectedPlayer === player.id ? "ring-2 ring-cyan-400" : ""
                     }`}
                     style={{ backgroundColor: player.color }}
                   >
@@ -1084,11 +1084,11 @@ export default function PlayDesigner() {
                         }}
                         autoFocus
                         maxLength={2}
-                        className="w-full h-full bg-transparent text-center text-white font-bold text-lg outline-none uppercase"
+                        className="w-full h-full bg-transparent text-center text-white font-bold text-xs outline-none uppercase"
                         data-testid={`input-label-${player.id}`}
                       />
                     ) : (
-                      <span className="text-lg">{player.label || ""}</span>
+                      <span className="text-xs">{player.label || ""}</span>
                     )}
                   </div>
                 </div>
