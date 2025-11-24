@@ -1,0 +1,45 @@
+Here is a prompt structured specifically to get a developer-focused LLM (like Cursor, ChatGPT, or the Replit AI) to build exactly what you want. It breaks down the "feel" into technical logic.
+
+The Prompt
+
+Context: I am building a sports playbook application (e.g., American Football) using [Insert your tech stack, e.g., React and HTML5 Canvas / KonvaJS / SVG]. I need to implement two specific route-drawing tools for the players.
+
+The Core Requirement: Both tools must operate on a single fluid motion: MouseDown (start) → MouseMove (draw) → MouseUp (finish).
+
+Do not give me a "connect-the-dots" tool where I have to click for every segment.
+
+Do not require a double-click to end the line.
+
+The arrowhead should automatically render at the end of the path when MouseUp fires.
+
+I need you to implement the logic for these two specific input modes:
+
+1. The "Smart Angular" Mode (Straight Lines with Auto-Breaks) This tool creates a polyline (straight segments) but is controlled by a continuous drag.
+
+Behavior: As the user drags, the line should extend straight from the last point.
+
+The "Break" Logic: You need to implement a threshold detection. If the user changes their dragging direction significantly (e.g., a sharp 90-degree turn) while still holding the mouse down, the code should automatically "drop" a vertex at the corner and start a new straight segment following the mouse.
+
+UX Feel: It should feel like drawing with a ruler that automatically snaps a corner when I intentionally change direction, allowing me to draw a "post pattern" (straight up, then break inside) in one gesture.
+
+2. The "Freehand" Mode (Curved/Squiggle) This acts like a standard pencil tool.
+
+Behavior: Capture the mouse coordinates at a high sampling rate during the MouseMove event.
+
+Smoothing: Apply a basic smoothing algorithm (like Catmull-Rom splines or Bezier curves) so the line looks organic but not jagged/pixelated.
+
+Technical Constraints:
+
+Please provide the event handler logic for onMouseDown, onMouseMove, and onMouseUp.
+
+Focus heavily on the logic for the Angular Mode to distinguish between a "shaky hand" (ignore) and a "deliberate directional change" (create vertex).
+
+How to use this:
+
+Copy the text above.
+
+Fill in the brackets [ ... ] with your actual tech stack (e.g., "JavaScript and HTML Canvas" or "React and SVG").
+
+Paste it into your AI coding assistant.
+
+This prompt works because it translates "I want to break it easily" into "threshold detection" and "vertex dropping," which are the specific algorithmic concepts the AI needs to write the code.
