@@ -85,6 +85,7 @@ export default function PlayDesigner() {
   const [selectedElements, setSelectedElements] = useState<{ players: string[]; routes: string[] }>({ players: [], routes: [] });
   const [isDraggingStraightRoute, setIsDraggingStraightRoute] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const currentRoutePointsRef = useRef<{ x: number; y: number }[]>([]);
   const { toast } = useToast();
 
   const offenseColors = ["#22c55e", "#3b82f6", "#ef4444", "#eab308", "#000000", "#f97316", "#6b7280"];
@@ -95,6 +96,7 @@ export default function PlayDesigner() {
   useEffect(() => {
     setIsDrawingRoute(false);
     setCurrentRoutePoints([]);
+    currentRoutePointsRef.current = [];
     setIsDraggingStraightRoute(false);
     setLassoStart(null);
     setLassoEnd(null);
@@ -217,13 +219,17 @@ export default function PlayDesigner() {
           const radius = 12;
           const edgeX = player.x + radius * Math.cos(angle);
           const edgeY = player.y + radius * Math.sin(angle);
-          setCurrentRoutePoints([{ x: edgeX, y: edgeY }]);
+          const initialPoint = { x: edgeX, y: edgeY };
+          setCurrentRoutePoints([initialPoint]);
+          currentRoutePointsRef.current = [initialPoint];
           
           if (routeStyle === "straight") {
             setIsDraggingStraightRoute(true);
           }
         } else {
-          setCurrentRoutePoints([{ x: player.x, y: player.y }]);
+          const initialPoint = { x: player.x, y: player.y };
+          setCurrentRoutePoints([initialPoint]);
+          currentRoutePointsRef.current = [initialPoint];
         }
       }
     }
@@ -265,12 +271,14 @@ export default function PlayDesigner() {
       }
     }
     
-    if (tool === "route" && isDraggingStraightRoute && currentRoutePoints.length >= 1) {
+    if (tool === "route" && isDraggingStraightRoute && currentRoutePointsRef.current.length >= 1) {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (rect) {
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-        setCurrentRoutePoints([currentRoutePoints[0], { x, y }]);
+        const newPoints = [currentRoutePointsRef.current[0], { x, y }];
+        setCurrentRoutePoints(newPoints);
+        currentRoutePointsRef.current = newPoints;
       }
     }
     
@@ -304,7 +312,7 @@ export default function PlayDesigner() {
     setIsDragging(false);
     setDraggingRoutePoint(null);
     
-    if (tool === "route" && isDraggingStraightRoute && currentRoutePoints.length === 2) {
+    if (tool === "route" && isDraggingStraightRoute && currentRoutePointsRef.current.length >= 2) {
       finishRoute();
       setIsDraggingStraightRoute(false);
       return;
@@ -344,7 +352,7 @@ export default function PlayDesigner() {
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
         
-        if (currentRoutePoints.length === 1 && selectedPlayer) {
+        if (currentRoutePointsRef.current.length === 1 && selectedPlayer) {
           const player = players.find(p => p.id === selectedPlayer);
           if (player) {
             const dx = x - player.x;
@@ -353,12 +361,16 @@ export default function PlayDesigner() {
             const radius = 12;
             const edgeX = player.x + radius * Math.cos(angle);
             const edgeY = player.y + radius * Math.sin(angle);
-            setCurrentRoutePoints([{ x: edgeX, y: edgeY }, { x, y }]);
+            const newPoints = [{ x: edgeX, y: edgeY }, { x, y }];
+            setCurrentRoutePoints(newPoints);
+            currentRoutePointsRef.current = newPoints;
             return;
           }
         }
         
-        setCurrentRoutePoints([...currentRoutePoints, { x, y }]);
+        const newPoints = [...currentRoutePointsRef.current, { x, y }];
+        setCurrentRoutePoints(newPoints);
+        currentRoutePointsRef.current = newPoints;
       }
     }
   };
@@ -432,20 +444,21 @@ export default function PlayDesigner() {
   };
 
   const finishRoute = () => {
-    if (isDrawingRoute && selectedPlayer && currentRoutePoints.length > 1) {
+    if (isDrawingRoute && selectedPlayer && currentRoutePointsRef.current.length >= 2) {
       const newRoute: Route = {
         id: `route-${Date.now()}`,
         playerId: selectedPlayer,
-        points: currentRoutePoints,
+        points: currentRoutePointsRef.current.map(p => ({ ...p })),
         type: routeType,
         style: routeStyle,
         isMotion: isMotion,
         priority: routeType === "secondary" ? 2 : undefined,
       };
-      setRoutes([...routes, newRoute]);
+      setRoutes(prev => [...prev, newRoute]);
     }
     setIsDrawingRoute(false);
     setCurrentRoutePoints([]);
+    currentRoutePointsRef.current = [];
     setSelectedElements({ players: [], routes: [] });
     setIsDraggingStraightRoute(false);
   };
@@ -1221,7 +1234,7 @@ export default function PlayDesigner() {
                       strokeWidth="3.6"
                       fill="none"
                       strokeDasharray={route.isMotion ? "5,5" : "none"}
-                      {...(route.isMotion ? {} : { markerEnd: `url(#arrowhead-${route.type})` })}
+                      markerEnd={route.isMotion ? undefined : `url(#arrowhead-${route.type})`}
                       onMouseDown={(e) => {
                         e.stopPropagation();
                       }}
@@ -1287,7 +1300,7 @@ export default function PlayDesigner() {
                       strokeWidth="3.6"
                       fill="none"
                       strokeDasharray={isMotion ? "5,5" : "none"}
-                      {...(isMotion ? {} : { markerEnd: `url(#arrowhead-${routeType})` })}
+                      markerEnd={isMotion ? undefined : `url(#arrowhead-${routeType})`}
                       opacity="0.5"
                     />
                   </g>
