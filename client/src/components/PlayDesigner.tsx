@@ -184,6 +184,39 @@ export default function PlayDesigner() {
     }
   };
 
+  const calculateAngleDifference = (p1: {x: number, y: number}, p2: {x: number, y: number}, p3: {x: number, y: number}) => {
+    const v1 = { x: p2.x - p1.x, y: p2.y - p1.y };
+    const v2 = { x: p3.x - p2.x, y: p3.y - p2.y };
+    
+    const angle1 = Math.atan2(v1.y, v1.x);
+    const angle2 = Math.atan2(v2.y, v2.x);
+    
+    let diff = Math.abs(angle2 - angle1);
+    if (diff > Math.PI) diff = 2 * Math.PI - diff;
+    
+    return diff * (180 / Math.PI);
+  };
+
+  const simplifyPoints = (points: {x: number, y: number}[], tolerance: number = 3): {x: number, y: number}[] => {
+    if (points.length <= 2) return points;
+    
+    const result: {x: number, y: number}[] = [points[0]];
+    
+    for (let i = 1; i < points.length - 1; i++) {
+      const dist = Math.sqrt(
+        Math.pow(points[i].x - result[result.length - 1].x, 2) + 
+        Math.pow(points[i].y - result[result.length - 1].y, 2)
+      );
+      
+      if (dist > tolerance) {
+        result.push(points[i]);
+      }
+    }
+    
+    result.push(points[points.length - 1]);
+    return result;
+  };
+
   const handlePlayerMouseDown = (e: React.MouseEvent, playerId: string) => {
     if (tool === "select") {
       e.stopPropagation();
@@ -205,32 +238,14 @@ export default function PlayDesigner() {
     } else if (tool === "route") {
       e.stopPropagation();
       setIsDrawingRoute(true);
+      setIsDraggingStraightRoute(true);
       setSelectedPlayer(playerId);
       setSelectedElements({ players: [], routes: [] });
       const player = players.find(p => p.id === playerId);
       if (player) {
-        const rect = canvasRef.current?.getBoundingClientRect();
-        if (rect) {
-          const clickX = e.clientX - rect.left;
-          const clickY = e.clientY - rect.top;
-          const dx = clickX - player.x;
-          const dy = clickY - player.y;
-          const angle = Math.atan2(dy, dx);
-          const radius = 12;
-          const edgeX = player.x + radius * Math.cos(angle);
-          const edgeY = player.y + radius * Math.sin(angle);
-          const initialPoint = { x: edgeX, y: edgeY };
-          setCurrentRoutePoints([initialPoint]);
-          currentRoutePointsRef.current = [initialPoint];
-          
-          if (routeStyle === "straight") {
-            setIsDraggingStraightRoute(true);
-          }
-        } else {
-          const initialPoint = { x: player.x, y: player.y };
-          setCurrentRoutePoints([initialPoint]);
-          currentRoutePointsRef.current = [initialPoint];
-        }
+        const initialPoint = { x: player.x, y: player.y };
+        setCurrentRoutePoints([initialPoint]);
+        currentRoutePointsRef.current = [initialPoint];
       }
     }
   };
@@ -260,7 +275,7 @@ export default function PlayDesigner() {
   };
 
   const handleCanvasMouseMove = (e: React.MouseEvent) => {
-    if (isDragging && selectedPlayer) {
+    if (isDragging && selectedPlayer && tool === "select") {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (rect) {
         const newX = e.clientX - rect.left - dragOffset.x;
@@ -271,14 +286,64 @@ export default function PlayDesigner() {
       }
     }
     
-    if (tool === "route" && isDraggingStraightRoute && currentRoutePointsRef.current.length >= 1) {
+    if (tool === "route" && isDraggingStraightRoute && isDrawingRoute && currentRoutePointsRef.current.length >= 1) {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (rect) {
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-        const newPoints = [currentRoutePointsRef.current[0], { x, y }];
-        setCurrentRoutePoints(newPoints);
-        currentRoutePointsRef.current = newPoints;
+        const currentPoint = { x, y };
+        
+        if (routeStyle === "straight") {
+          const points = currentRoutePointsRef.current;
+          const ANGLE_THRESHOLD = 50;
+          const MIN_SEGMENT_LENGTH = 20;
+          
+          if (points.length === 1) {
+            const newPoints = [points[0], currentPoint];
+            setCurrentRoutePoints(newPoints);
+            currentRoutePointsRef.current = newPoints;
+          } else if (points.length >= 2) {
+            const lastVertex = points[points.length - 2];
+            const lastPoint = points[points.length - 1];
+            
+            const segmentLength = Math.sqrt(
+              Math.pow(currentPoint.x - lastVertex.x, 2) + 
+              Math.pow(currentPoint.y - lastVertex.y, 2)
+            );
+            
+            if (segmentLength > MIN_SEGMENT_LENGTH && points.length >= 2) {
+              const angleDiff = calculateAngleDifference(lastVertex, lastPoint, currentPoint);
+              
+              if (angleDiff > ANGLE_THRESHOLD) {
+                const newPoints = [...points.slice(0, -1), lastPoint, currentPoint];
+                setCurrentRoutePoints(newPoints);
+                currentRoutePointsRef.current = newPoints;
+              } else {
+                const newPoints = [...points.slice(0, -1), currentPoint];
+                setCurrentRoutePoints(newPoints);
+                currentRoutePointsRef.current = newPoints;
+              }
+            } else {
+              const newPoints = [...points.slice(0, -1), currentPoint];
+              setCurrentRoutePoints(newPoints);
+              currentRoutePointsRef.current = newPoints;
+            }
+          }
+        } else if (routeStyle === "curved") {
+          const points = currentRoutePointsRef.current;
+          const lastPoint = points[points.length - 1];
+          
+          const dist = Math.sqrt(
+            Math.pow(currentPoint.x - lastPoint.x, 2) + 
+            Math.pow(currentPoint.y - lastPoint.y, 2)
+          );
+          
+          if (dist > 2) {
+            const newPoints = [...points, currentPoint];
+            setCurrentRoutePoints(newPoints);
+            currentRoutePointsRef.current = newPoints;
+          }
+        }
       }
     }
     
@@ -309,14 +374,16 @@ export default function PlayDesigner() {
   };
 
   const handleCanvasMouseUp = () => {
-    setIsDragging(false);
-    setDraggingRoutePoint(null);
-    
-    if (tool === "route" && isDraggingStraightRoute && currentRoutePointsRef.current.length >= 2) {
+    if (tool === "route" && isDraggingStraightRoute && isDrawingRoute && currentRoutePointsRef.current.length >= 2) {
       finishRoute();
       setIsDraggingStraightRoute(false);
+      setIsDragging(false);
+      setDraggingRoutePoint(null);
       return;
     }
+    
+    setIsDragging(false);
+    setDraggingRoutePoint(null);
     
     if (tool === "select" && lassoStart) {
       if (lassoEnd) {
@@ -346,39 +413,9 @@ export default function PlayDesigner() {
   };
 
   const handleCanvasClick = (e: React.MouseEvent) => {
-    if (tool === "route" && isDrawingRoute && routeStyle === "curved") {
-      const rect = canvasRef.current?.getBoundingClientRect();
-      if (rect) {
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        
-        if (currentRoutePointsRef.current.length === 1 && selectedPlayer) {
-          const player = players.find(p => p.id === selectedPlayer);
-          if (player) {
-            const dx = x - player.x;
-            const dy = y - player.y;
-            const angle = Math.atan2(dy, dx);
-            const radius = 12;
-            const edgeX = player.x + radius * Math.cos(angle);
-            const edgeY = player.y + radius * Math.sin(angle);
-            const newPoints = [{ x: edgeX, y: edgeY }, { x, y }];
-            setCurrentRoutePoints(newPoints);
-            currentRoutePointsRef.current = newPoints;
-            return;
-          }
-        }
-        
-        const newPoints = [...currentRoutePointsRef.current, { x, y }];
-        setCurrentRoutePoints(newPoints);
-        currentRoutePointsRef.current = newPoints;
-      }
-    }
   };
 
   const handleCanvasDoubleClick = (e: React.MouseEvent) => {
-    if (tool === "route" && isDrawingRoute && routeStyle === "curved") {
-      finishRoute();
-    }
   };
 
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
@@ -445,10 +482,16 @@ export default function PlayDesigner() {
 
   const finishRoute = () => {
     if (isDrawingRoute && selectedPlayer && currentRoutePointsRef.current.length >= 2) {
+      let finalPoints = currentRoutePointsRef.current.map(p => ({ ...p }));
+      
+      if (routeStyle === "curved") {
+        finalPoints = simplifyPoints(finalPoints, 5);
+      }
+      
       const newRoute: Route = {
         id: `route-${Date.now()}`,
         playerId: selectedPlayer,
-        points: currentRoutePointsRef.current.map(p => ({ ...p })),
+        points: finalPoints,
         type: routeType,
         style: routeStyle,
         isMotion: isMotion,
