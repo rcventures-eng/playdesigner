@@ -69,8 +69,8 @@ export default function PlayDesigner() {
     concept: "",
     personnel: "",
   });
-  const [exportWidth, setExportWidth] = useState("392");
-  const [exportHeight, setExportHeight] = useState("694");
+  const [exportWidth, setExportWidth] = useState("600");
+  const [exportHeight, setExportHeight] = useState("500");
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isDrawingRoute, setIsDrawingRoute] = useState(false);
@@ -111,8 +111,8 @@ export default function PlayDesigner() {
   const addPlayer = (color: string) => {
     const newPlayer: Player = {
       id: `player-${Date.now()}`,
-      x: 200,
-      y: 400,
+      x: 300,
+      y: 160,
       color,
     };
     setPlayers([...players, newPlayer]);
@@ -194,7 +194,7 @@ export default function PlayDesigner() {
         const newX = e.clientX - rect.left - dragOffset.x;
         const newY = e.clientY - rect.top - dragOffset.y;
         setPlayers(players.map(p =>
-          p.id === selectedPlayer ? { ...p, x: Math.max(24, Math.min(376, newX)), y: Math.max(24, Math.min(776, newY)) } : p
+          p.id === selectedPlayer ? { ...p, x: Math.max(24, Math.min(576, newX)), y: Math.max(24, Math.min(476, newY)) } : p
         ));
       }
     }
@@ -274,7 +274,7 @@ export default function PlayDesigner() {
         points: currentRoutePoints,
         type: routeType,
         style: routeStyle,
-        isMotion: isMotion && currentRoutePoints[0].y > 400,
+        isMotion: isMotion,
         priority: routeType === "secondary" ? 2 : undefined,
       };
       setRoutes([...routes, newRoute]);
@@ -291,7 +291,7 @@ export default function PlayDesigner() {
         width: parseInt(exportWidth),
         height: parseInt(exportHeight),
         style: {
-          transform: `scale(${parseInt(exportWidth) / 400})`,
+          transform: `scale(${parseInt(exportWidth) / 600})`,
           transformOrigin: 'top left',
         },
       });
@@ -495,7 +495,7 @@ export default function PlayDesigner() {
       )}
 
       <div className="flex flex-1 overflow-hidden">
-        <div className="w-80 border-r border-border bg-card flex flex-col overflow-hidden">
+        <div className="w-96 border-r border-border bg-card flex flex-col overflow-hidden">
           <div className="p-4 border-b border-border">
             <h1 className="text-xl font-bold text-foreground mb-4">Play Designer</h1>
             <Tabs value={playType} onValueChange={(v) => setPlayType(v as any)} className="w-full">
@@ -901,7 +901,7 @@ export default function PlayDesigner() {
             <div
               ref={canvasRef}
               className="relative bg-gradient-to-r from-green-700 to-green-600 rounded cursor-crosshair"
-              style={{ width: 400, height: 800 }}
+              style={{ width: 600, height: 500 }}
               onMouseMove={(e) => {
                 handleCanvasMouseMove(e);
                 handleShapeMouseMove(e);
@@ -917,13 +917,14 @@ export default function PlayDesigner() {
             >
               <svg className="absolute inset-0 w-full h-full pointer-events-none">
                 <defs>
-                  <pattern id="hashmarks" x="0" y="0" width="40" height="80" patternUnits="userSpaceOnUse">
-                    <line x1="0" y1="40" x2="40" y2="40" stroke="white" strokeWidth="1" opacity="0.3" />
+                  <pattern id="yardlines" x="0" y="0" width="600" height="50" patternUnits="userSpaceOnUse">
+                    <line x1="0" y1="0" x2="600" y2="0" stroke="white" strokeWidth="1" opacity="0.2" />
                   </pattern>
                 </defs>
-                <rect width="400" height="800" fill="url(#hashmarks)" />
-                <line x1="200" y1="0" x2="200" y2="800" stroke="white" strokeWidth="3" />
-                <text x="195" y="400" fill="white" fontSize="12" textAnchor="end" opacity="0.5" transform="rotate(-90 195 400)">Line of Scrimmage</text>
+                <rect width="600" height="500" fill="url(#yardlines)" />
+                <line x1="180" y1="0" x2="180" y2="500" stroke="white" strokeWidth="2" strokeDasharray="8,12" opacity="0.5" />
+                <line x1="420" y1="0" x2="420" y2="500" stroke="white" strokeWidth="2" strokeDasharray="8,12" opacity="0.5" />
+                <line x1="0" y1="160" x2="600" y2="160" stroke="white" strokeWidth="4" />
               </svg>
 
               <svg className="absolute inset-0 w-full h-full">
@@ -1037,7 +1038,7 @@ export default function PlayDesigner() {
 
               <div
                 className="absolute"
-                style={{ left: 185, top: 385, width: 30, height: 15 }}
+                style={{ left: 285, top: 152.5, width: 30, height: 15 }}
                 data-testid="football"
               >
                 <svg width="30" height="15" viewBox="0 0 30 15">
@@ -1053,7 +1054,7 @@ export default function PlayDesigner() {
           </div>
         </div>
 
-        <div className="w-64 border-l border-border bg-card p-4">
+        <div className="w-80 border-l border-border bg-card p-4">
           <h3 className="font-semibold text-sm text-foreground mb-3">Quick Tips</h3>
           <div className="space-y-2 text-xs text-muted-foreground">
             <p>• Click player circles to select and drag them</p>
