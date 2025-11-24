@@ -36,20 +36,22 @@ Preferred communication style: Simple, everyday language.
 
 **HTML Canvas**: The play designer uses HTML5 Canvas and SVG (implementation in `PlayDesigner.tsx`) for rendering the football field, player positions, routes, and shapes.
 
-**Field Layout**: Horizontal field orientation (600×500px) showing proper football field proportions:
-- Line of scrimmage: Horizontal white line at y=160 (approximately 8 yards from top)
-- Field area: ~8 yards (80px) behind line of scrimmage, ~25 yards (340px) ahead for offensive target area
-- Hash marks: Two vertical dashed lines at x=180 and x=420 representing inner hash marks
-- Yard lines: Horizontal pattern every 50px with white lines at 20% opacity
-- Football: Centered at line of scrimmage (position: left 285, top 152.5)
+**Field Layout**: Vertical field orientation (640×660px) showing proper football field proportions:
+- Line of scrimmage: Horizontal white line at y=540 (8 yards from bottom, 6px stroke)
+- Field area: ~8 yards (96px) behind line of scrimmage, ~42 yards (504px) ahead for offensive target area
+- Hash marks: Two sets of short horizontal marks in the middle at x=258-270 and x=370-382 (20 yards from each sideline, NCAA style) running vertically down field
+- Yard lines: Horizontal lines every 60px (5-yard increments) with 4px stroke at 30% opacity
+- Edge yard markers: Short horizontal tick marks on left (x=24-36) and right (x=604-616) edges marking each yard (12px spacing) - integral for route distance measurement
+- Football: Centered at line of scrimmage (position: left 305, top 532.5)
+- Scale: 12 pixels per yard, 24px padding on all sides
 
-**Rationale**: Horizontal layout with proper proportions provides a realistic view of the play area coaches are familiar with. The field shows the most tactically relevant area for play design.
+**Rationale**: Vertical layout with proper proportions provides a realistic view of the play area coaches are familiar with. The field shows the most tactically relevant area for play design with the line of scrimmage at the bottom and routes extending upward.
 
 **Export Functionality**: html-to-image library (`toPng` function) for converting canvas to downloadable PNG images at customizable dimensions.
 
-**Rationale**: Allows coaches to export plays at custom dimensions (default 600×500, or custom sizes) for printing, presentations, or digital playbooks.
+**Rationale**: Allows coaches to export plays at custom dimensions (default 640×660, or custom sizes) for printing, presentations, or digital playbooks.
 
-**Interaction Model**: Drag-and-drop for player positioning (bounds: x 24-576, y 24-476), click-to-draw for routes, and property panels for metadata entry.
+**Interaction Model**: Drag-and-drop for player positioning (bounds: x 48-592, y 48-612), click-to-draw for routes, and property panels for metadata entry.
 
 **Rationale**: Follows design guidelines emphasizing ease of use and touch-friendly interactions for mobile/tablet support. Drag bounds ensure players stay within the visible field area.
 

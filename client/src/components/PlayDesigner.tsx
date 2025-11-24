@@ -69,8 +69,8 @@ export default function PlayDesigner() {
     concept: "",
     personnel: "",
   });
-  const [exportWidth, setExportWidth] = useState("600");
-  const [exportHeight, setExportHeight] = useState("500");
+  const [exportWidth, setExportWidth] = useState("640");
+  const [exportHeight, setExportHeight] = useState("660");
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isDrawingRoute, setIsDrawingRoute] = useState(false);
@@ -111,8 +111,8 @@ export default function PlayDesigner() {
   const addPlayer = (color: string) => {
     const newPlayer: Player = {
       id: `player-${Date.now()}`,
-      x: 300,
-      y: 160,
+      x: 320,
+      y: 540,
       color,
     };
     setPlayers([...players, newPlayer]);
@@ -194,7 +194,7 @@ export default function PlayDesigner() {
         const newX = e.clientX - rect.left - dragOffset.x;
         const newY = e.clientY - rect.top - dragOffset.y;
         setPlayers(players.map(p =>
-          p.id === selectedPlayer ? { ...p, x: Math.max(24, Math.min(576, newX)), y: Math.max(24, Math.min(476, newY)) } : p
+          p.id === selectedPlayer ? { ...p, x: Math.max(48, Math.min(592, newX)), y: Math.max(48, Math.min(612, newY)) } : p
         ));
       }
     }
@@ -291,7 +291,7 @@ export default function PlayDesigner() {
         width: parseInt(exportWidth),
         height: parseInt(exportHeight),
         style: {
-          transform: `scale(${parseInt(exportWidth) / 600})`,
+          transform: `scale(${parseInt(exportWidth) / 640})`,
           transformOrigin: 'top left',
         },
         skipFonts: true,
@@ -899,12 +899,12 @@ export default function PlayDesigner() {
           </div>
         </div>
 
-        <div className="flex-1 bg-muted/30 p-8 overflow-auto flex items-center justify-center">
+        <div className="flex-1 bg-muted/30 p-4 overflow-auto flex items-center justify-center">
           <div className="bg-background rounded-lg shadow-lg p-4">
             <div
               ref={canvasRef}
               className="relative bg-gradient-to-r from-green-700 to-green-600 rounded cursor-crosshair"
-              style={{ width: 600, height: 500 }}
+              style={{ width: 640, height: 660 }}
               onMouseMove={(e) => {
                 handleCanvasMouseMove(e);
                 handleShapeMouseMove(e);
@@ -919,15 +919,70 @@ export default function PlayDesigner() {
               data-testid="canvas-field"
             >
               <svg className="absolute inset-0 w-full h-full pointer-events-none">
-                <defs>
-                  <pattern id="yardlines" x="0" y="0" width="600" height="50" patternUnits="userSpaceOnUse">
-                    <line x1="0" y1="0" x2="600" y2="0" stroke="white" strokeWidth="1" opacity="0.2" />
-                  </pattern>
-                </defs>
-                <rect width="600" height="500" fill="url(#yardlines)" />
-                <line x1="180" y1="0" x2="180" y2="500" stroke="white" strokeWidth="2" strokeDasharray="8,12" opacity="0.5" />
-                <line x1="420" y1="0" x2="420" y2="500" stroke="white" strokeWidth="2" strokeDasharray="8,12" opacity="0.5" />
-                <line x1="0" y1="160" x2="600" y2="160" stroke="white" strokeWidth="4" />
+                {/* 5-yard horizontal lines (thicker) */}
+                {Array.from({ length: 11 }, (_, i) => {
+                  const y = 24 + i * 60;
+                  return (
+                    <line
+                      key={`yard-${i}`}
+                      x1="24"
+                      y1={y}
+                      x2="616"
+                      y2={y}
+                      stroke="white"
+                      strokeWidth="4"
+                      opacity="0.3"
+                    />
+                  );
+                })}
+                
+                {/* 1-yard tick marks on LEFT edge */}
+                {Array.from({ length: 51 }, (_, i) => {
+                  const y = 24 + i * 12;
+                  return (
+                    <line
+                      key={`left-tick-${i}`}
+                      x1="24"
+                      y1={y}
+                      x2="36"
+                      y2={y}
+                      stroke="white"
+                      strokeWidth="2"
+                      opacity="0.8"
+                    />
+                  );
+                })}
+                
+                {/* 1-yard tick marks on RIGHT edge */}
+                {Array.from({ length: 51 }, (_, i) => {
+                  const y = 24 + i * 12;
+                  return (
+                    <line
+                      key={`right-tick-${i}`}
+                      x1="604"
+                      y1={y}
+                      x2="616"
+                      y2={y}
+                      stroke="white"
+                      strokeWidth="2"
+                      opacity="0.8"
+                    />
+                  );
+                })}
+                
+                {/* Hash marks in middle (NCAA style - 20 yards from each sideline) */}
+                {Array.from({ length: 51 }, (_, i) => {
+                  const y = 24 + i * 12;
+                  return (
+                    <g key={`hash-${i}`}>
+                      <line x1="258" y1={y} x2="270" y2={y} stroke="white" strokeWidth="2" opacity="0.6" />
+                      <line x1="370" y1={y} x2="382" y2={y} stroke="white" strokeWidth="2" opacity="0.6" />
+                    </g>
+                  );
+                })}
+                
+                {/* Line of scrimmage (8 yards from bottom = y=540) */}
+                <line x1="24" y1="540" x2="616" y2="540" stroke="white" strokeWidth="6" />
               </svg>
 
               <svg className="absolute inset-0 w-full h-full">
@@ -1041,7 +1096,7 @@ export default function PlayDesigner() {
 
               <div
                 className="absolute"
-                style={{ left: 285, top: 152.5, width: 30, height: 15 }}
+                style={{ left: 305, top: 532.5, width: 30, height: 15 }}
                 data-testid="football"
               >
                 <svg width="30" height="15" viewBox="0 0 30 15">
