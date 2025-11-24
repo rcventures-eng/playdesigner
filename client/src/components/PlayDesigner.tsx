@@ -1250,8 +1250,8 @@ export default function PlayDesigner() {
                   <marker id="arrowhead-decision" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
                     <polygon points="0 0, 8 3, 0 6" fill="#1d4ed8" />
                   </marker>
-                  <marker id="arrowhead-blocking" markerWidth="8" markerHeight="8" refX="1" refY="4" orient="auto">
-                    <line x1="1" y1="0" x2="1" y2="8" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" />
+                  <marker id="arrowhead-blocking" markerWidth="4" markerHeight="4" refX="1" refY="2" orient="auto">
+                    <line x1="1" y1="0" x2="1" y2="4" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" />
                   </marker>
                   <marker id="arrowhead-secondary" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
                     <polygon points="0 0, 8 3, 0 6" fill="#000000" />
