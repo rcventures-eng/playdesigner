@@ -99,7 +99,7 @@ export default function PlayDesigner() {
   const currentRoutePointsRef = useRef<{ x: number; y: number }[]>([]);
   const { toast } = useToast();
 
-  const offenseColors = ["#22c55e", "#1d4ed8", "#ef4444", "#eab308", "#000000", "#f97316", "#6b7280"];
+  const offenseColors = ["#1a6b3d", "#1d4ed8", "#ef4444", "#eab308", "#000000", "#f97316", "#6b7280"];
   const defenseColors = ["#92400e", "#db2777", "#9333ea"];
   const shapeColors = ["#ec4899", "#1d4ed8", "#86efac"];
   const colors = playType === "offense" ? offenseColors : defenseColors;
@@ -116,7 +116,7 @@ export default function PlayDesigner() {
   // Preset positions for offensive players based on standard formation
   // Field: 688x660, padding 24px, line of scrimmage at y=504
   const offensePositions: Record<string, { x: number; y: number }> = {
-    "#22c55e": { x: 344, y: 580 },  // Green - Running back (center, 6 yards back)
+    "#1a6b3d": { x: 344, y: 580 },  // Forest Green - Running back (center, 6 yards back)
     "#1d4ed8": { x: 80, y: 504 },   // Blue - Split end (far left on line)
     "#ef4444": { x: 608, y: 504 },  // Red - Right receiver (far right on line)
     "#eab308": { x: 240, y: 504 },  // Yellow - Left guard (left of center on line)
