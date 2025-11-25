@@ -36,37 +36,51 @@ Preferred communication style: Simple, everyday language.
 
 **HTML Canvas**: The play designer uses HTML5 Canvas and SVG (implementation in `PlayDesigner.tsx`) for rendering the football field, player positions, routes, and shapes.
 
-**Field Layout**: Vertical field orientation (688×660px) showing proper football field proportions:
-- Line of scrimmage: Horizontal white line at y=504 (9 yards from bottom, 6px stroke)
-- Field area: ~9 yards (108px) behind line of scrimmage, ~41 yards (492px) ahead for offensive target area
-- Hash marks: Two sets of short horizontal marks in the middle at x=178-190 and x=498-510 (40 feet / 13.33 yards from each sideline, NCAA style) running vertically down field
+**Field Configuration (FIELD object)**: All field geometry is controlled by a centralized FIELD configuration object in PlayDesigner.tsx:
+- `FIELD.WIDTH` = 694px (native export width)
+- `FIELD.HEIGHT` = 392px (native export height)
+- `FIELD.HEADER_HEIGHT` = 60px (white header for metadata)
+- `FIELD.FIELD_TOP` = 60px (where green field starts)
+- `FIELD.LOS_Y` = 284px (line of scrimmage, 8 yards from bottom)
+- `FIELD.SIDE_PADDING` = 27px
+- `FIELD.BOTTOM_PADDING` = 12px
+- `FIELD.PIXELS_PER_YARD` = 12
+- `FIELD.FIELD_LEFT/RIGHT` = computed getters for field bounds
+- `FIELD.PLAYER_BOUNDS` = computed bounds for player drag limits
+
+**Field Layout**: Vertical field orientation (694×392px) optimized for printing two plays per 8.5×11 page:
+- White header block: 60px at top for metadata badges (Name, Formation, Concept, Personnel)
+- Green field area: 332px height starting at y=60
+- Line of scrimmage: Horizontal white line at y=284 (8 yards from bottom, 6px stroke)
+- Field area: ~8 yards (96px) behind LOS, ~18.7 yards ahead for offensive target area
+- Hash marks: Two sets of short horizontal marks at `FIELD.LEFT_HASH_X` and `FIELD.RIGHT_HASH_X` (NCAA-style)
 - Yard lines: Horizontal lines every 60px (5-yard increments) with 4px stroke at 30% opacity
-- Edge yard markers: Short horizontal tick marks on left (x=24-36) and right (x=652-664) edges marking each yard (12px spacing) - integral for route distance measurement
-- Football: Optional draggable element (10×20px vertical orientation with white center lace line when added)
-- Play-Action marker: When enabled, shows black circle with white "PA" text at football's bottom-right (same size as Primary Route marker)
-- Field width: 53.33 yards (regulation width), Scale: 12 pixels per yard, 24px padding on all sides
+- Edge yard markers: Short tick marks on left/right edges marking each yard (12px spacing)
+- Football: Optional draggable element (10×20px vertical orientation with white center lace line)
+- Play-Action marker: Black circle with white "PA" text at football's bottom-right
+- Scale: 12 pixels per yard, 53.33 yard regulation width
 
 **Motion Routes**: Motion routes (enabled via "Motion (dotted)" checkbox) display with visual split at Line of Scrimmage:
-- Below LOS (y >= 504): Dotted line (strokeDasharray="5,5") - represents pre-snap motion
-- Above LOS (y < 504): Solid line - represents post-snap route
+- Below LOS (y >= FIELD.LOS_Y): Dotted line (strokeDasharray="5,5") - represents pre-snap motion
+- Above LOS (y < FIELD.LOS_Y): Solid line - represents post-snap route
 - Arrow marker only appears when route crosses LOS
 - Helper functions: `splitMotionRouteAtLOS()` calculates intersection point, `getRoutePathForPoints()` generates path for each segment
 
-**Rationale**: Vertical layout with proper proportions provides a realistic view of the play area coaches are familiar with. The field shows the most tactically relevant area for play design with the line of scrimmage at the bottom and routes extending upward.
+**Rationale**: Native 694×392 resolution ensures maximum sharpness when exporting at full size (no upscaling artifacts). The 60px white header separates play metadata from the field area for clean presentation. Downscaling to smaller sizes (e.g., 347×196 for half size) works well with high-quality smoothing.
 
 **Export Functionality**: html-to-image library (`toPng` function) for converting canvas to downloadable PNG images at customizable dimensions. The `generateScaledExport` helper function handles edge-to-edge scaling:
-- First captures the live canvas at full 688×660 size using toPng (preserves all React-rendered SVG content)
+- First captures the live canvas at native 694×392 size using toPng (preserves all React-rendered SVG content)
 - Loads the captured image into an HTMLImageElement
 - Creates an HTML Canvas at target dimensions
 - Sets imageSmoothingEnabled=true and imageSmoothingQuality="high" for best interpolation
 - Draws the captured image stretched to fill the entire target area edge-to-edge
 - Both Download and Copy to Clipboard use this shared helper for consistent output
 
-**Rationale**: Allows coaches to export plays at any custom dimensions (default 688×660, or custom sizes like 694×392 for two-per-page printing) with the canvas stretched to fill the entire export area edge-to-edge. No padding bars - the full field fills the requested dimensions. High-quality smoothing minimizes scaling artifacts.
+**Rationale**: Native 694×392 exports are pixel-perfect (no scaling). Downscaling to smaller sizes (347×196, etc.) preserves quality. Designed for printing two plays per 8.5×11 page.
 
-**Interaction Model**: Drag-and-drop for player positioning (24×24px circles, bounds: x 36-652, y 36-624), click-to-draw for routes, and property panels for metadata entry.
+**Interaction Model**: Drag-and-drop for player positioning (24×24px circles, bounds from FIELD.PLAYER_BOUNDS), click-to-draw for routes, and property panels for metadata entry.
 
-**Rationale**: Follows design guidelines emphasizing ease of use and touch-friendly interactions for mobile/tablet support. Drag bounds ensure players stay within the visible field area.
+**Rationale**: Follows design guidelines emphasizing ease of use and touch-friendly interactions for mobile/tablet support. Drag bounds calculated from FIELD config ensure players stay within the visible field area.
 
 ### Backend Architecture
 
