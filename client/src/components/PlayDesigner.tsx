@@ -691,22 +691,52 @@ export default function PlayDesigner() {
   const generateScaledExport = async (targetWidth: number, targetHeight: number): Promise<string> => {
     if (!canvasRef.current) throw new Error("Canvas not available");
     
-    // Render SVG directly at target dimensions for maximum crispness
-    // html-to-image will re-render the SVG at the target size, not scale a raster image
-    const dataUrl = await toPng(canvasRef.current, {
-      width: targetWidth,
-      height: targetHeight,
-      canvasWidth: targetWidth,
-      canvasHeight: targetHeight,
+    // Path 1: Native size (694x392) - direct capture, pixel-perfect quality
+    const isNativeSize = targetWidth === FIELD.WIDTH && targetHeight === FIELD.HEIGHT;
+    
+    if (isNativeSize) {
+      return await toPng(canvasRef.current, {
+        width: FIELD.WIDTH,
+        height: FIELD.HEIGHT,
+        skipFonts: true,
+        pixelRatio: 1,
+      });
+    }
+    
+    // Path 2: Other sizes - capture at 2x resolution, then downscale for crisp results
+    const highResDataUrl = await toPng(canvasRef.current, {
+      width: FIELD.WIDTH,
+      height: FIELD.HEIGHT,
       skipFonts: true,
-      pixelRatio: 1,
-      style: {
-        transform: `scale(${targetWidth / FIELD.WIDTH})`,
-        transformOrigin: 'top left',
-      }
+      pixelRatio: 2, // Capture at 2x resolution (1388x784)
     });
     
-    return dataUrl;
+    // Downscale the high-res capture to target dimensions
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+        const ctx = canvas.getContext("2d");
+        
+        if (!ctx) {
+          reject(new Error("Could not get canvas context"));
+          return;
+        }
+        
+        // High-quality downscaling
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        
+        // Draw the high-res image scaled down to target size
+        ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+        
+        resolve(canvas.toDataURL("image/png"));
+      };
+      img.onerror = () => reject(new Error("Failed to load image for scaling"));
+      img.src = highResDataUrl;
+    });
   };
 
   const exportAsImage = async () => {
