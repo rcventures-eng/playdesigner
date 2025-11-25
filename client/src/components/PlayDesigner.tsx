@@ -83,6 +83,7 @@ interface HistoryState {
   routes: Route[];
   shapes: Shape[];
   footballs: Football[];
+  metadata: { name: string; formation: string; concept: string; personnel: string };
 }
 
 export default function PlayDesigner() {
@@ -206,7 +207,8 @@ export default function PlayDesigner() {
             players: JSON.parse(JSON.stringify(players)),
             routes: JSON.parse(JSON.stringify(routes)),
             shapes: JSON.parse(JSON.stringify(shapes)),
-            footballs: JSON.parse(JSON.stringify(footballs))
+            footballs: JSON.parse(JSON.stringify(footballs)),
+            metadata: JSON.parse(JSON.stringify(metadata))
           }]);
         }
         
@@ -241,7 +243,7 @@ export default function PlayDesigner() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedPlayer, selectedRoute, selectedShape, selectedFootball, editingPlayer, selectedElements, players, routes, shapes, footballs]);
+  }, [selectedPlayer, selectedRoute, selectedShape, selectedFootball, editingPlayer, selectedElements, players, routes, shapes, footballs, metadata]);
 
   const addPlayer = (color: string) => {
     saveToHistory();
@@ -279,7 +281,8 @@ export default function PlayDesigner() {
       players: JSON.parse(JSON.stringify(players)),
       routes: JSON.parse(JSON.stringify(routes)),
       shapes: JSON.parse(JSON.stringify(shapes)),
-      footballs: JSON.parse(JSON.stringify(footballs))
+      footballs: JSON.parse(JSON.stringify(footballs)),
+      metadata: JSON.parse(JSON.stringify(metadata))
     }]);
   };
 
@@ -290,6 +293,7 @@ export default function PlayDesigner() {
     setRoutes(previousState.routes);
     setShapes(previousState.shapes);
     setFootballs(previousState.footballs);
+    setMetadata(previousState.metadata);
     setHistory(prev => prev.slice(0, -1));
     setSelectedPlayer(null);
     setSelectedRoute(null);
@@ -1194,7 +1198,7 @@ export default function PlayDesigner() {
                   data-testid="button-tool-select"
                   className="justify-start px-2"
                 >
-                  <MoveHorizontal className="h-4 w-4 mr-1" />
+                  <MoveHorizontal className="h-4 w-4 mr-1.5" />
                   Select
                 </Button>
                 <Button
@@ -1204,7 +1208,7 @@ export default function PlayDesigner() {
                   data-testid="button-tool-route"
                   className="justify-start px-2"
                 >
-                  <PenTool className="h-4 w-4 mr-1" />
+                  <PenTool className="h-4 w-4 mr-1.5" />
                   Route
                 </Button>
                 <Button
@@ -1215,7 +1219,7 @@ export default function PlayDesigner() {
                   data-testid="button-tool-undo"
                   className="justify-start px-2"
                 >
-                  <RotateCcw className="h-4 w-4 mr-1" />
+                  <RotateCcw className="h-4 w-4 mr-1.5" />
                   Undo
                 </Button>
                 <Button
