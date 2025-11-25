@@ -649,45 +649,44 @@ export default function PlayDesigner() {
     const CANVAS_WIDTH = 688;
     const CANVAS_HEIGHT = 660;
     
-    const scaleX = targetWidth / CANVAS_WIDTH;
-    const scaleY = targetHeight / CANVAS_HEIGHT;
-    const scale = Math.min(scaleX, scaleY);
+    const fullSizeDataUrl = await toPng(canvasRef.current, {
+      width: CANVAS_WIDTH,
+      height: CANVAS_HEIGHT,
+      skipFonts: true,
+    });
     
-    const scaledWidth = CANVAS_WIDTH * scale;
-    const scaledHeight = CANVAS_HEIGHT * scale;
-    const offsetX = (targetWidth - scaledWidth) / 2;
-    const offsetY = (targetHeight - scaledHeight) / 2;
-    
-    const container = document.createElement("div");
-    container.style.position = "absolute";
-    container.style.left = "-9999px";
-    container.style.top = "-9999px";
-    container.style.width = `${targetWidth}px`;
-    container.style.height = `${targetHeight}px`;
-    container.style.backgroundColor = "#2d5a27";
-    container.style.display = "flex";
-    container.style.alignItems = "center";
-    container.style.justifyContent = "center";
-    container.style.overflow = "hidden";
-    
-    const clonedCanvas = canvasRef.current.cloneNode(true) as HTMLElement;
-    clonedCanvas.style.transform = `scale(${scale})`;
-    clonedCanvas.style.transformOrigin = "center center";
-    clonedCanvas.style.flexShrink = "0";
-    
-    container.appendChild(clonedCanvas);
-    document.body.appendChild(container);
-    
-    try {
-      const dataUrl = await toPng(container, {
-        width: targetWidth,
-        height: targetHeight,
-        skipFonts: true,
-      });
-      return dataUrl;
-    } finally {
-      document.body.removeChild(container);
-    }
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const scaleX = targetWidth / CANVAS_WIDTH;
+        const scaleY = targetHeight / CANVAS_HEIGHT;
+        const scale = Math.min(scaleX, scaleY);
+        
+        const scaledWidth = CANVAS_WIDTH * scale;
+        const scaledHeight = CANVAS_HEIGHT * scale;
+        const offsetX = (targetWidth - scaledWidth) / 2;
+        const offsetY = (targetHeight - scaledHeight) / 2;
+        
+        const canvas = document.createElement("canvas");
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+        const ctx = canvas.getContext("2d");
+        
+        if (!ctx) {
+          reject(new Error("Could not get canvas context"));
+          return;
+        }
+        
+        ctx.fillStyle = "#2d5a27";
+        ctx.fillRect(0, 0, targetWidth, targetHeight);
+        
+        ctx.drawImage(img, offsetX, offsetY, scaledWidth, scaledHeight);
+        
+        resolve(canvas.toDataURL("image/png"));
+      };
+      img.onerror = () => reject(new Error("Failed to load image for scaling"));
+      img.src = fullSizeDataUrl;
+    });
   };
 
   const exportAsImage = async () => {
