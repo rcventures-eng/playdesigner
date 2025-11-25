@@ -46,12 +46,20 @@ interface PlayMetadata {
   personnel: string;
 }
 
+interface HistoryState {
+  players: Player[];
+  routes: Route[];
+  shapes: Shape[];
+  football: { x: number; y: number } | null;
+}
+
 export default function PlayDesigner() {
   const [playType, setPlayType] = useState<"offense" | "defense" | "special">("offense");
   const [players, setPlayers] = useState<Player[]>([]);
   const [routes, setRoutes] = useState<Route[]>([]);
   const [shapes, setShapes] = useState<Shape[]>([]);
   const [football, setFootball] = useState<{ x: number; y: number } | null>(null);
+  const [history, setHistory] = useState<HistoryState[]>([]);
   const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
   const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
   const [selectedShape, setSelectedShape] = useState<string | null>(null);
@@ -116,6 +124,18 @@ export default function PlayDesigner() {
       if (e.key === "Delete" || e.key === "Backspace") {
         if (editingPlayer) return;
         
+        const hasSelection = selectedElements.players.length > 0 || selectedElements.routes.length > 0 ||
+          selectedPlayer || selectedRoute || selectedShape || selectedFootball;
+        
+        if (hasSelection) {
+          setHistory(prev => [...prev, {
+            players: JSON.parse(JSON.stringify(players)),
+            routes: JSON.parse(JSON.stringify(routes)),
+            shapes: JSON.parse(JSON.stringify(shapes)),
+            football: football ? { ...football } : null
+          }]);
+        }
+        
         if (selectedElements.players.length > 0 || selectedElements.routes.length > 0) {
           setPlayers(prev => prev.filter(p => !selectedElements.players.includes(p.id)));
           setRoutes(prev => prev.filter(r => 
@@ -147,9 +167,10 @@ export default function PlayDesigner() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedPlayer, selectedRoute, selectedShape, selectedFootball, editingPlayer, selectedElements]);
+  }, [selectedPlayer, selectedRoute, selectedShape, selectedFootball, editingPlayer, selectedElements, players, routes, shapes, football]);
 
   const addPlayer = (color: string) => {
+    saveToHistory();
     const newPlayer: Player = {
       id: `player-${Date.now()}`,
       x: 344,
@@ -160,11 +181,39 @@ export default function PlayDesigner() {
   };
 
   const addFootball = () => {
+    saveToHistory();
     setFootball({ x: 344, y: 504 });
     setTool("select");
   };
 
+  const saveToHistory = () => {
+    setHistory(prev => [...prev, {
+      players: JSON.parse(JSON.stringify(players)),
+      routes: JSON.parse(JSON.stringify(routes)),
+      shapes: JSON.parse(JSON.stringify(shapes)),
+      football: football ? { ...football } : null
+    }]);
+  };
+
+  const undo = () => {
+    if (history.length === 0) return;
+    const previousState = history[history.length - 1];
+    setPlayers(previousState.players);
+    setRoutes(previousState.routes);
+    setShapes(previousState.shapes);
+    setFootball(previousState.football);
+    setHistory(prev => prev.slice(0, -1));
+    setSelectedPlayer(null);
+    setSelectedRoute(null);
+    setSelectedShape(null);
+    setSelectedFootball(false);
+    setSelectedElements({ players: [], routes: [] });
+  };
+
   const deleteSelected = () => {
+    const hasSelection = selectedFootball || selectedPlayer || selectedRoute || selectedShape;
+    if (hasSelection) saveToHistory();
+    
     if (selectedFootball) {
       setFootball(null);
       setSelectedFootball(false);
@@ -222,6 +271,7 @@ export default function PlayDesigner() {
       e.stopPropagation();
       const player = players.find(p => p.id === playerId);
       if (player) {
+        saveToHistory();
         setSelectedPlayer(playerId);
         setSelectedRoute(null);
         setSelectedShape(null);
@@ -463,6 +513,7 @@ export default function PlayDesigner() {
         const height = Math.abs(y - shapeStart.y);
         
         if (width > 20 && height > 20) {
+          saveToHistory();
           const newShape: Shape = {
             id: `shape-${Date.now()}`,
             type: shapeType,
@@ -482,6 +533,7 @@ export default function PlayDesigner() {
 
   const finishRoute = () => {
     if (isDrawingRoute && selectedPlayer && currentRoutePointsRef.current.length >= 2) {
+      saveToHistory();
       let finalPoints = currentRoutePointsRef.current.map(p => ({ ...p }));
       
       if (routeStyle === "curved") {
@@ -890,9 +942,8 @@ export default function PlayDesigner() {
                 <Button
                   size="sm"
                   variant="destructive"
-                  onClick={() => {
-                    // Undo functionality placeholder
-                  }}
+                  onClick={undo}
+                  disabled={history.length === 0}
                   data-testid="button-tool-undo"
                   className="justify-start px-2"
                 >
