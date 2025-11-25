@@ -68,12 +68,12 @@ Preferred communication style: Simple, everyday language.
 
 **Rationale**: Native 694×392 resolution ensures maximum sharpness when exporting at full size (no upscaling artifacts). The 60px white header separates play metadata from the field area for clean presentation. Downscaling to smaller sizes (e.g., 347×196 for half size) works well with high-quality smoothing.
 
-**Export Functionality**: html-to-image library (`toPng` function) for converting canvas to downloadable PNG images at customizable dimensions. The `generateScaledExport` helper function handles edge-to-edge scaling:
-- Uses html-to-image's native width/height parameters to render SVG directly at target dimensions
-- Applies CSS transform scaling to ensure proper proportions
+**Export Functionality**: html-to-image library (`toPng` function) for converting canvas to downloadable PNG images at customizable dimensions. The `generateScaledExport` helper function uses a two-path approach:
+- **Native size (694×392)**: Direct capture with pixelRatio: 1 - pixel-perfect quality, unchanged from original
+- **Other sizes**: Capture at 2x resolution (1388×784 via pixelRatio: 2), then downscale to target using canvas with imageSmoothingQuality='high'
 - Both Download and Copy to Clipboard use this shared helper for consistent output
 
-**Rationale**: Direct SVG rendering at target dimensions produces crisp output at all sizes (300×200, 400×300, 694×392) without pixel interpolation blur. Designed for printing two plays per 8.5×11 page.
+**Rationale**: The 2x capture + downscale approach produces crisp exports at any size because downscaling from high-resolution preserves detail (unlike upscaling which invents pixels). Native 694×392 exports remain pixel-perfect. Designed for printing two plays per 8.5×11 page.
 
 **Interaction Model**: Drag-and-drop for player positioning (24×24px circles, bounds from FIELD.PLAYER_BOUNDS), click-to-draw for routes, and property panels for metadata entry.
 
