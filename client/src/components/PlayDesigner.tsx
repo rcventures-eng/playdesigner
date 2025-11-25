@@ -356,6 +356,26 @@ export default function PlayDesigner() {
     }
   };
 
+  const handleFootballMouseDown = (e: React.MouseEvent) => {
+    if (tool === "select" && football) {
+      e.stopPropagation();
+      saveToHistory();
+      setSelectedFootball(true);
+      setSelectedPlayer(null);
+      setSelectedRoute(null);
+      setSelectedShape(null);
+      setSelectedElements({ players: [], routes: [] });
+      setIsDragging(true);
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (rect) {
+        setDragOffset({
+          x: e.clientX - rect.left - football.x,
+          y: e.clientY - rect.top - football.y,
+        });
+      }
+    }
+  };
+
   const handleLabelChange = (value: string) => {
     const upperValue = value.toUpperCase().slice(0, 2);
     setEditingLabel(upperValue);
@@ -380,6 +400,19 @@ export default function PlayDesigner() {
         setPlayers(players.map(p =>
           p.id === selectedPlayer ? { ...p, x: Math.max(36, Math.min(652, newX)), y: Math.max(36, Math.min(624, newY)) } : p
         ));
+      }
+    }
+    
+    // Handle football dragging
+    if (isDragging && selectedFootball && football && tool === "select") {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (rect) {
+        const newX = e.clientX - rect.left - dragOffset.x;
+        const newY = e.clientY - rect.top - dragOffset.y;
+        setFootball({ 
+          x: Math.max(36, Math.min(652, newX)), 
+          y: Math.max(36, Math.min(624, newY)) 
+        });
       }
     }
     
@@ -1550,13 +1583,14 @@ export default function PlayDesigner() {
                   className={`absolute cursor-pointer hover:scale-110 transition-transform ${
                     selectedFootball ? "ring-2 ring-cyan-400 rounded-full" : ""
                   }`}
-                  style={{ left: football.x - 5, top: football.y - 10, width: 10, height: 20 }}
-                  onClick={() => {
-                    setSelectedFootball(true);
-                    setSelectedPlayer(null);
-                    setSelectedRoute(null);
-                    setSelectedShape(null);
+                  style={{ 
+                    left: football.x - 5, 
+                    top: football.y - 10, 
+                    width: 10, 
+                    height: 20,
+                    zIndex: 50
                   }}
+                  onMouseDown={handleFootballMouseDown}
                   data-testid="football"
                 >
                   <svg width="10" height="20" viewBox="0 0 20 40">
