@@ -680,6 +680,12 @@ export default function PlayDesigner() {
     
     try {
       const dataUrl = await toPng(canvasRef.current, {
+        width: parseInt(exportWidth),
+        height: parseInt(exportHeight),
+        style: {
+          transform: `scale(${parseInt(exportWidth) / 640})`,
+          transformOrigin: 'top left',
+        },
         skipFonts: true,
       });
       const response = await fetch(dataUrl);
@@ -690,7 +696,7 @@ export default function PlayDesigner() {
       
       toast({
         title: "Copied!",
-        description: "Play copied to clipboard",
+        description: `Play copied to clipboard at ${exportWidth}x${exportHeight}`,
       });
     } catch (err) {
       toast({
