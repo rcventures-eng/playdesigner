@@ -298,6 +298,23 @@ export default function PlayDesigner() {
     setSelectedElements({ players: [], routes: [] });
   };
 
+  const clearAll = () => {
+    // Save to history so user can undo the clear action
+    if (players.length > 0 || routes.length > 0 || shapes.length > 0 || footballs.length > 0) {
+      saveToHistory();
+    }
+    setPlayers([]);
+    setRoutes([]);
+    setShapes([]);
+    setFootballs([]);
+    setMetadata({ name: "", formation: "", concept: "", personnel: "" });
+    setSelectedPlayer(null);
+    setSelectedRoute(null);
+    setSelectedShape(null);
+    setSelectedFootball(null);
+    setSelectedElements({ players: [], routes: [] });
+  };
+
   const deleteSelected = () => {
     const hasSelection = selectedFootball || selectedPlayer || selectedRoute || selectedShape;
     if (hasSelection) saveToHistory();
@@ -1169,7 +1186,7 @@ export default function PlayDesigner() {
 
             <Card className="p-4 space-y-3">
               <h3 className="font-semibold text-sm text-foreground">Tools</h3>
-              <div className="grid grid-cols-3 gap-1.5">
+              <div className="grid grid-cols-4 gap-1.5">
                 <Button
                   size="sm"
                   variant={tool === "select" ? "default" : "secondary"}
@@ -1200,6 +1217,15 @@ export default function PlayDesigner() {
                 >
                   <RotateCcw className="h-4 w-4 mr-1" />
                   Undo
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={clearAll}
+                  data-testid="button-clear-all"
+                  className="bg-white text-black border-gray-300 px-2"
+                >
+                  Clear All
                 </Button>
                 {playType === "defense" && (
                   <Button
