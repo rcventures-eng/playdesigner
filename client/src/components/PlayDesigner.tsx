@@ -112,6 +112,18 @@ export default function PlayDesigner() {
     "screen": "Screen",
   };
   
+  // Preset positions for offensive players based on standard formation
+  // Field: 688x660, padding 24px, line of scrimmage at y=504
+  const offensePositions: Record<string, { x: number; y: number }> = {
+    "#22c55e": { x: 344, y: 580 },  // Green - Running back (center, 6 yards back)
+    "#1d4ed8": { x: 80, y: 504 },   // Blue - Split end (far left on line)
+    "#ef4444": { x: 608, y: 504 },  // Red - Right receiver (far right on line)
+    "#eab308": { x: 240, y: 504 },  // Yellow - Left guard (left of center on line)
+    "#000000": { x: 344, y: 504 },  // Black - Center (middle on line)
+    "#f97316": { x: 400, y: 540 },  // Orange - Quarterback (behind line, slightly right)
+    "#6b7280": { x: 448, y: 504 },  // Gray - Right guard (right of center on line)
+  };
+  
   const formationLabels: Record<string, string> = {
     "man-to-man": "Man-to-Man",
     "zone": "Zone",
@@ -197,13 +209,22 @@ export default function PlayDesigner() {
 
   const addPlayer = (color: string) => {
     saveToHistory();
+    
+    // Use preset position for offense players, default to center for defense
+    const position = playType === "offense" && offensePositions[color] 
+      ? offensePositions[color] 
+      : { x: 344, y: 504 };
+    
     const newPlayer: Player = {
       id: `player-${Date.now()}`,
-      x: 344,
-      y: 504,
+      x: position.x,
+      y: position.y,
       color,
     };
     setPlayers([...players, newPlayer]);
+    
+    // Switch to select mode so user can immediately reposition if needed
+    setTool("select");
   };
 
   const addFootball = () => {
