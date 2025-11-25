@@ -643,19 +643,60 @@ export default function PlayDesigner() {
     setIsDraggingStraightRoute(false);
   };
 
+  const generateScaledExport = async (targetWidth: number, targetHeight: number): Promise<string> => {
+    if (!canvasRef.current) throw new Error("Canvas not available");
+    
+    const CANVAS_WIDTH = 688;
+    const CANVAS_HEIGHT = 660;
+    
+    const scaleX = targetWidth / CANVAS_WIDTH;
+    const scaleY = targetHeight / CANVAS_HEIGHT;
+    const scale = Math.min(scaleX, scaleY);
+    
+    const scaledWidth = CANVAS_WIDTH * scale;
+    const scaledHeight = CANVAS_HEIGHT * scale;
+    const offsetX = (targetWidth - scaledWidth) / 2;
+    const offsetY = (targetHeight - scaledHeight) / 2;
+    
+    const container = document.createElement("div");
+    container.style.position = "absolute";
+    container.style.left = "-9999px";
+    container.style.top = "-9999px";
+    container.style.width = `${targetWidth}px`;
+    container.style.height = `${targetHeight}px`;
+    container.style.backgroundColor = "#2d5a27";
+    container.style.display = "flex";
+    container.style.alignItems = "center";
+    container.style.justifyContent = "center";
+    container.style.overflow = "hidden";
+    
+    const clonedCanvas = canvasRef.current.cloneNode(true) as HTMLElement;
+    clonedCanvas.style.transform = `scale(${scale})`;
+    clonedCanvas.style.transformOrigin = "center center";
+    clonedCanvas.style.flexShrink = "0";
+    
+    container.appendChild(clonedCanvas);
+    document.body.appendChild(container);
+    
+    try {
+      const dataUrl = await toPng(container, {
+        width: targetWidth,
+        height: targetHeight,
+        skipFonts: true,
+      });
+      return dataUrl;
+    } finally {
+      document.body.removeChild(container);
+    }
+  };
+
   const exportAsImage = async () => {
     if (!canvasRef.current) return;
     
     try {
-      const dataUrl = await toPng(canvasRef.current, {
-        width: parseInt(exportWidth),
-        height: parseInt(exportHeight),
-        style: {
-          transform: `scale(${parseInt(exportWidth) / 640})`,
-          transformOrigin: 'top left',
-        },
-        skipFonts: true,
-      });
+      const targetWidth = parseInt(exportWidth);
+      const targetHeight = parseInt(exportHeight);
+      const dataUrl = await generateScaledExport(targetWidth, targetHeight);
       
       const link = document.createElement("a");
       link.download = `${metadata.name || "play"}.png`;
@@ -679,15 +720,10 @@ export default function PlayDesigner() {
     if (!canvasRef.current) return;
     
     try {
-      const dataUrl = await toPng(canvasRef.current, {
-        width: parseInt(exportWidth),
-        height: parseInt(exportHeight),
-        style: {
-          transform: `scale(${parseInt(exportWidth) / 640})`,
-          transformOrigin: 'top left',
-        },
-        skipFonts: true,
-      });
+      const targetWidth = parseInt(exportWidth);
+      const targetHeight = parseInt(exportHeight);
+      const dataUrl = await generateScaledExport(targetWidth, targetHeight);
+      
       const response = await fetch(dataUrl);
       const blob = await response.blob();
       await navigator.clipboard.write([
