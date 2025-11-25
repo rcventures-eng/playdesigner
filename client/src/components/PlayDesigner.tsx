@@ -133,9 +133,12 @@ export default function PlayDesigner() {
     "outside-run": "Outside Run",
     "inside-run": "Inside Run",
     "short-pass": "Short Pass",
+    "medium-pass": "Medium Pass",
     "deep-pass": "Deep Pass",
+    "play-action-pass": "Play Action Pass",
     "rpo": "RPO",
-    "screen": "Screen",
+    "screen-pass": "Screen Pass",
+    "trick": "Trick",
   };
   
   // Preset positions for offensive players based on standard formation
@@ -1090,9 +1093,12 @@ export default function PlayDesigner() {
                           <SelectItem value="outside-run">Outside Run</SelectItem>
                           <SelectItem value="inside-run">Inside Run</SelectItem>
                           <SelectItem value="short-pass">Short Pass</SelectItem>
+                          <SelectItem value="medium-pass">Medium Pass</SelectItem>
                           <SelectItem value="deep-pass">Deep Pass</SelectItem>
+                          <SelectItem value="play-action-pass">Play Action Pass</SelectItem>
                           <SelectItem value="rpo">RPO</SelectItem>
                           <SelectItem value="screen-pass">Screen Pass</SelectItem>
+                          <SelectItem value="trick">Trick</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
