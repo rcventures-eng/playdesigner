@@ -72,11 +72,17 @@ interface PlayMetadata {
   personnel: string;
 }
 
+interface Football {
+  id: string;
+  x: number;
+  y: number;
+}
+
 interface HistoryState {
   players: Player[];
   routes: Route[];
   shapes: Shape[];
-  football: { x: number; y: number } | null;
+  footballs: Football[];
 }
 
 export default function PlayDesigner() {
@@ -84,12 +90,12 @@ export default function PlayDesigner() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [routes, setRoutes] = useState<Route[]>([]);
   const [shapes, setShapes] = useState<Shape[]>([]);
-  const [football, setFootball] = useState<{ x: number; y: number } | null>(null);
+  const [footballs, setFootballs] = useState<Football[]>([]);
   const [history, setHistory] = useState<HistoryState[]>([]);
   const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
   const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
   const [selectedShape, setSelectedShape] = useState<string | null>(null);
-  const [selectedFootball, setSelectedFootball] = useState(false);
+  const [selectedFootball, setSelectedFootball] = useState<string | null>(null);
   const [editingPlayer, setEditingPlayer] = useState<string | null>(null);
   const [editingLabel, setEditingLabel] = useState("");
   const [tool, setTool] = useState<"select" | "player" | "route" | "shape" | "label">("select");
@@ -181,7 +187,7 @@ export default function PlayDesigner() {
     setSelectedPlayer(null);
     setSelectedRoute(null);
     setSelectedShape(null);
-    setSelectedFootball(false);
+    setSelectedFootball(null);
     setSelectedElements({ players: [], routes: [] });
     setIsDragging(false);
     setDraggingRoutePoint(null);
@@ -200,7 +206,7 @@ export default function PlayDesigner() {
             players: JSON.parse(JSON.stringify(players)),
             routes: JSON.parse(JSON.stringify(routes)),
             shapes: JSON.parse(JSON.stringify(shapes)),
-            football: football ? { ...football } : null
+            footballs: JSON.parse(JSON.stringify(footballs))
           }]);
         }
         
@@ -228,14 +234,14 @@ export default function PlayDesigner() {
           setSelectedShape(null);
         }
         if (selectedFootball) {
-          setFootball(null);
-          setSelectedFootball(false);
+          setFootballs(prev => prev.filter(f => f.id !== selectedFootball));
+          setSelectedFootball(null);
         }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedPlayer, selectedRoute, selectedShape, selectedFootball, editingPlayer, selectedElements, players, routes, shapes, football]);
+  }, [selectedPlayer, selectedRoute, selectedShape, selectedFootball, editingPlayer, selectedElements, players, routes, shapes, footballs]);
 
   const addPlayer = (color: string) => {
     saveToHistory();
@@ -259,7 +265,12 @@ export default function PlayDesigner() {
 
   const addFootball = () => {
     saveToHistory();
-    setFootball({ x: FIELD.WIDTH / 2, y: FIELD.LOS_Y });
+    const newFootball: Football = {
+      id: `football-${Date.now()}`,
+      x: FIELD.WIDTH / 2,
+      y: FIELD.LOS_Y
+    };
+    setFootballs([...footballs, newFootball]);
     setTool("select");
   };
 
@@ -268,7 +279,7 @@ export default function PlayDesigner() {
       players: JSON.parse(JSON.stringify(players)),
       routes: JSON.parse(JSON.stringify(routes)),
       shapes: JSON.parse(JSON.stringify(shapes)),
-      football: football ? { ...football } : null
+      footballs: JSON.parse(JSON.stringify(footballs))
     }]);
   };
 
@@ -278,12 +289,12 @@ export default function PlayDesigner() {
     setPlayers(previousState.players);
     setRoutes(previousState.routes);
     setShapes(previousState.shapes);
-    setFootball(previousState.football);
+    setFootballs(previousState.footballs);
     setHistory(prev => prev.slice(0, -1));
     setSelectedPlayer(null);
     setSelectedRoute(null);
     setSelectedShape(null);
-    setSelectedFootball(false);
+    setSelectedFootball(null);
     setSelectedElements({ players: [], routes: [] });
   };
 
@@ -292,8 +303,8 @@ export default function PlayDesigner() {
     if (hasSelection) saveToHistory();
     
     if (selectedFootball) {
-      setFootball(null);
-      setSelectedFootball(false);
+      setFootballs(footballs.filter(f => f.id !== selectedFootball));
+      setSelectedFootball(null);
     }
     if (selectedPlayer) {
       setPlayers(players.filter(p => p.id !== selectedPlayer));
@@ -386,11 +397,12 @@ export default function PlayDesigner() {
     }
   };
 
-  const handleFootballMouseDown = (e: React.MouseEvent) => {
+  const handleFootballMouseDown = (e: React.MouseEvent, footballId: string) => {
+    const football = footballs.find(f => f.id === footballId);
     if (tool === "select" && football) {
       e.stopPropagation();
       saveToHistory();
-      setSelectedFootball(true);
+      setSelectedFootball(footballId);
       setSelectedPlayer(null);
       setSelectedRoute(null);
       setSelectedShape(null);
@@ -435,15 +447,18 @@ export default function PlayDesigner() {
     }
     
     // Handle football dragging
-    if (isDragging && selectedFootball && football && tool === "select") {
+    if (isDragging && selectedFootball && tool === "select") {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (rect) {
         const newX = e.clientX - rect.left - dragOffset.x;
         const newY = e.clientY - rect.top - dragOffset.y;
-        setFootball({ 
-          x: Math.max(bounds.minX, Math.min(bounds.maxX, newX)), 
-          y: Math.max(bounds.minY, Math.min(bounds.maxY, newY)) 
-        });
+        setFootballs(footballs.map(f =>
+          f.id === selectedFootball ? { 
+            ...f,
+            x: Math.max(bounds.minX, Math.min(bounds.maxX, newX)), 
+            y: Math.max(bounds.minY, Math.min(bounds.maxY, newY)) 
+          } : f
+        ));
       }
     }
     
@@ -595,7 +610,7 @@ export default function PlayDesigner() {
         setSelectedPlayer(null);
         setSelectedRoute(null);
         setSelectedShape(null);
-        setSelectedFootball(false);
+        setSelectedFootball(null);
       }
     } else if (tool === "shape" && playType === "defense") {
       const rect = canvasRef.current?.getBoundingClientRect();
@@ -676,44 +691,22 @@ export default function PlayDesigner() {
   const generateScaledExport = async (targetWidth: number, targetHeight: number): Promise<string> => {
     if (!canvasRef.current) throw new Error("Canvas not available");
     
-    // Native canvas size - no scaling needed at default dimensions
-    const isNativeSize = targetWidth === FIELD.WIDTH && targetHeight === FIELD.HEIGHT;
-    
-    const fullSizeDataUrl = await toPng(canvasRef.current, {
-      width: FIELD.WIDTH,
-      height: FIELD.HEIGHT,
+    // Render SVG directly at target dimensions for maximum crispness
+    // html-to-image will re-render the SVG at the target size, not scale a raster image
+    const dataUrl = await toPng(canvasRef.current, {
+      width: targetWidth,
+      height: targetHeight,
+      canvasWidth: targetWidth,
+      canvasHeight: targetHeight,
       skipFonts: true,
+      pixelRatio: 1,
+      style: {
+        transform: `scale(${targetWidth / FIELD.WIDTH})`,
+        transformOrigin: 'top left',
+      }
     });
     
-    // If exporting at native size, return directly (maximum quality)
-    if (isNativeSize) {
-      return fullSizeDataUrl;
-    }
-    
-    // For smaller sizes, downscale with high quality
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        canvas.width = targetWidth;
-        canvas.height = targetHeight;
-        const ctx = canvas.getContext("2d");
-        
-        if (!ctx) {
-          reject(new Error("Could not get canvas context"));
-          return;
-        }
-        
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = "high";
-        
-        ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
-        
-        resolve(canvas.toDataURL("image/png"));
-      };
-      img.onerror = () => reject(new Error("Failed to load image for scaling"));
-      img.src = fullSizeDataUrl;
-    });
+    return dataUrl;
   };
 
   const exportAsImage = async () => {
@@ -1215,7 +1208,6 @@ export default function PlayDesigner() {
                     data-testid="button-add-football"
                     onClick={addFootball}
                     className="h-9 w-9"
-                    disabled={football !== null}
                   >
                     <svg width="16" height="16" viewBox="0 0 20 40" fill="currentColor">
                       <ellipse cx="10" cy="20" rx="9.5" ry="19.5" fill="#8B4513" stroke="#654321" strokeWidth="1" />
@@ -1228,7 +1220,7 @@ export default function PlayDesigner() {
                     </svg>
                   </Button>
                 </div>
-                {football && (
+                {footballs.length > 0 && (
                   <div className="flex items-center gap-2 mt-2">
                     <input
                       type="checkbox"
@@ -1660,7 +1652,7 @@ export default function PlayDesigner() {
                                     setSelectedRoute(route.id);
                                     setSelectedPlayer(null);
                                     setSelectedShape(null);
-                                    setSelectedFootball(false);
+                                    setSelectedFootball(null);
                                     setSelectedElements({ players: [], routes: [] });
                                   }}
                                   className="cursor-pointer"
@@ -1680,7 +1672,7 @@ export default function PlayDesigner() {
                                     setSelectedRoute(route.id);
                                     setSelectedPlayer(null);
                                     setSelectedShape(null);
-                                    setSelectedFootball(false);
+                                    setSelectedFootball(null);
                                     setSelectedElements({ players: [], routes: [] });
                                   }}
                                   className="cursor-pointer"
@@ -1722,7 +1714,7 @@ export default function PlayDesigner() {
                           setSelectedRoute(route.id);
                           setSelectedPlayer(null);
                           setSelectedShape(null);
-                          setSelectedFootball(false);
+                          setSelectedFootball(null);
                           setSelectedElements({ players: [], routes: [] });
                         }}
                         className="cursor-pointer"
@@ -1885,10 +1877,11 @@ export default function PlayDesigner() {
                 </div>
               ))}
 
-              {football && (
+              {footballs.map((football) => (
                 <div
+                  key={football.id}
                   className={`absolute cursor-pointer hover:scale-110 transition-transform ${
-                    selectedFootball ? "ring-2 ring-cyan-400 rounded-full" : ""
+                    selectedFootball === football.id ? "ring-2 ring-cyan-400 rounded-full" : ""
                   }`}
                   style={{ 
                     left: football.x - 5, 
@@ -1897,10 +1890,10 @@ export default function PlayDesigner() {
                     height: 20,
                     zIndex: 50
                   }}
-                  onMouseDown={handleFootballMouseDown}
-                  data-testid="football"
+                  onMouseDown={(e) => handleFootballMouseDown(e, football.id)}
+                  data-testid={`football-${football.id}`}
                 >
-                  <svg width="10" height="20" viewBox="0 0 20 40">
+                  <svg width="10" height="20" viewBox="0 0 20 40" style={{ pointerEvents: 'none' }}>
                     <ellipse cx="10" cy="20" rx="8.75" ry="18.9" fill="#8B4513" stroke="#654321" strokeWidth="1" />
                     <line x1="10" y1="3" x2="10" y2="37" stroke="#FFFFFF" strokeWidth="1.2" />
                     <line x1="4.5" y1="13" x2="15.5" y2="13" stroke="#FFFFFF" strokeWidth="0.6" />
@@ -1920,14 +1913,14 @@ export default function PlayDesigner() {
                         top: 9,
                         pointerEvents: 'none'
                       }}
-                      data-testid="play-action-marker"
+                      data-testid={`play-action-marker-${football.id}`}
                     >
                       <circle cx="10" cy="10" r="10" fill="black" stroke="#000" strokeWidth="2" />
                       <text x="10" y="14" fill="white" fontSize="12" fontWeight="bold" textAnchor="middle">PA</text>
                     </svg>
                   )}
                 </div>
-              )}
+              ))}
 
             </div>
           </div>
