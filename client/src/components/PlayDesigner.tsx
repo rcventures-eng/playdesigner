@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Download, Copy, Plus, Trash2, Circle as CircleIcon, MoveHorizontal, PenTool, Square as SquareIcon, Type, Hexagon } from "lucide-react";
+import { Download, Copy, Plus, Trash2, Circle as CircleIcon, MoveHorizontal, PenTool, Square as SquareIcon, Type, Hexagon, RotateCcw } from "lucide-react";
 import { toPng } from "html-to-image";
 import { useToast } from "@/hooks/use-toast";
 
@@ -866,15 +866,15 @@ export default function PlayDesigner() {
 
             <Card className="p-4 space-y-3">
               <h3 className="font-semibold text-sm text-foreground">Tools</h3>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-1.5">
                 <Button
                   size="sm"
                   variant={tool === "select" ? "default" : "secondary"}
                   onClick={() => setTool("select")}
                   data-testid="button-tool-select"
-                  className="justify-start"
+                  className="justify-start px-2"
                 >
-                  <MoveHorizontal className="h-4 w-4 mr-2" />
+                  <MoveHorizontal className="h-4 w-4 mr-1" />
                   Select
                 </Button>
                 <Button
@@ -882,10 +882,22 @@ export default function PlayDesigner() {
                   variant={tool === "route" ? "default" : "secondary"}
                   onClick={() => setTool("route")}
                   data-testid="button-tool-route"
-                  className="justify-start"
+                  className="justify-start px-2"
                 >
-                  <PenTool className="h-4 w-4 mr-2" />
+                  <PenTool className="h-4 w-4 mr-1" />
                   Route
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => {
+                    // Undo functionality placeholder
+                  }}
+                  data-testid="button-tool-undo"
+                  className="justify-start px-2"
+                >
+                  <RotateCcw className="h-4 w-4 mr-1" />
+                  Undo
                 </Button>
                 {playType === "defense" && (
                   <Button
