@@ -1344,7 +1344,17 @@ export default function PlayDesigner() {
                       strokeWidth="3.6"
                       fill="none"
                       strokeDasharray={route.isMotion ? "5,5" : "none"}
-                      markerEnd={route.isMotion ? undefined : (route.type === "blocking" ? "url(#arrowhead-blocking)" : `url(#arrowhead-${getRouteColor(route).replace('#', '')})`)}
+                      markerEnd={(() => {
+                        const endPoint = route.points[route.points.length - 1];
+                        const crossedLOS = endPoint && endPoint.y < 504;
+                        if (route.type === "blocking") {
+                          return "url(#arrowhead-blocking)";
+                        }
+                        if (route.isMotion && !crossedLOS) {
+                          return undefined;
+                        }
+                        return `url(#arrowhead-${getRouteColor(route).replace('#', '')})`;
+                      })()}
                       onMouseDown={(e) => {
                         e.stopPropagation();
                       }}
@@ -1415,7 +1425,17 @@ export default function PlayDesigner() {
                           strokeWidth="3.6"
                           fill="none"
                           strokeDasharray={isMotion ? "5,5" : "none"}
-                          markerEnd={isMotion ? undefined : (routeType === "blocking" ? "url(#arrowhead-blocking)" : `url(#arrowhead-${previewColor.replace('#', '')})`)}
+                          markerEnd={(() => {
+                            const endPoint = currentRoutePoints[currentRoutePoints.length - 1];
+                            const crossedLOS = endPoint && endPoint.y < 504;
+                            if (routeType === "blocking") {
+                              return "url(#arrowhead-blocking)";
+                            }
+                            if (isMotion && !crossedLOS) {
+                              return undefined;
+                            }
+                            return `url(#arrowhead-${previewColor.replace('#', '')})`;
+                          })()}
                           opacity="0.5"
                         />
                       );
