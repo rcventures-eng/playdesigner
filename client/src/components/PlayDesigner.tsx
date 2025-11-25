@@ -72,6 +72,7 @@ export default function PlayDesigner() {
   const [shapeColor, setShapeColor] = useState("#ec4899");
   const [routeType, setRouteType] = useState<"pass" | "run" | "blocking">("pass");
   const [makePrimary, setMakePrimary] = useState(false);
+  const [playAction, setPlayAction] = useState(false);
   const [routeStyle, setRouteStyle] = useState<"straight" | "curved">("straight");
   const [isMotion, setIsMotion] = useState(false);
   const [showBlocking, setShowBlocking] = useState(true);
@@ -1150,13 +1151,13 @@ export default function PlayDesigner() {
                   <Separator />
                   <div className="space-y-2">
                     <Label className="text-xs">Route Type</Label>
-                    <div className="grid grid-cols-4 gap-1.5">
+                    <div className="grid grid-cols-5 gap-1">
                       <Button
                         size="sm"
                         variant={routeType === "pass" ? "default" : "secondary"}
                         onClick={() => setRouteType("pass")}
                         data-testid="button-route-pass"
-                        className="px-2"
+                        className="px-1 text-xs"
                       >
                         Pass
                       </Button>
@@ -1165,7 +1166,7 @@ export default function PlayDesigner() {
                         variant={routeType === "run" ? "default" : "secondary"}
                         onClick={() => setRouteType("run")}
                         data-testid="button-route-run"
-                        className="px-2"
+                        className="px-1 text-xs"
                       >
                         Run
                       </Button>
@@ -1174,17 +1175,25 @@ export default function PlayDesigner() {
                         variant={makePrimary ? "default" : "secondary"}
                         onClick={() => setMakePrimary(!makePrimary)}
                         data-testid="button-make-primary"
-                        className="px-2 flex items-center gap-1"
+                        className="px-1 flex items-center justify-center gap-0.5"
                       >
                         <span className="inline-flex items-center justify-center w-4 h-4 bg-white text-black rounded-full text-xs font-bold">1</span>
-                        Primary
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={playAction ? "default" : "secondary"}
+                        onClick={() => setPlayAction(!playAction)}
+                        data-testid="button-play-action"
+                        className="px-1 flex items-center justify-center gap-0.5"
+                      >
+                        <span className="inline-flex items-center justify-center w-4 h-4 bg-black text-white rounded-full text-xs font-bold">PA</span>
                       </Button>
                       <Button
                         size="sm"
                         variant={routeType === "blocking" ? "default" : "secondary"}
                         onClick={() => setRouteType("blocking")}
                         data-testid="button-route-blocking"
-                        className="px-2"
+                        className="px-1 text-xs"
                       >
                         Block
                       </Button>
