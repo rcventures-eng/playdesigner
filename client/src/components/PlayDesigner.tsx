@@ -11,6 +11,31 @@ import { Download, Copy, Plus, Trash2, Circle as CircleIcon, MoveHorizontal, Pen
 import { toPng } from "html-to-image";
 import { useToast } from "@/hooks/use-toast";
 
+const FIELD = {
+  WIDTH: 694,
+  HEIGHT: 392,
+  HEADER_HEIGHT: 60,
+  SIDE_PADDING: 27,
+  BOTTOM_PADDING: 12,
+  PIXELS_PER_YARD: 12,
+  get FIELD_TOP() { return this.HEADER_HEIGHT; },
+  get FIELD_LEFT() { return this.SIDE_PADDING; },
+  get FIELD_RIGHT() { return this.WIDTH - this.SIDE_PADDING; },
+  get FIELD_WIDTH() { return this.WIDTH - this.SIDE_PADDING * 2; },
+  get FIELD_HEIGHT() { return this.HEIGHT - this.HEADER_HEIGHT; },
+  get LOS_Y() { return this.HEIGHT - this.BOTTOM_PADDING - 8 * this.PIXELS_PER_YARD; },
+  get PLAYER_BOUNDS() {
+    return {
+      minX: this.FIELD_LEFT + 12,
+      maxX: this.FIELD_RIGHT - 12,
+      minY: this.FIELD_TOP + 12,
+      maxY: this.HEIGHT - this.BOTTOM_PADDING - 12,
+    };
+  },
+  get LEFT_HASH_X() { return this.FIELD_LEFT + 160; },
+  get RIGHT_HASH_X() { return this.FIELD_RIGHT - 160; },
+};
+
 interface Player {
   id: string;
   x: number;
@@ -82,8 +107,8 @@ export default function PlayDesigner() {
     concept: "",
     personnel: "",
   });
-  const [exportWidth, setExportWidth] = useState("688");
-  const [exportHeight, setExportHeight] = useState("660");
+  const [exportWidth, setExportWidth] = useState(String(FIELD.WIDTH));
+  const [exportHeight, setExportHeight] = useState(String(FIELD.HEIGHT));
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isDrawingRoute, setIsDrawingRoute] = useState(false);
@@ -114,15 +139,16 @@ export default function PlayDesigner() {
   };
   
   // Preset positions for offensive players based on standard formation
-  // Field: 688x660, padding 24px, line of scrimmage at y=504
+  // Uses FIELD config for positioning relative to LOS
+  const centerX = FIELD.WIDTH / 2;
   const offensePositions: Record<string, { x: number; y: number }> = {
-    "#39ff14": { x: 344, y: 580 },  // Neon Green - Running back (center, 6 yards back)
-    "#1d4ed8": { x: 80, y: 504 },   // Blue - Split end (far left on line)
-    "#ef4444": { x: 608, y: 504 },  // Red - Right receiver (far right on line)
-    "#eab308": { x: 240, y: 504 },  // Yellow - Left guard (left of center on line)
-    "#000000": { x: 344, y: 504 },  // Black - Center (middle on line)
-    "#f97316": { x: 400, y: 540 },  // Orange - Quarterback (behind line, slightly right)
-    "#6b7280": { x: 448, y: 504 },  // Gray - Right guard (right of center on line)
+    "#39ff14": { x: centerX, y: FIELD.LOS_Y + 6 * FIELD.PIXELS_PER_YARD },  // Neon Green - Running back (center, 6 yards back)
+    "#1d4ed8": { x: FIELD.FIELD_LEFT + 50, y: FIELD.LOS_Y },   // Blue - Split end (far left on line)
+    "#ef4444": { x: FIELD.FIELD_RIGHT - 50, y: FIELD.LOS_Y },  // Red - Right receiver (far right on line)
+    "#eab308": { x: centerX - 80, y: FIELD.LOS_Y },  // Yellow - Left guard (left of center on line)
+    "#000000": { x: centerX, y: FIELD.LOS_Y },  // Black - Center (middle on line)
+    "#f97316": { x: centerX + 40, y: FIELD.LOS_Y + 3 * FIELD.PIXELS_PER_YARD },  // Orange - Quarterback (behind line, slightly right)
+    "#6b7280": { x: centerX + 80, y: FIELD.LOS_Y },  // Gray - Right guard (right of center on line)
   };
   
   const formationLabels: Record<string, string> = {
@@ -214,7 +240,7 @@ export default function PlayDesigner() {
     // Use preset position for offense players, default to center for defense
     const position = playType === "offense" && offensePositions[color] 
       ? offensePositions[color] 
-      : { x: 344, y: 504 };
+      : { x: FIELD.WIDTH / 2, y: FIELD.LOS_Y };
     
     const newPlayer: Player = {
       id: `player-${Date.now()}`,
@@ -230,7 +256,7 @@ export default function PlayDesigner() {
 
   const addFootball = () => {
     saveToHistory();
-    setFootball({ x: 344, y: 504 });
+    setFootball({ x: FIELD.WIDTH / 2, y: FIELD.LOS_Y });
     setTool("select");
   };
 
@@ -393,13 +419,14 @@ export default function PlayDesigner() {
   };
 
   const handleCanvasMouseMove = (e: React.MouseEvent) => {
+    const bounds = FIELD.PLAYER_BOUNDS;
     if (isDragging && selectedPlayer && tool === "select") {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (rect) {
         const newX = e.clientX - rect.left - dragOffset.x;
         const newY = e.clientY - rect.top - dragOffset.y;
         setPlayers(players.map(p =>
-          p.id === selectedPlayer ? { ...p, x: Math.max(36, Math.min(652, newX)), y: Math.max(36, Math.min(624, newY)) } : p
+          p.id === selectedPlayer ? { ...p, x: Math.max(bounds.minX, Math.min(bounds.maxX, newX)), y: Math.max(bounds.minY, Math.min(bounds.maxY, newY)) } : p
         ));
       }
     }
@@ -411,8 +438,8 @@ export default function PlayDesigner() {
         const newX = e.clientX - rect.left - dragOffset.x;
         const newY = e.clientY - rect.top - dragOffset.y;
         setFootball({ 
-          x: Math.max(36, Math.min(652, newX)), 
-          y: Math.max(36, Math.min(624, newY)) 
+          x: Math.max(bounds.minX, Math.min(bounds.maxX, newX)), 
+          y: Math.max(bounds.minY, Math.min(bounds.maxY, newY)) 
         });
       }
     }
@@ -646,15 +673,21 @@ export default function PlayDesigner() {
   const generateScaledExport = async (targetWidth: number, targetHeight: number): Promise<string> => {
     if (!canvasRef.current) throw new Error("Canvas not available");
     
-    const CANVAS_WIDTH = 688;
-    const CANVAS_HEIGHT = 660;
+    // Native canvas size - no scaling needed at default dimensions
+    const isNativeSize = targetWidth === FIELD.WIDTH && targetHeight === FIELD.HEIGHT;
     
     const fullSizeDataUrl = await toPng(canvasRef.current, {
-      width: CANVAS_WIDTH,
-      height: CANVAS_HEIGHT,
+      width: FIELD.WIDTH,
+      height: FIELD.HEIGHT,
       skipFonts: true,
     });
     
+    // If exporting at native size, return directly (maximum quality)
+    if (isNativeSize) {
+      return fullSizeDataUrl;
+    }
+    
+    // For smaller sizes, downscale with high quality
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
@@ -762,9 +795,9 @@ export default function PlayDesigner() {
     return route.color || "#000000";
   };
 
-  // Split motion route at LOS (y=504) - returns { belowLOS: points[], aboveLOS: points[] }
+  // Split motion route at LOS - returns { belowLOS: points[], aboveLOS: points[] }
   const splitMotionRouteAtLOS = (points: { x: number; y: number }[]) => {
-    const LOS_Y = 504;
+    const LOS_Y = FIELD.LOS_Y;
     const belowLOS: { x: number; y: number }[] = [];
     const aboveLOS: { x: number; y: number }[] = [];
     
@@ -1430,8 +1463,8 @@ export default function PlayDesigner() {
           <div className="bg-background rounded-lg shadow-lg p-2">
             <div
               ref={canvasRef}
-              className="relative bg-gradient-to-r from-green-700 to-green-600 rounded cursor-crosshair"
-              style={{ width: 688, height: 660 }}
+              className="relative rounded cursor-crosshair overflow-hidden"
+              style={{ width: FIELD.WIDTH, height: FIELD.HEIGHT }}
               onMouseMove={(e) => {
                 handleCanvasMouseMove(e);
                 handleShapeMouseMove(e);
@@ -1445,16 +1478,76 @@ export default function PlayDesigner() {
               onDoubleClick={handleCanvasDoubleClick}
               data-testid="canvas-field"
             >
+              {/* White header for metadata */}
+              <div 
+                className="absolute top-0 left-0 right-0 flex items-center justify-center"
+                style={{ height: FIELD.HEADER_HEIGHT, backgroundColor: "#ffffff", zIndex: 25 }}
+              >
+                {(metadata.name || metadata.formation || metadata.concept || metadata.personnel) && (
+                  <div className="flex flex-wrap items-center justify-center gap-2 px-4">
+                    {metadata.name && (
+                      <div
+                        className="px-3 py-1.5 rounded text-white font-semibold text-sm"
+                        style={{ backgroundColor: "#ea580c" }}
+                        data-testid="overlay-play-name"
+                      >
+                        {metadata.name}
+                      </div>
+                    )}
+                    {metadata.formation && (
+                      <div
+                        className="px-3 py-1.5 rounded text-white font-medium text-sm"
+                        style={{ backgroundColor: "#374151" }}
+                        data-testid="overlay-formation"
+                      >
+                        Formation: {getFormattedLabel(metadata.formation, formationLabels)}
+                      </div>
+                    )}
+                    {metadata.concept && (
+                      <div
+                        className="px-3 py-1.5 rounded text-white font-medium text-sm"
+                        style={{ backgroundColor: "#374151" }}
+                        data-testid="overlay-concept"
+                      >
+                        Concept: {getFormattedLabel(metadata.concept, conceptLabels)}
+                      </div>
+                    )}
+                    {metadata.personnel && (
+                      <div
+                        className="px-3 py-1.5 rounded text-white font-medium text-sm"
+                        style={{ backgroundColor: "#374151" }}
+                        data-testid="overlay-personnel"
+                      >
+                        Personnel: {metadata.personnel}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              {/* Green field area */}
+              <div 
+                className="absolute bg-gradient-to-b from-green-600 to-green-700"
+                style={{ 
+                  top: FIELD.HEADER_HEIGHT, 
+                  left: 0, 
+                  right: 0, 
+                  bottom: 0,
+                  zIndex: 0 
+                }}
+              />
+              
               <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }}>
-                {/* 5-yard horizontal lines (thicker) */}
-                {Array.from({ length: 11 }, (_, i) => {
-                  const y = 24 + i * 60;
+                {/* 5-yard horizontal lines (thicker) - only in field area */}
+                {Array.from({ length: Math.floor(FIELD.FIELD_HEIGHT / 60) + 1 }, (_, i) => {
+                  const y = FIELD.FIELD_TOP + i * 60;
+                  if (y > FIELD.HEIGHT - FIELD.BOTTOM_PADDING) return null;
                   return (
                     <line
                       key={`yard-${i}`}
-                      x1="24"
+                      x1={FIELD.FIELD_LEFT}
                       y1={y}
-                      x2="664"
+                      x2={FIELD.FIELD_RIGHT}
                       y2={y}
                       stroke="white"
                       strokeWidth="4"
@@ -1464,14 +1557,15 @@ export default function PlayDesigner() {
                 })}
                 
                 {/* 1-yard tick marks on LEFT edge */}
-                {Array.from({ length: 51 }, (_, i) => {
-                  const y = 24 + i * 12;
+                {Array.from({ length: Math.floor(FIELD.FIELD_HEIGHT / 12) + 1 }, (_, i) => {
+                  const y = FIELD.FIELD_TOP + i * 12;
+                  if (y > FIELD.HEIGHT - FIELD.BOTTOM_PADDING) return null;
                   return (
                     <line
                       key={`left-tick-${i}`}
-                      x1="24"
+                      x1={FIELD.FIELD_LEFT}
                       y1={y}
-                      x2="36"
+                      x2={FIELD.FIELD_LEFT + 12}
                       y2={y}
                       stroke="white"
                       strokeWidth="2"
@@ -1481,14 +1575,15 @@ export default function PlayDesigner() {
                 })}
                 
                 {/* 1-yard tick marks on RIGHT edge */}
-                {Array.from({ length: 51 }, (_, i) => {
-                  const y = 24 + i * 12;
+                {Array.from({ length: Math.floor(FIELD.FIELD_HEIGHT / 12) + 1 }, (_, i) => {
+                  const y = FIELD.FIELD_TOP + i * 12;
+                  if (y > FIELD.HEIGHT - FIELD.BOTTOM_PADDING) return null;
                   return (
                     <line
                       key={`right-tick-${i}`}
-                      x1="652"
+                      x1={FIELD.FIELD_RIGHT - 12}
                       y1={y}
-                      x2="664"
+                      x2={FIELD.FIELD_RIGHT}
                       y2={y}
                       stroke="white"
                       strokeWidth="2"
@@ -1497,19 +1592,20 @@ export default function PlayDesigner() {
                   );
                 })}
                 
-                {/* Hash marks in middle (NCAA style - 40 feet / 13.33 yards from each sideline) */}
-                {Array.from({ length: 51 }, (_, i) => {
-                  const y = 24 + i * 12;
+                {/* Hash marks in middle (NCAA style) */}
+                {Array.from({ length: Math.floor(FIELD.FIELD_HEIGHT / 12) + 1 }, (_, i) => {
+                  const y = FIELD.FIELD_TOP + i * 12;
+                  if (y > FIELD.HEIGHT - FIELD.BOTTOM_PADDING) return null;
                   return (
                     <g key={`hash-${i}`}>
-                      <line x1="178" y1={y} x2="190" y2={y} stroke="white" strokeWidth="2" opacity="0.6" />
-                      <line x1="498" y1={y} x2="510" y2={y} stroke="white" strokeWidth="2" opacity="0.6" />
+                      <line x1={FIELD.LEFT_HASH_X - 6} y1={y} x2={FIELD.LEFT_HASH_X + 6} y2={y} stroke="white" strokeWidth="2" opacity="0.6" />
+                      <line x1={FIELD.RIGHT_HASH_X - 6} y1={y} x2={FIELD.RIGHT_HASH_X + 6} y2={y} stroke="white" strokeWidth="2" opacity="0.6" />
                     </g>
                   );
                 })}
                 
-                {/* Line of scrimmage (9 yards from bottom = y=504) */}
-                <line x1="24" y1="504" x2="664" y2="504" stroke="white" strokeWidth="6" />
+                {/* Line of scrimmage */}
+                <line x1={FIELD.FIELD_LEFT} y1={FIELD.LOS_Y} x2={FIELD.FIELD_RIGHT} y2={FIELD.LOS_Y} stroke="white" strokeWidth="6" />
               </svg>
 
               <svg className="absolute inset-0 w-full h-full" style={{ pointerEvents: "none", zIndex: 2 }}>
@@ -1542,7 +1638,7 @@ export default function PlayDesigner() {
                         {(() => {
                           const { belowLOS, aboveLOS } = splitMotionRouteAtLOS(route.points);
                           const endPoint = route.points[route.points.length - 1];
-                          const crossedLOS = endPoint && endPoint.y < 504;
+                          const crossedLOS = endPoint && endPoint.y < FIELD.LOS_Y;
                           return (
                             <>
                               {belowLOS.length >= 2 && (
@@ -1677,7 +1773,7 @@ export default function PlayDesigner() {
                       const playerColor = player?.color || "#000000";
                       const previewColor = routeType === "blocking" ? "#ffffff" : (routeType === "run" ? "#000000" : playerColor);
                       const endPoint = currentRoutePoints[currentRoutePoints.length - 1];
-                      const crossedLOS = endPoint && endPoint.y < 504;
+                      const crossedLOS = endPoint && endPoint.y < FIELD.LOS_Y;
                       
                       if (isMotion) {
                         const { belowLOS, aboveLOS } = splitMotionRouteAtLOS(currentRoutePoints);
@@ -1827,66 +1923,6 @@ export default function PlayDesigner() {
                 </div>
               )}
 
-              {/* Metadata overlay on field - centered in middle 5-yard row (y=84-144) */}
-              {(metadata.name || metadata.formation || metadata.concept || metadata.personnel) && (
-                <div
-                  className="absolute pointer-events-none"
-                  style={{
-                    top: 84,
-                    left: 24,
-                    width: 640,
-                    height: 60,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    zIndex: 20,
-                  }}
-                  data-testid="metadata-overlay"
-                >
-                  <div
-                    className="flex flex-wrap items-center justify-center gap-2"
-                    style={{ maxWidth: 620 }}
-                  >
-                    {metadata.name && (
-                      <div
-                        className="px-3 py-1.5 rounded text-white font-semibold text-sm"
-                        style={{ backgroundColor: "#ea580c" }}
-                        data-testid="overlay-play-name"
-                      >
-                        {metadata.name}
-                      </div>
-                    )}
-                    {metadata.formation && (
-                      <div
-                        className="px-3 py-1.5 rounded text-white font-medium text-sm"
-                        style={{ backgroundColor: "#374151" }}
-                        data-testid="overlay-formation"
-                      >
-                        Formation: {getFormattedLabel(metadata.formation, formationLabels)}
-                      </div>
-                    )}
-                    {metadata.concept && (
-                      <div
-                        className="px-3 py-1.5 rounded text-white font-medium text-sm"
-                        style={{ backgroundColor: "#374151" }}
-                        data-testid="overlay-concept"
-                      >
-                        Concept: {getFormattedLabel(metadata.concept, conceptLabels)}
-                      </div>
-                    )}
-                    {metadata.personnel && (
-                      <div
-                        className="px-3 py-1.5 rounded text-white font-medium text-sm"
-                        style={{ backgroundColor: "#374151" }}
-                        data-testid="overlay-personnel"
-                      >
-                        Personnel: {metadata.personnel}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
