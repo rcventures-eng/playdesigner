@@ -55,13 +55,14 @@ Preferred communication style: Simple, everyday language.
 **Rationale**: Vertical layout with proper proportions provides a realistic view of the play area coaches are familiar with. The field shows the most tactically relevant area for play design with the line of scrimmage at the bottom and routes extending upward.
 
 **Export Functionality**: html-to-image library (`toPng` function) for converting canvas to downloadable PNG images at customizable dimensions. The `generateScaledExport` helper function handles proportional scaling:
-- Creates off-screen container at target dimensions with field green (#2d5a27) background
-- Clones entire canvas (field, players, routes, metadata labels)
+- First captures the live canvas at full 688×660 size using toPng (preserves all React-rendered SVG content)
+- Loads the captured image into an HTMLImageElement
+- Creates an HTML Canvas at target dimensions with field green (#2d5a27) background
 - Calculates uniform scale factor: `min(targetWidth/688, targetHeight/660)`
-- Centers scaled content using CSS flexbox
+- Draws the scaled image centered using canvas drawImage API
 - Both Download and Copy to Clipboard use this shared helper for consistent output
 
-**Rationale**: Allows coaches to export plays at any custom dimensions (default 688×660, or custom sizes like 694×392 for two-per-page printing) with the entire play proportionally scaled to fit. The full design including all metadata, players, and routes is always visible regardless of export size.
+**Rationale**: Allows coaches to export plays at any custom dimensions (default 688×660, or custom sizes like 694×392 for two-per-page printing) with the entire play proportionally scaled to fit. The full design including all metadata, players, and routes is always visible regardless of export size. The two-step approach (capture live DOM first, then scale) ensures all React-rendered content is preserved.
 
 **Interaction Model**: Drag-and-drop for player positioning (24×24px circles, bounds: x 36-652, y 36-624), click-to-draw for routes, and property panels for metadata entry.
 
