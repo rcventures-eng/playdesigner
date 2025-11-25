@@ -102,6 +102,30 @@ export default function PlayDesigner() {
   const defenseColors = ["#92400e", "#db2777", "#9333ea"];
   const shapeColors = ["#ec4899", "#1d4ed8", "#86efac"];
   const colors = playType === "offense" ? offenseColors : defenseColors;
+  
+  const conceptLabels: Record<string, string> = {
+    "outside-run": "Outside Run",
+    "inside-run": "Inside Run",
+    "short-pass": "Short Pass",
+    "deep-pass": "Deep Pass",
+    "rpo": "RPO",
+    "screen": "Screen",
+  };
+  
+  const formationLabels: Record<string, string> = {
+    "man-to-man": "Man-to-Man",
+    "zone": "Zone",
+    "blitz": "Blitz",
+    "field-goal": "Field Goal",
+    "punt": "Punt",
+    "kickoff": "Kickoff",
+    "punt-return": "Punt Return",
+    "kickoff-return": "Kickoff Return",
+  };
+  
+  const getFormattedLabel = (value: string, labels: Record<string, string>) => {
+    return labels[value] || value;
+  };
 
   useEffect(() => {
     setIsDrawingRoute(false);
@@ -775,12 +799,12 @@ export default function PlayDesigner() {
           )}
           {metadata.formation && (
             <Badge variant="secondary" className="bg-secondary/80 text-secondary-foreground font-medium px-3 py-1.5" data-testid="badge-formation">
-              Formation: {metadata.formation}
+              Formation: {getFormattedLabel(metadata.formation, formationLabels)}
             </Badge>
           )}
           {metadata.concept && (
             <Badge variant="secondary" className="bg-secondary/80 text-secondary-foreground font-medium px-3 py-1.5" data-testid="badge-concept">
-              Concept: {metadata.concept}
+              Concept: {getFormattedLabel(metadata.concept, conceptLabels)}
             </Badge>
           )}
           {metadata.personnel && (
@@ -1523,6 +1547,67 @@ export default function PlayDesigner() {
                     <line x1="3.5" y1="23.5" x2="16.5" y2="23.5" stroke="#FFFFFF" strokeWidth="0.6" />
                     <line x1="4.5" y1="27" x2="15.5" y2="27" stroke="#FFFFFF" strokeWidth="0.6" />
                   </svg>
+                </div>
+              )}
+
+              {/* Metadata overlay on field - centered in middle 5-yard row (y=84-144) */}
+              {(metadata.name || metadata.formation || metadata.concept || metadata.personnel) && (
+                <div
+                  className="absolute pointer-events-none"
+                  style={{
+                    top: 84,
+                    left: 24,
+                    width: 640,
+                    height: 60,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    zIndex: 20,
+                  }}
+                  data-testid="metadata-overlay"
+                >
+                  <div
+                    className="flex flex-wrap items-center justify-center gap-2"
+                    style={{ maxWidth: 620 }}
+                  >
+                    {metadata.name && (
+                      <div
+                        className="px-3 py-1.5 rounded text-white font-semibold text-sm"
+                        style={{ backgroundColor: "#ea580c" }}
+                        data-testid="overlay-play-name"
+                      >
+                        {metadata.name}
+                      </div>
+                    )}
+                    {metadata.formation && (
+                      <div
+                        className="px-3 py-1.5 rounded text-white font-medium text-sm"
+                        style={{ backgroundColor: "#374151" }}
+                        data-testid="overlay-formation"
+                      >
+                        Formation: {getFormattedLabel(metadata.formation, formationLabels)}
+                      </div>
+                    )}
+                    {metadata.concept && (
+                      <div
+                        className="px-3 py-1.5 rounded text-white font-medium text-sm"
+                        style={{ backgroundColor: "#374151" }}
+                        data-testid="overlay-concept"
+                      >
+                        Concept: {getFormattedLabel(metadata.concept, conceptLabels)}
+                      </div>
+                    )}
+                    {metadata.personnel && (
+                      <div
+                        className="px-3 py-1.5 rounded text-white font-medium text-sm"
+                        style={{ backgroundColor: "#374151" }}
+                        data-testid="overlay-personnel"
+                      >
+                        Personnel: {metadata.personnel}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
