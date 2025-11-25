@@ -673,270 +673,47 @@ export default function PlayDesigner() {
     setIsDraggingStraightRoute(false);
   };
 
-  // Helper function to create scaled field metrics for any export size
-  const createScaledField = (targetWidth: number, targetHeight: number) => {
-    const scaleX = targetWidth / FIELD.WIDTH;
-    const scaleY = targetHeight / FIELD.HEIGHT;
-    return {
-      WIDTH: targetWidth,
-      HEIGHT: targetHeight,
-      HEADER_HEIGHT: FIELD.HEADER_HEIGHT * scaleY,
-      SIDE_PADDING: FIELD.SIDE_PADDING * scaleX,
-      BOTTOM_PADDING: FIELD.BOTTOM_PADDING * scaleY,
-      PIXELS_PER_YARD: FIELD.PIXELS_PER_YARD * scaleY,
-      FIELD_TOP: FIELD.FIELD_TOP * scaleY,
-      FIELD_LEFT: FIELD.FIELD_LEFT * scaleX,
-      FIELD_RIGHT: FIELD.FIELD_RIGHT * scaleX,
-      FIELD_WIDTH: FIELD.FIELD_WIDTH * scaleX,
-      FIELD_HEIGHT: FIELD.FIELD_HEIGHT * scaleY,
-      LOS_Y: FIELD.LOS_Y * scaleY,
-      LEFT_HASH_X: FIELD.LEFT_HASH_X * scaleX,
-      RIGHT_HASH_X: FIELD.RIGHT_HASH_X * scaleX,
-      scaleX,
-      scaleY,
-    };
-  };
-
-  // Render export canvas with scaled coordinates using safe DOM APIs
-  const renderExportCanvas = (targetWidth: number, targetHeight: number): HTMLDivElement => {
-    const F = createScaledField(targetWidth, targetHeight);
-    const container = document.createElement("div");
-    container.style.cssText = `position: absolute; left: -9999px; top: 0; width: ${targetWidth}px; height: ${targetHeight}px; overflow: hidden; background: white;`;
-    
-    const scale = Math.min(F.scaleX, F.scaleY);
-    const badgeFontSize = Math.max(8, 14 * scale);
-    const playerLabelFontSize = Math.max(6, 10 * scale);
-    const playerSize = Math.max(12, 24 * scale);
-    
-    // Create header with badges using safe DOM APIs
-    const header = document.createElement("div");
-    header.style.cssText = `position: absolute; top: 0; left: 0; right: 0; height: ${F.HEADER_HEIGHT}px; background: white; z-index: 10; display: flex; align-items: center; justify-content: center; gap: ${8 * scale}px; padding: 0 ${8 * scale}px;`;
-    
-    const createBadge = (text: string, bgColor: string) => {
-      const badge = document.createElement("div");
-      badge.style.cssText = `padding: ${6 * scale}px ${12 * scale}px; border-radius: 4px; background: ${bgColor}; color: white; font-weight: 500; font-size: ${badgeFontSize}px; white-space: nowrap;`;
-      badge.textContent = text;
-      return badge;
-    };
-    
-    if (metadata.name) header.appendChild(createBadge(metadata.name, "#f97316"));
-    if (metadata.formation) header.appendChild(createBadge(`Formation: ${playType === "offense" ? metadata.formation : getFormattedLabel(metadata.formation, formationLabels)}`, "#374151"));
-    if (metadata.concept && playType === "offense") header.appendChild(createBadge(`Concept: ${getFormattedLabel(metadata.concept, conceptLabels)}`, "#374151"));
-    if (metadata.personnel) header.appendChild(createBadge(`Personnel: ${metadata.personnel}`, "#374151"));
-    container.appendChild(header);
-    
-    // Green field background
-    const field = document.createElement("div");
-    field.style.cssText = `position: absolute; top: ${F.HEADER_HEIGHT}px; left: 0; right: 0; bottom: 0; background: linear-gradient(to bottom, #16a34a, #15803d); z-index: 0;`;
-    container.appendChild(field);
-    
-    // Field lines SVG
-    const fieldSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    fieldSvg.setAttribute("style", "position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;");
-    
-    // Yard lines
-    for (let i = 0; i <= Math.floor(F.FIELD_HEIGHT / (60 * F.scaleY)); i++) {
-      const y = F.FIELD_TOP + i * 60 * F.scaleY;
-      if (y > F.HEIGHT - F.BOTTOM_PADDING) continue;
-      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-      line.setAttribute("x1", String(F.FIELD_LEFT));
-      line.setAttribute("y1", String(y));
-      line.setAttribute("x2", String(F.FIELD_RIGHT));
-      line.setAttribute("y2", String(y));
-      line.setAttribute("stroke", "white");
-      line.setAttribute("stroke-width", String(4 * scale));
-      line.setAttribute("opacity", "0.3");
-      fieldSvg.appendChild(line);
-    }
-    
-    // Tick marks and hash marks
-    for (let i = 0; i <= Math.floor(F.FIELD_HEIGHT / (12 * F.scaleY)); i++) {
-      const y = F.FIELD_TOP + i * 12 * F.scaleY;
-      if (y > F.HEIGHT - F.BOTTOM_PADDING) continue;
-      
-      [[F.FIELD_LEFT, F.FIELD_LEFT + 12 * F.scaleX], [F.FIELD_RIGHT - 12 * F.scaleX, F.FIELD_RIGHT]].forEach(([x1, x2]) => {
-        const tick = document.createElementNS("http://www.w3.org/2000/svg", "line");
-        tick.setAttribute("x1", String(x1));
-        tick.setAttribute("y1", String(y));
-        tick.setAttribute("x2", String(x2));
-        tick.setAttribute("y2", String(y));
-        tick.setAttribute("stroke", "white");
-        tick.setAttribute("stroke-width", String(2 * scale));
-        tick.setAttribute("opacity", "0.8");
-        fieldSvg.appendChild(tick);
-      });
-      
-      [F.LEFT_HASH_X, F.RIGHT_HASH_X].forEach(hashX => {
-        const hash = document.createElementNS("http://www.w3.org/2000/svg", "line");
-        hash.setAttribute("x1", String(hashX - 6 * F.scaleX));
-        hash.setAttribute("y1", String(y));
-        hash.setAttribute("x2", String(hashX + 6 * F.scaleX));
-        hash.setAttribute("y2", String(y));
-        hash.setAttribute("stroke", "white");
-        hash.setAttribute("stroke-width", String(2 * scale));
-        hash.setAttribute("opacity", "0.6");
-        fieldSvg.appendChild(hash);
-      });
-    }
-    
-    // Line of scrimmage
-    const los = document.createElementNS("http://www.w3.org/2000/svg", "line");
-    los.setAttribute("x1", String(F.FIELD_LEFT));
-    los.setAttribute("y1", String(F.LOS_Y));
-    los.setAttribute("x2", String(F.FIELD_RIGHT));
-    los.setAttribute("y2", String(F.LOS_Y));
-    los.setAttribute("stroke", "white");
-    los.setAttribute("stroke-width", String(6 * scale));
-    fieldSvg.appendChild(los);
-    container.appendChild(fieldSvg);
-    
-    // Routes SVG
-    const routesSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    routesSvg.setAttribute("style", "position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2;");
-    
-    const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
-    const usedColors = new Set([...routes.map(r => r.color || "#000000"), ...offenseColors, ...defenseColors]);
-    usedColors.forEach(color => {
-      const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
-      marker.setAttribute("id", `export-arrow-${color.replace('#', '')}`);
-      marker.setAttribute("markerWidth", "8");
-      marker.setAttribute("markerHeight", "8");
-      marker.setAttribute("refX", "7");
-      marker.setAttribute("refY", "3");
-      marker.setAttribute("orient", "auto");
-      const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
-      polygon.setAttribute("points", "0 0, 8 3, 0 6");
-      polygon.setAttribute("fill", color);
-      marker.appendChild(polygon);
-      defs.appendChild(marker);
-    });
-    routesSvg.appendChild(defs);
-    
-    // Draw routes
-    routes.filter(r => showBlocking || r.type !== "blocking").forEach(route => {
-      const scaledPoints = route.points.map(p => ({ x: p.x * F.scaleX, y: p.y * F.scaleY }));
-      if (scaledPoints.length < 2) return;
-      
-      let pathD: string;
-      if (route.style === "straight") {
-        pathD = `M ${scaledPoints[0].x} ${scaledPoints[0].y} ` + scaledPoints.slice(1).map(p => `L ${p.x} ${p.y}`).join(" ");
-      } else {
-        pathD = `M ${scaledPoints[0].x} ${scaledPoints[0].y}`;
-        for (let i = 1; i < scaledPoints.length; i++) {
-          const prev = scaledPoints[i - 1];
-          const curr = scaledPoints[i];
-          const next = scaledPoints[i + 1];
-          if (next) {
-            const cpx = prev.x + (curr.x - prev.x) * 0.5;
-            const cpy = prev.y + (curr.y - prev.y) * 0.5;
-            pathD += ` Q ${cpx} ${cpy} ${curr.x} ${curr.y}`;
-          } else {
-            pathD += ` L ${curr.x} ${curr.y}`;
-          }
-        }
-      }
-      
-      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      path.setAttribute("d", pathD);
-      path.setAttribute("stroke", route.color || "#000000");
-      path.setAttribute("stroke-width", String((route.type === "blocking" ? 2 : 3.6) * scale));
-      path.setAttribute("fill", "none");
-      if (route.isMotion) path.setAttribute("stroke-dasharray", "5,5");
-      if (route.type !== "blocking") path.setAttribute("marker-end", `url(#export-arrow-${(route.color || "#000000").replace('#', '')})`);
-      routesSvg.appendChild(path);
-    });
-    
-    // Draw shapes
-    shapes.forEach(shape => {
-      const sx = shape.x * F.scaleX;
-      const sy = shape.y * F.scaleY;
-      const sw = shape.width * F.scaleX;
-      const sh = shape.height * F.scaleY;
-      
-      if (shape.type === "circle" || shape.type === "oval") {
-        const ellipse = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
-        ellipse.setAttribute("cx", String(sx + sw/2));
-        ellipse.setAttribute("cy", String(sy + sh/2));
-        ellipse.setAttribute("rx", String(sw/2));
-        ellipse.setAttribute("ry", String(sh/2));
-        ellipse.setAttribute("fill", shape.color);
-        ellipse.setAttribute("opacity", "0.3");
-        routesSvg.appendChild(ellipse);
-      } else {
-        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-        rect.setAttribute("x", String(sx));
-        rect.setAttribute("y", String(sy));
-        rect.setAttribute("width", String(sw));
-        rect.setAttribute("height", String(sh));
-        rect.setAttribute("fill", shape.color);
-        rect.setAttribute("opacity", "0.3");
-        routesSvg.appendChild(rect);
-      }
-    });
-    container.appendChild(routesSvg);
-    
-    // Football
-    if (football) {
-      const fbContainer = document.createElement("div");
-      fbContainer.style.cssText = `position: absolute; left: ${football.x * F.scaleX - 5 * scale}px; top: ${football.y * F.scaleY - 10 * scale}px; z-index: 5;`;
-      const fbSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      fbSvg.setAttribute("width", String(10 * scale));
-      fbSvg.setAttribute("height", String(20 * scale));
-      fbSvg.setAttribute("viewBox", "0 0 20 40");
-      const ellipse = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
-      ellipse.setAttribute("cx", "10");
-      ellipse.setAttribute("cy", "20");
-      ellipse.setAttribute("rx", "8.75");
-      ellipse.setAttribute("ry", "18.9");
-      ellipse.setAttribute("fill", "#8B4513");
-      ellipse.setAttribute("stroke", "#654321");
-      ellipse.setAttribute("stroke-width", "1");
-      fbSvg.appendChild(ellipse);
-      const lace = document.createElementNS("http://www.w3.org/2000/svg", "line");
-      lace.setAttribute("x1", "10");
-      lace.setAttribute("y1", "3");
-      lace.setAttribute("x2", "10");
-      lace.setAttribute("y2", "37");
-      lace.setAttribute("stroke", "#FFFFFF");
-      lace.setAttribute("stroke-width", "1.2");
-      fbSvg.appendChild(lace);
-      fbContainer.appendChild(fbSvg);
-      container.appendChild(fbContainer);
-    }
-    
-    // Players
-    players.forEach(player => {
-      const playerDiv = document.createElement("div");
-      playerDiv.style.cssText = `position: absolute; left: ${player.x * F.scaleX - playerSize/2}px; top: ${player.y * F.scaleY - playerSize/2}px; width: ${playerSize}px; height: ${playerSize}px; background: ${player.color}; border-radius: 50%; border: ${2 * scale}px solid ${player.color === "#000000" ? "#333" : "rgba(0,0,0,0.3)"}; display: flex; align-items: center; justify-content: center; z-index: 3;`;
-      if (player.label) {
-        const labelSpan = document.createElement("span");
-        labelSpan.style.cssText = `color: ${player.color === "#eab308" || player.color === "#39ff14" ? "#000" : "#fff"}; font-size: ${playerLabelFontSize}px; font-weight: bold;`;
-        labelSpan.textContent = player.label;
-        playerDiv.appendChild(labelSpan);
-      }
-      container.appendChild(playerDiv);
-    });
-    
-    document.body.appendChild(container);
-    return container;
-  };
-
   const generateScaledExport = async (targetWidth: number, targetHeight: number): Promise<string> => {
-    // Create off-screen canvas with natively scaled content
-    const exportContainer = renderExportCanvas(targetWidth, targetHeight);
+    if (!canvasRef.current) throw new Error("Canvas not available");
     
-    try {
-      // Capture the natively-rendered content - no scaling artifacts
-      const dataUrl = await toPng(exportContainer, {
-        width: targetWidth,
-        height: targetHeight,
-        skipFonts: true,
-      });
-      return dataUrl;
-    } finally {
-      // Clean up off-screen container
-      document.body.removeChild(exportContainer);
+    // Native canvas size - no scaling needed at default dimensions
+    const isNativeSize = targetWidth === FIELD.WIDTH && targetHeight === FIELD.HEIGHT;
+    
+    const fullSizeDataUrl = await toPng(canvasRef.current, {
+      width: FIELD.WIDTH,
+      height: FIELD.HEIGHT,
+      skipFonts: true,
+    });
+    
+    // If exporting at native size, return directly (maximum quality)
+    if (isNativeSize) {
+      return fullSizeDataUrl;
     }
+    
+    // For smaller sizes, downscale with high quality
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+        const ctx = canvas.getContext("2d");
+        
+        if (!ctx) {
+          reject(new Error("Could not get canvas context"));
+          return;
+        }
+        
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        
+        ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+        
+        resolve(canvas.toDataURL("image/png"));
+      };
+      img.onerror = () => reject(new Error("Failed to load image for scaling"));
+      img.src = fullSizeDataUrl;
+    });
   };
 
   const exportAsImage = async () => {
