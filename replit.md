@@ -54,15 +54,15 @@ Preferred communication style: Simple, everyday language.
 
 **Rationale**: Vertical layout with proper proportions provides a realistic view of the play area coaches are familiar with. The field shows the most tactically relevant area for play design with the line of scrimmage at the bottom and routes extending upward.
 
-**Export Functionality**: html-to-image library (`toPng` function) for converting canvas to downloadable PNG images at customizable dimensions. The `generateScaledExport` helper function handles proportional scaling:
+**Export Functionality**: html-to-image library (`toPng` function) for converting canvas to downloadable PNG images at customizable dimensions. The `generateScaledExport` helper function handles edge-to-edge scaling:
 - First captures the live canvas at full 688×660 size using toPng (preserves all React-rendered SVG content)
 - Loads the captured image into an HTMLImageElement
-- Creates an HTML Canvas at target dimensions with field green (#2d5a27) background
-- Calculates uniform scale factor: `min(targetWidth/688, targetHeight/660)`
-- Draws the scaled image centered using canvas drawImage API
+- Creates an HTML Canvas at target dimensions
+- Sets imageSmoothingEnabled=true and imageSmoothingQuality="high" for best interpolation
+- Draws the captured image stretched to fill the entire target area edge-to-edge
 - Both Download and Copy to Clipboard use this shared helper for consistent output
 
-**Rationale**: Allows coaches to export plays at any custom dimensions (default 688×660, or custom sizes like 694×392 for two-per-page printing) with the entire play proportionally scaled to fit. The full design including all metadata, players, and routes is always visible regardless of export size. The two-step approach (capture live DOM first, then scale) ensures all React-rendered content is preserved.
+**Rationale**: Allows coaches to export plays at any custom dimensions (default 688×660, or custom sizes like 694×392 for two-per-page printing) with the canvas stretched to fill the entire export area edge-to-edge. No padding bars - the full field fills the requested dimensions. High-quality smoothing minimizes scaling artifacts.
 
 **Interaction Model**: Drag-and-drop for player positioning (24×24px circles, bounds: x 36-652, y 36-624), click-to-draw for routes, and property panels for metadata entry.
 
