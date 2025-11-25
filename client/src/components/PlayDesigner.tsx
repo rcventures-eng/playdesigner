@@ -23,10 +23,11 @@ interface Route {
   id: string;
   playerId: string;
   points: { x: number; y: number }[];
-  type: "primary" | "secondary" | "decision" | "blocking";
+  type: "pass" | "run" | "blocking";
   style: "straight" | "curved";
   priority?: number;
   isMotion?: boolean;
+  color?: string;
 }
 
 interface Shape {
@@ -69,7 +70,8 @@ export default function PlayDesigner() {
   const [tool, setTool] = useState<"select" | "player" | "route" | "shape" | "label">("select");
   const [shapeType, setShapeType] = useState<"circle" | "oval" | "square" | "rectangle">("circle");
   const [shapeColor, setShapeColor] = useState("#ec4899");
-  const [routeType, setRouteType] = useState<"primary" | "secondary" | "decision" | "blocking">("primary");
+  const [routeType, setRouteType] = useState<"pass" | "run" | "blocking">("pass");
+  const [makePrimary, setMakePrimary] = useState(false);
   const [routeStyle, setRouteStyle] = useState<"straight" | "curved">("straight");
   const [isMotion, setIsMotion] = useState(false);
   const [showBlocking, setShowBlocking] = useState(true);
@@ -540,6 +542,9 @@ export default function PlayDesigner() {
         finalPoints = simplifyPoints(finalPoints, 5);
       }
       
+      const player = players.find(p => p.id === selectedPlayer);
+      const playerColor = player?.color || "#000000";
+      
       const newRoute: Route = {
         id: `route-${Date.now()}`,
         playerId: selectedPlayer,
@@ -547,7 +552,8 @@ export default function PlayDesigner() {
         type: routeType,
         style: routeStyle,
         isMotion: isMotion,
-        priority: routeType === "secondary" ? 2 : undefined,
+        priority: makePrimary ? 1 : undefined,
+        color: playerColor,
       };
       setRoutes(prev => [...prev, newRoute]);
     }
@@ -639,13 +645,10 @@ export default function PlayDesigner() {
     }
   };
 
-  const getRouteColor = (type: string) => {
-    switch (type) {
-      case "primary": return "#ef4444";
-      case "decision": return "#1d4ed8";
-      case "blocking": return "#ffffff";
-      default: return "#000000";
-    }
+  const getRouteColor = (route: Route | { type: string; color?: string }) => {
+    if (route.type === "blocking") return "#ffffff";
+    if (route.type === "run") return "#000000";
+    return route.color || "#000000";
   };
 
   const renderShape = (shape: Shape) => {
@@ -1069,38 +1072,43 @@ export default function PlayDesigner() {
                   <Separator />
                   <div className="space-y-2">
                     <Label className="text-xs">Route Type</Label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-4 gap-1.5">
                       <Button
                         size="sm"
-                        variant={routeType === "primary" ? "default" : "outline"}
-                        onClick={() => setRouteType("primary")}
-                        data-testid="button-route-primary"
+                        variant={routeType === "pass" ? "default" : "secondary"}
+                        onClick={() => setRouteType("pass")}
+                        data-testid="button-route-pass"
+                        className="px-2"
                       >
+                        Pass
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={routeType === "run" ? "default" : "secondary"}
+                        onClick={() => setRouteType("run")}
+                        data-testid="button-route-run"
+                        className="px-2"
+                      >
+                        Run
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={makePrimary ? "default" : "secondary"}
+                        onClick={() => setMakePrimary(!makePrimary)}
+                        data-testid="button-make-primary"
+                        className="px-2 flex items-center gap-1"
+                      >
+                        <span className="inline-flex items-center justify-center w-4 h-4 bg-white text-black rounded-full text-xs font-bold">1</span>
                         Primary
                       </Button>
                       <Button
                         size="sm"
-                        variant={routeType === "secondary" ? "default" : "outline"}
-                        onClick={() => setRouteType("secondary")}
-                        data-testid="button-route-secondary"
-                      >
-                        2nd/3rd
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant={routeType === "decision" ? "default" : "outline"}
-                        onClick={() => setRouteType("decision")}
-                        data-testid="button-route-decision"
-                      >
-                        Decision
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant={routeType === "blocking" ? "default" : "outline"}
+                        variant={routeType === "blocking" ? "default" : "secondary"}
                         onClick={() => setRouteType("blocking")}
                         data-testid="button-route-blocking"
+                        className="px-2"
                       >
-                        Blocking
+                        Block
                       </Button>
                     </div>
                   </div>
@@ -1307,18 +1315,14 @@ export default function PlayDesigner() {
 
               <svg className="absolute inset-0 w-full h-full" style={{ pointerEvents: "none", zIndex: 2 }}>
                 <defs>
-                  <marker id="arrowhead-primary" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
-                    <polygon points="0 0, 8 3, 0 6" fill="#ef4444" />
-                  </marker>
-                  <marker id="arrowhead-decision" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
-                    <polygon points="0 0, 8 3, 0 6" fill="#1d4ed8" />
-                  </marker>
                   <marker id="arrowhead-blocking" markerWidth="4" markerHeight="4" refX="1" refY="2" orient="auto">
                     <line x1="1" y1="0" x2="1" y2="4" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" />
                   </marker>
-                  <marker id="arrowhead-secondary" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
-                    <polygon points="0 0, 8 3, 0 6" fill="#000000" />
-                  </marker>
+                  {Array.from(new Set([...routes.map(r => getRouteColor(r)), ...offenseColors, ...defenseColors, "#000000"])).map(color => (
+                    <marker key={`arrowhead-${color}`} id={`arrowhead-${color.replace('#', '')}`} markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+                      <polygon points="0 0, 8 3, 0 6" fill={color} />
+                    </marker>
+                  ))}
                 </defs>
                 
                 {shapes.map(shape => renderShape(shape))}
@@ -1336,11 +1340,11 @@ export default function PlayDesigner() {
                     )}
                     <path
                       d={getRoutePath(route)}
-                      stroke={getRouteColor(route.type)}
+                      stroke={getRouteColor(route)}
                       strokeWidth="3.6"
                       fill="none"
                       strokeDasharray={route.isMotion ? "5,5" : "none"}
-                      markerEnd={route.isMotion ? undefined : `url(#arrowhead-${route.type})`}
+                      markerEnd={route.isMotion ? undefined : (route.type === "blocking" ? "url(#arrowhead-blocking)" : `url(#arrowhead-${getRouteColor(route).replace('#', '')})`)}
                       onMouseDown={(e) => {
                         e.stopPropagation();
                       }}
@@ -1398,17 +1402,24 @@ export default function PlayDesigner() {
                   </g>
                 ))}
 
-                {isDrawingRoute && currentRoutePoints.length > 0 && (
+                {isDrawingRoute && currentRoutePoints.length > 0 && selectedPlayer && (
                   <g>
-                    <path
-                      d={getRoutePath({ points: currentRoutePoints, type: routeType, style: routeStyle } as Route)}
-                      stroke={getRouteColor(routeType)}
-                      strokeWidth="3.6"
-                      fill="none"
-                      strokeDasharray={isMotion ? "5,5" : "none"}
-                      markerEnd={isMotion ? undefined : `url(#arrowhead-${routeType})`}
-                      opacity="0.5"
-                    />
+                    {(() => {
+                      const player = players.find(p => p.id === selectedPlayer);
+                      const playerColor = player?.color || "#000000";
+                      const previewColor = routeType === "blocking" ? "#ffffff" : (routeType === "run" ? "#000000" : playerColor);
+                      return (
+                        <path
+                          d={getRoutePath({ points: currentRoutePoints, type: routeType, style: routeStyle } as Route)}
+                          stroke={previewColor}
+                          strokeWidth="3.6"
+                          fill="none"
+                          strokeDasharray={isMotion ? "5,5" : "none"}
+                          markerEnd={isMotion ? undefined : (routeType === "blocking" ? "url(#arrowhead-blocking)" : `url(#arrowhead-${previewColor.replace('#', '')})`)}
+                          opacity="0.5"
+                        />
+                      );
+                    })()}
                   </g>
                 )}
                 
