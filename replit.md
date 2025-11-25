@@ -42,8 +42,15 @@ Preferred communication style: Simple, everyday language.
 - Hash marks: Two sets of short horizontal marks in the middle at x=178-190 and x=498-510 (40 feet / 13.33 yards from each sideline, NCAA style) running vertically down field
 - Yard lines: Horizontal lines every 60px (5-yard increments) with 4px stroke at 30% opacity
 - Edge yard markers: Short horizontal tick marks on left (x=24-36) and right (x=652-664) edges marking each yard (12px spacing) - integral for route distance measurement
-- Football: Optional clickable/removable element at line of scrimmage (10×20px vertical orientation with white center lace line when added)
+- Football: Optional draggable element (10×20px vertical orientation with white center lace line when added)
+- Play-Action marker: When enabled, shows black circle with white "PA" text at football's bottom-right (same size as Primary Route marker)
 - Field width: 53.33 yards (regulation width), Scale: 12 pixels per yard, 24px padding on all sides
+
+**Motion Routes**: Motion routes (enabled via "Motion (dotted)" checkbox) display with visual split at Line of Scrimmage:
+- Below LOS (y >= 504): Dotted line (strokeDasharray="5,5") - represents pre-snap motion
+- Above LOS (y < 504): Solid line - represents post-snap route
+- Arrow marker only appears when route crosses LOS
+- Helper functions: `splitMotionRouteAtLOS()` calculates intersection point, `getRoutePathForPoints()` generates path for each segment
 
 **Rationale**: Vertical layout with proper proportions provides a realistic view of the play area coaches are familiar with. The field shows the most tactically relevant area for play design with the line of scrimmage at the bottom and routes extending upward.
 

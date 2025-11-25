@@ -730,6 +730,81 @@ export default function PlayDesigner() {
     return route.color || "#000000";
   };
 
+  // Split motion route at LOS (y=504) - returns { belowLOS: points[], aboveLOS: points[] }
+  const splitMotionRouteAtLOS = (points: { x: number; y: number }[]) => {
+    const LOS_Y = 504;
+    const belowLOS: { x: number; y: number }[] = [];
+    const aboveLOS: { x: number; y: number }[] = [];
+    
+    if (points.length === 0) return { belowLOS, aboveLOS };
+    
+    // Add the first point to the appropriate array
+    if (points[0].y >= LOS_Y) {
+      belowLOS.push(points[0]);
+    } else {
+      aboveLOS.push(points[0]);
+    }
+    
+    for (let i = 1; i < points.length; i++) {
+      const prev = points[i - 1];
+      const curr = points[i];
+      
+      // Check if we're crossing the LOS between prev and curr
+      const prevBelow = prev.y >= LOS_Y;
+      const currBelow = curr.y >= LOS_Y;
+      
+      if (prevBelow !== currBelow) {
+        // Crossing the LOS - calculate intersection point
+        const t = (LOS_Y - prev.y) / (curr.y - prev.y);
+        const intersectX = prev.x + t * (curr.x - prev.x);
+        const intersectPoint = { x: intersectX, y: LOS_Y };
+        
+        if (prevBelow) {
+          // Moving from below to above LOS
+          belowLOS.push(intersectPoint);
+          aboveLOS.push(intersectPoint);
+          aboveLOS.push(curr);
+        } else {
+          // Moving from above to below LOS
+          aboveLOS.push(intersectPoint);
+          belowLOS.push(intersectPoint);
+          belowLOS.push(curr);
+        }
+      } else if (currBelow) {
+        // Staying below LOS
+        belowLOS.push(curr);
+      } else {
+        // Staying above LOS
+        aboveLOS.push(curr);
+      }
+    }
+    
+    return { belowLOS, aboveLOS };
+  };
+
+  // Generate path string for a subset of points using route style
+  const getRoutePathForPoints = (points: { x: number; y: number }[], style: string) => {
+    if (points.length < 2) return "";
+    if (style === "straight") {
+      return `M ${points[0].x} ${points[0].y} ` + points.slice(1).map(p => `L ${p.x} ${p.y}`).join(" ");
+    } else {
+      let path = `M ${points[0].x} ${points[0].y}`;
+      for (let i = 1; i < points.length; i++) {
+        const prev = points[i - 1];
+        const curr = points[i];
+        const next = points[i + 1];
+        if (next) {
+          const cp1x = prev.x + (curr.x - prev.x) * 0.5;
+          const cp1y = prev.y + (curr.y - prev.y) * 0.5;
+          path += ` Q ${cp1x} ${cp1y} ${curr.x} ${curr.y}`;
+        } else {
+          path += ` L ${curr.x} ${curr.y}`;
+        }
+      }
+      return path;
+    }
+  };
+
   const renderShape = (shape: Shape) => {
     const isSelected = selectedShape === shape.id;
     const strokeColor = isSelected ? "#06b6d4" : "transparent";
@@ -1430,38 +1505,97 @@ export default function PlayDesigner() {
                         opacity="0.4"
                       />
                     )}
-                    <path
-                      d={getRoutePath(route)}
-                      stroke={getRouteColor(route)}
-                      strokeWidth="3.6"
-                      fill="none"
-                      strokeDasharray={route.isMotion ? "5,5" : "none"}
-                      markerEnd={(() => {
-                        const endPoint = route.points[route.points.length - 1];
-                        const crossedLOS = endPoint && endPoint.y < 504;
-                        if (route.type === "blocking") {
-                          return "url(#arrowhead-blocking)";
-                        }
-                        if (route.isMotion && !crossedLOS) {
-                          return undefined;
-                        }
-                        return `url(#arrowhead-${getRouteColor(route).replace('#', '')})`;
-                      })()}
-                      onMouseDown={(e) => {
-                        e.stopPropagation();
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedRoute(route.id);
-                        setSelectedPlayer(null);
-                        setSelectedShape(null);
-                        setSelectedFootball(false);
-                        setSelectedElements({ players: [], routes: [] });
-                      }}
-                      className="cursor-pointer"
-                      style={{ pointerEvents: "auto" }}
-                      data-testid={`route-${route.id}`}
-                    />
+                    {route.isMotion ? (
+                      <>
+                        {(() => {
+                          const { belowLOS, aboveLOS } = splitMotionRouteAtLOS(route.points);
+                          const endPoint = route.points[route.points.length - 1];
+                          const crossedLOS = endPoint && endPoint.y < 504;
+                          return (
+                            <>
+                              {belowLOS.length >= 2 && (
+                                <path
+                                  d={getRoutePathForPoints(belowLOS, route.style)}
+                                  stroke={getRouteColor(route)}
+                                  strokeWidth="3.6"
+                                  fill="none"
+                                  strokeDasharray="5,5"
+                                  onMouseDown={(e) => e.stopPropagation()}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedRoute(route.id);
+                                    setSelectedPlayer(null);
+                                    setSelectedShape(null);
+                                    setSelectedFootball(false);
+                                    setSelectedElements({ players: [], routes: [] });
+                                  }}
+                                  className="cursor-pointer"
+                                  style={{ pointerEvents: "auto" }}
+                                />
+                              )}
+                              {aboveLOS.length >= 2 && (
+                                <path
+                                  d={getRoutePathForPoints(aboveLOS, route.style)}
+                                  stroke={getRouteColor(route)}
+                                  strokeWidth="3.6"
+                                  fill="none"
+                                  markerEnd={crossedLOS ? `url(#arrowhead-${getRouteColor(route).replace('#', '')})` : undefined}
+                                  onMouseDown={(e) => e.stopPropagation()}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedRoute(route.id);
+                                    setSelectedPlayer(null);
+                                    setSelectedShape(null);
+                                    setSelectedFootball(false);
+                                    setSelectedElements({ players: [], routes: [] });
+                                  }}
+                                  className="cursor-pointer"
+                                  style={{ pointerEvents: "auto" }}
+                                  data-testid={`route-${route.id}`}
+                                />
+                              )}
+                              {belowLOS.length >= 2 && aboveLOS.length < 2 && (
+                                <path
+                                  d={getRoutePathForPoints(belowLOS, route.style)}
+                                  stroke="transparent"
+                                  strokeWidth="3.6"
+                                  fill="none"
+                                  data-testid={`route-${route.id}`}
+                                  style={{ pointerEvents: "none" }}
+                                />
+                              )}
+                            </>
+                          );
+                        })()}
+                      </>
+                    ) : (
+                      <path
+                        d={getRoutePath(route)}
+                        stroke={getRouteColor(route)}
+                        strokeWidth="3.6"
+                        fill="none"
+                        markerEnd={(() => {
+                          if (route.type === "blocking") {
+                            return "url(#arrowhead-blocking)";
+                          }
+                          return `url(#arrowhead-${getRouteColor(route).replace('#', '')})`;
+                        })()}
+                        onMouseDown={(e) => {
+                          e.stopPropagation();
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedRoute(route.id);
+                          setSelectedPlayer(null);
+                          setSelectedShape(null);
+                          setSelectedFootball(false);
+                          setSelectedElements({ players: [], routes: [] });
+                        }}
+                        className="cursor-pointer"
+                        style={{ pointerEvents: "auto" }}
+                        data-testid={`route-${route.id}`}
+                      />
+                    )}
                     {route.priority && route.points.length > 0 && (
                       <g>
                         <circle
@@ -1510,21 +1644,46 @@ export default function PlayDesigner() {
                       const player = players.find(p => p.id === selectedPlayer);
                       const playerColor = player?.color || "#000000";
                       const previewColor = routeType === "blocking" ? "#ffffff" : (routeType === "run" ? "#000000" : playerColor);
+                      const endPoint = currentRoutePoints[currentRoutePoints.length - 1];
+                      const crossedLOS = endPoint && endPoint.y < 504;
+                      
+                      if (isMotion) {
+                        const { belowLOS, aboveLOS } = splitMotionRouteAtLOS(currentRoutePoints);
+                        return (
+                          <>
+                            {belowLOS.length >= 2 && (
+                              <path
+                                d={getRoutePathForPoints(belowLOS, routeStyle)}
+                                stroke={previewColor}
+                                strokeWidth="3.6"
+                                fill="none"
+                                strokeDasharray="5,5"
+                                opacity="0.5"
+                              />
+                            )}
+                            {aboveLOS.length >= 2 && (
+                              <path
+                                d={getRoutePathForPoints(aboveLOS, routeStyle)}
+                                stroke={previewColor}
+                                strokeWidth="3.6"
+                                fill="none"
+                                markerEnd={crossedLOS ? `url(#arrowhead-${previewColor.replace('#', '')})` : undefined}
+                                opacity="0.5"
+                              />
+                            )}
+                          </>
+                        );
+                      }
+                      
                       return (
                         <path
                           d={getRoutePath({ points: currentRoutePoints, type: routeType, style: routeStyle } as Route)}
                           stroke={previewColor}
                           strokeWidth="3.6"
                           fill="none"
-                          strokeDasharray={isMotion ? "5,5" : "none"}
                           markerEnd={(() => {
-                            const endPoint = currentRoutePoints[currentRoutePoints.length - 1];
-                            const crossedLOS = endPoint && endPoint.y < 504;
                             if (routeType === "blocking") {
                               return "url(#arrowhead-blocking)";
-                            }
-                            if (isMotion && !crossedLOS) {
-                              return undefined;
                             }
                             return `url(#arrowhead-${previewColor.replace('#', '')})`;
                           })()}
