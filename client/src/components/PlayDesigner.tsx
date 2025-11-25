@@ -74,6 +74,7 @@ export default function PlayDesigner() {
   const [makePrimary, setMakePrimary] = useState(false);
   const [routeStyle, setRouteStyle] = useState<"straight" | "curved">("straight");
   const [isMotion, setIsMotion] = useState(false);
+  const [isPlayAction, setIsPlayAction] = useState(false);
   const [showBlocking, setShowBlocking] = useState(true);
   const [metadata, setMetadata] = useState<PlayMetadata>({
     name: "",
@@ -1081,6 +1082,19 @@ export default function PlayDesigner() {
                     </svg>
                   </Button>
                 </div>
+                {football && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <input
+                      type="checkbox"
+                      id="play-action"
+                      checked={isPlayAction}
+                      onChange={(e) => setIsPlayAction(e.target.checked)}
+                      className="rounded"
+                      data-testid="checkbox-play-action"
+                    />
+                    <Label htmlFor="play-action" className="text-xs">Play-Action</Label>
+                  </div>
+                )}
               </div>
 
               {tool === "shape" && playType === "defense" && (
@@ -1602,6 +1616,23 @@ export default function PlayDesigner() {
                     <line x1="3.5" y1="23.5" x2="16.5" y2="23.5" stroke="#FFFFFF" strokeWidth="0.6" />
                     <line x1="4.5" y1="27" x2="15.5" y2="27" stroke="#FFFFFF" strokeWidth="0.6" />
                   </svg>
+                  {isPlayAction && (
+                    <svg 
+                      width="22" 
+                      height="22" 
+                      viewBox="-1 -1 22 22"
+                      style={{ 
+                        position: 'absolute', 
+                        left: -1, 
+                        top: 9,
+                        pointerEvents: 'none'
+                      }}
+                      data-testid="play-action-marker"
+                    >
+                      <circle cx="10" cy="10" r="10" fill="black" stroke="#000" strokeWidth="2" />
+                      <text x="10" y="14" fill="white" fontSize="12" fontWeight="bold" textAnchor="middle">PA</text>
+                    </svg>
+                  )}
                 </div>
               )}
 
