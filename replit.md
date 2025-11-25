@@ -56,8 +56,8 @@ Preferred communication style: Simple, everyday language.
 - Hash marks: Two sets of short horizontal marks at `FIELD.LEFT_HASH_X` and `FIELD.RIGHT_HASH_X` (NCAA-style)
 - Yard lines: Horizontal lines every 60px (5-yard increments) with 4px stroke at 30% opacity
 - Edge yard markers: Short tick marks on left/right edges marking each yard (12px spacing)
-- Football: Optional draggable element (10×20px vertical orientation with white center lace line)
-- Play-Action marker: Black circle with white "PA" text at football's bottom-right
+- Footballs: Unlimited draggable footballs (10×20px vertical orientation with white center lace line). Users can add multiple footballs and individually select/delete them.
+- Play-Action marker: Black circle with white "PA" text at football's bottom-right (appears on all footballs when Play Action concept selected)
 - Scale: 12 pixels per yard, 53.33 yard regulation width
 
 **Motion Routes**: Motion routes (enabled via "Motion (dotted)" checkbox) display with visual split at Line of Scrimmage:
@@ -69,14 +69,11 @@ Preferred communication style: Simple, everyday language.
 **Rationale**: Native 694×392 resolution ensures maximum sharpness when exporting at full size (no upscaling artifacts). The 60px white header separates play metadata from the field area for clean presentation. Downscaling to smaller sizes (e.g., 347×196 for half size) works well with high-quality smoothing.
 
 **Export Functionality**: html-to-image library (`toPng` function) for converting canvas to downloadable PNG images at customizable dimensions. The `generateScaledExport` helper function handles edge-to-edge scaling:
-- First captures the live canvas at native 694×392 size using toPng (preserves all React-rendered SVG content)
-- Loads the captured image into an HTMLImageElement
-- Creates an HTML Canvas at target dimensions
-- Sets imageSmoothingEnabled=true and imageSmoothingQuality="high" for best interpolation
-- Draws the captured image stretched to fill the entire target area edge-to-edge
+- Uses html-to-image's native width/height parameters to render SVG directly at target dimensions
+- Applies CSS transform scaling to ensure proper proportions
 - Both Download and Copy to Clipboard use this shared helper for consistent output
 
-**Rationale**: Native 694×392 exports are pixel-perfect (no scaling). Downscaling to smaller sizes (347×196, etc.) preserves quality. Designed for printing two plays per 8.5×11 page.
+**Rationale**: Direct SVG rendering at target dimensions produces crisp output at all sizes (300×200, 400×300, 694×392) without pixel interpolation blur. Designed for printing two plays per 8.5×11 page.
 
 **Interaction Model**: Drag-and-drop for player positioning (24×24px circles, bounds from FIELD.PLAYER_BOUNDS), click-to-draw for routes, and property panels for metadata entry.
 
