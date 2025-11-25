@@ -54,9 +54,9 @@ Preferred communication style: Simple, everyday language.
 
 **Rationale**: Vertical layout with proper proportions provides a realistic view of the play area coaches are familiar with. The field shows the most tactically relevant area for play design with the line of scrimmage at the bottom and routes extending upward.
 
-**Export Functionality**: html-to-image library (`toPng` function) for converting canvas to downloadable PNG images at customizable dimensions.
+**Export Functionality**: html-to-image library (`toPng` function) for converting canvas to downloadable PNG images at customizable dimensions. Both Download and Copy to Clipboard use identical export options (width, height, scale transform) to ensure consistent output dimensions.
 
-**Rationale**: Allows coaches to export plays at custom dimensions (default 688×660, or custom sizes) for printing, presentations, or digital playbooks.
+**Rationale**: Allows coaches to export plays at custom dimensions (default 688×660, or custom sizes like 694×392 for two-per-page printing) for printing, presentations, or digital playbooks. Clipboard export respects the same dimensions as file download for workflow consistency.
 
 **Interaction Model**: Drag-and-drop for player positioning (24×24px circles, bounds: x 36-652, y 36-624), click-to-draw for routes, and property panels for metadata entry.
 
