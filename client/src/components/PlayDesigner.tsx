@@ -658,15 +658,6 @@ export default function PlayDesigner() {
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
-        const scaleX = targetWidth / CANVAS_WIDTH;
-        const scaleY = targetHeight / CANVAS_HEIGHT;
-        const scale = Math.min(scaleX, scaleY);
-        
-        const scaledWidth = CANVAS_WIDTH * scale;
-        const scaledHeight = CANVAS_HEIGHT * scale;
-        const offsetX = (targetWidth - scaledWidth) / 2;
-        const offsetY = (targetHeight - scaledHeight) / 2;
-        
         const canvas = document.createElement("canvas");
         canvas.width = targetWidth;
         canvas.height = targetHeight;
@@ -677,10 +668,10 @@ export default function PlayDesigner() {
           return;
         }
         
-        ctx.fillStyle = "#2d5a27";
-        ctx.fillRect(0, 0, targetWidth, targetHeight);
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
         
-        ctx.drawImage(img, offsetX, offsetY, scaledWidth, scaledHeight);
+        ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
         
         resolve(canvas.toDataURL("image/png"));
       };
