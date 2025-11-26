@@ -1079,7 +1079,7 @@ export default function PlayDesigner() {
                   <Input
                     id="play-name"
                     data-testid="input-play-name"
-                    placeholder="Play name..."
+                    placeholder="Play Name..."
                     value={metadata.name}
                     onChange={(e) => setMetadata({ ...metadata, name: e.target.value })}
                     className="h-8 text-sm"
@@ -1131,7 +1131,7 @@ export default function PlayDesigner() {
                       <Label htmlFor="concept" className="text-xs">Concept</Label>
                       <Select value={metadata.concept} onValueChange={(v) => setMetadata({ ...metadata, concept: v })}>
                         <SelectTrigger id="concept" data-testid="select-concept" className="h-8 text-sm">
-                          <SelectValue placeholder="Select concept" />
+                          <SelectValue placeholder="Select Concept" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="outside-run">Outside Run</SelectItem>
