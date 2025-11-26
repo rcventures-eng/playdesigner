@@ -338,7 +338,7 @@
   transition: background-color 80ms ease-out, color 80ms ease-out;
   will-change: background-color;
 }
-.lp-menu-item:hover:not([data-disabled="true"]) {
+.lp-menu-item:hover:not([data-disabled="true"]):not([data-active="true"]) {
   background-color: rgba(55, 65, 81, 0.5);
 }
 .lp-menu-item[data-active="true"] {
