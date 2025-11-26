@@ -1986,42 +1986,42 @@ export default function PlayDesigner() {
           </div>
         </div>
 
-        <div className="w-80 border-l border-border bg-card p-4 overflow-y-auto">
-          <h3 className="font-semibold text-sm text-foreground mb-3">Kickoff: How to Build Your Play</h3>
-          <div className="space-y-2 text-xs text-muted-foreground">
+        <div className="w-96 border-l border-border bg-card p-4 overflow-y-auto">
+          <h3 className="font-semibold text-base text-foreground mb-3">🏈 Kickoff: How to Build Your Play</h3>
+          <div className="space-y-2 text-sm text-muted-foreground">
             <p className="text-foreground font-semibold">Welcome to the Play Creator! Follow these simple steps to sketch up your next touchdown.</p>
             
             <p className="font-semibold text-foreground mt-3">1. Set the Stage</p>
             <p>Look for the icons on the left sidebar to populate the field.</p>
-            <p>• Add Players: Click the Colored Icons to drop players onto the canvas.</p>
-            <p>• Add the Ball: Click the Football Icon to set the tee. Tip: You can add extra footballs to show hand-offs or reverses.</p>
+            <p>🟢 Add Players: Click the Colored Icons to drop players onto the canvas.</p>
+            <p>🏈 Add the Ball: Click the Football Icon to set the tee. Tip: You can add extra footballs to show hand-offs or reverses.</p>
             
             <p className="font-semibold text-foreground mt-3">2. Move & Label Players</p>
             <p>Switch to the Select Tool (mouse cursor icon) to organize the formation.</p>
-            <p>• Move a Player: Single-click and drag the circle to where they line up.</p>
-            <p>• Name a Position: Double-click any circle to type an abbreviation (e.g., QB, WR, LT).</p>
+            <p>Move a Player: Single-click and drag the circle to where they line up.</p>
+            <p>Name a Position: Double-click any circle to type an abbreviation (e.g., QB, WR, LT).</p>
             
             <p className="font-semibold text-foreground mt-3">3. Draw the Action</p>
             <p>Switch to the Route Tool to show players what to do.</p>
-            <p className="font-semibold">Running & Blocking</p>
-            <p>• Run Routes: Just draw! Routes automatically appear as solid black lines.</p>
-            <p>• Blocking: Toggle the Block switch for blocking assignments.</p>
-            <p className="font-semibold mt-2">Passing</p>
-            <p>• Pass Routes: These will automatically appear in the player's color.</p>
-            <p>• Primary Receiver: Toggle the Primary switch to mark the main target.</p>
-            <p>• Route Shape: Choose Straight for fly routes or posts; choose Curved for crossing routes or drags.</p>
-            <p className="font-semibold mt-2">Motion & Fakes</p>
-            <p>• Pre-Snap Motion: Check the Motion box. Lines behind the scrimmage line will be dashed, then turn solid once the ball is snapped.</p>
-            <p>• Play-Action: Select a football icon, check Play-Action, and place it where the fake happens.</p>
+            <p className="font-semibold">🏃 Running & Blocking</p>
+            <p>Run Routes: Just draw! Routes automatically appear as solid black lines.</p>
+            <p>Blocking: Toggle the Block switch for blocking assignments.</p>
+            <p className="font-semibold mt-2">🎯 Passing</p>
+            <p>Pass Routes: These will automatically appear in the player's color.</p>
+            <p>Primary Receiver: Toggle the Primary switch to mark the main target.</p>
+            <p>Route Shape: Choose Straight for fly routes or posts; choose Curved for crossing routes or drags.</p>
+            <p className="font-semibold mt-2">💨 Motion & Fakes</p>
+            <p>Pre-Snap Motion: Check the Motion box. Lines behind the scrimmage line will be dashed, then turn solid once the ball is snapped.</p>
+            <p>Play-Action: Select a football icon, check Play-Action, and place it where the fake happens.</p>
             
             <p className="font-semibold text-foreground mt-3">4. Fixes & Finishes</p>
-            <p>• Undo: Removes the very last thing you did.</p>
-            <p>• Clear All: Wipes the board clean to start a brand new play.</p>
+            <p>↩️ Undo: Removes the very last thing you did.</p>
+            <p>🗑️ Clear All: Wipes the board clean to start a brand new play.</p>
             
             <p className="font-semibold text-foreground mt-3">5. Save Your Play</p>
             <p>Ready to put this in your playbook? You have two easy options:</p>
-            <p>• Download as Image: Best for printing (fits perfectly on a standard sheet of paper).</p>
-            <p>• Copy to Clipboard: Best for pasting directly into a document or presentation.</p>
+            <p>📥 Download as Image: Best for printing (fits perfectly on a standard sheet of paper).</p>
+            <p>📋 Copy to Clipboard: Best for pasting directly into a document or presentation.</p>
           </div>
         </div>
       </div>
