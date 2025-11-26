@@ -1206,9 +1206,9 @@ export default function PlayDesigner() {
                   variant={tool === "route" ? "default" : "secondary"}
                   onClick={() => setTool("route")}
                   data-testid="button-tool-route"
-                  className="justify-start px-2"
+                  className="gap-1 justify-center px-2"
                 >
-                  <PenTool className="h-4 w-4 mr-1.5" />
+                  <PenTool className="h-4 w-4" />
                   Route
                 </Button>
                 <Button
@@ -1217,9 +1217,9 @@ export default function PlayDesigner() {
                   onClick={undo}
                   disabled={history.length === 0}
                   data-testid="button-tool-undo"
-                  className="justify-start px-2"
+                  className="gap-1 justify-center px-2"
                 >
-                  <RotateCcw className="h-4 w-4 mr-1.5" />
+                  <RotateCcw className="h-4 w-4" />
                   Undo
                 </Button>
                 <Button
