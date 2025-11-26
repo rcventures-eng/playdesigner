@@ -708,7 +708,7 @@ export default function PlayDesigner() {
     currentRoutePointsRef.current = [];
     setSelectedElements({ players: [], routes: [] });
     setIsDraggingStraightRoute(false);
-    setActiveTool("select");
+    setTool("select");
   };
 
   const generateScaledExport = async (targetWidth: number, targetHeight: number): Promise<string> => {
