@@ -128,8 +128,21 @@ export default function PlayDesigner() {
   const [lassoEnd, setLassoEnd] = useState<{ x: number; y: number } | null>(null);
   const [selectedElements, setSelectedElements] = useState<{ players: string[]; routes: string[] }>({ players: [], routes: [] });
   const [isDraggingStraightRoute, setIsDraggingStraightRoute] = useState(false);
+  
+  // Long-press menu state
+  const [longPressMenuOpen, setLongPressMenuOpen] = useState(false);
+  const [longPressMenuPosition, setLongPressMenuPosition] = useState({ x: 0, y: 0 });
+  const [longPressPlayerId, setLongPressPlayerId] = useState<string | null>(null);
+  const [longPressPlayerRef, setLongPressPlayerRef] = useState<string | null>(null);
+  const [hoveredRouteType, setHoveredRouteType] = useState<"pass" | "run" | "blocking" | null>(null);
+  const [hoveredRouteStyle, setHoveredRouteStyle] = useState<"straight" | "curved" | null>(null);
+  const [menuMotion, setMenuMotion] = useState(false);
+  const [menuMakePrimary, setMenuMakePrimary] = useState(false);
+  
   const canvasRef = useRef<HTMLDivElement>(null);
   const currentRoutePointsRef = useRef<{ x: number; y: number }[]>([]);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const longPressStartPos = useRef<{ x: number; y: number } | null>(null);
   const { toast } = useToast();
 
   const offenseColors = ["#39ff14", "#1d4ed8", "#ef4444", "#eab308", "#000000", "#f97316", "#6b7280"];
@@ -245,6 +258,28 @@ export default function PlayDesigner() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [selectedPlayer, selectedRoute, selectedShape, selectedFootball, editingPlayer, selectedElements, players, routes, shapes, footballs, metadata]);
+
+  // Handle click-outside to close long-press menu and cancel long-press on window mouseup
+  useEffect(() => {
+    const handleWindowMouseUp = () => {
+      cancelLongPress();
+    };
+    
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (longPressMenuOpen && !target.closest('[data-testid="long-press-menu"]')) {
+        closeLongPressMenu();
+      }
+    };
+    
+    window.addEventListener("mouseup", handleWindowMouseUp);
+    document.addEventListener("click", handleClickOutside);
+    
+    return () => {
+      window.removeEventListener("mouseup", handleWindowMouseUp);
+      document.removeEventListener("click", handleClickOutside);
+    };
+  }, [longPressMenuOpen]);
 
   const addPlayer = (color: string) => {
     saveToHistory();
@@ -394,6 +429,21 @@ export default function PlayDesigner() {
             y: e.clientY - rect.top - player.y,
           });
         }
+        
+        // Start long-press timer (300ms) and store start position for movement threshold
+        setLongPressPlayerRef(playerId);
+        longPressStartPos.current = { x: e.clientX, y: e.clientY };
+        longPressTimerRef.current = setTimeout(() => {
+          // Long press detected - open menu
+          setLongPressPlayerId(playerId);
+          setLongPressMenuPosition({ x: e.clientX, y: e.clientY + 20 });
+          setLongPressMenuOpen(true);
+          setIsDragging(false); // Cancel drag to prevent accidental movement
+          setHoveredRouteType(null);
+          setHoveredRouteStyle(null);
+          setMenuMotion(false);
+          setMenuMakePrimary(false);
+        }, 300);
       }
     } else if (tool === "route") {
       e.stopPropagation();
@@ -408,6 +458,56 @@ export default function PlayDesigner() {
         currentRoutePointsRef.current = [initialPoint];
       }
     }
+  };
+  
+  const cancelLongPress = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    setLongPressPlayerRef(null);
+    longPressStartPos.current = null;
+  };
+  
+  const closeLongPressMenu = () => {
+    setLongPressMenuOpen(false);
+    setLongPressPlayerId(null);
+    setHoveredRouteType(null);
+    setHoveredRouteStyle(null);
+    setMenuMotion(false);
+    setMenuMakePrimary(false);
+  };
+  
+  const startRouteFromMenu = (type: "pass" | "run" | "blocking", style: "straight" | "curved") => {
+    if (!longPressPlayerId) return;
+    
+    const player = players.find(p => p.id === longPressPlayerId);
+    if (!player) return;
+    
+    // Set route options (motion and primary only apply to pass/run, not blocking)
+    setRouteType(type);
+    setRouteStyle(style);
+    if (type === "blocking") {
+      setIsMotion(false);
+      setMakePrimary(false);
+    } else {
+      setIsMotion(menuMotion);
+      setMakePrimary(menuMakePrimary);
+    }
+    
+    // Start route drawing
+    setTool("route");
+    setIsDrawingRoute(true);
+    setIsDraggingStraightRoute(true);
+    setSelectedPlayer(longPressPlayerId);
+    setSelectedElements({ players: [], routes: [] });
+    
+    const initialPoint = { x: player.x, y: player.y };
+    setCurrentRoutePoints([initialPoint]);
+    currentRoutePointsRef.current = [initialPoint];
+    
+    // Close menu
+    closeLongPressMenu();
   };
 
   const handlePlayerDoubleClick = (e: React.MouseEvent, playerId: string) => {
@@ -456,6 +556,16 @@ export default function PlayDesigner() {
   };
 
   const handleCanvasMouseMove = (e: React.MouseEvent) => {
+    // Cancel long-press if mouse moves more than 8 pixels (prevents menu opening during drag)
+    if (longPressStartPos.current && longPressTimerRef.current) {
+      const dx = e.clientX - longPressStartPos.current.x;
+      const dy = e.clientY - longPressStartPos.current.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      if (distance > 8) {
+        cancelLongPress();
+      }
+    }
+    
     const bounds = FIELD.PLAYER_BOUNDS;
     if (isDragging && selectedPlayer && tool === "select") {
       const rect = canvasRef.current?.getBoundingClientRect();
@@ -572,6 +682,9 @@ export default function PlayDesigner() {
   };
 
   const handleCanvasMouseUp = () => {
+    // Cancel long-press timer if mouse released before 300ms
+    cancelLongPress();
+    
     if (tool === "route" && isDraggingStraightRoute && isDrawingRoute && currentRoutePointsRef.current.length >= 2) {
       finishRoute();
       setIsDraggingStraightRoute(false);
@@ -1559,6 +1672,7 @@ export default function PlayDesigner() {
               onMouseDown={handleCanvasMouseDown}
               onClick={handleCanvasClick}
               onDoubleClick={handleCanvasDoubleClick}
+              onMouseLeave={cancelLongPress}
               data-testid="canvas-field"
             >
               {/* White header for metadata */}
@@ -1937,7 +2051,9 @@ export default function PlayDesigner() {
                 >
                   <div
                     className={`w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs ${
-                      (selectedPlayer === player.id || selectedElements.players.includes(player.id)) ? "ring-2 ring-cyan-400" : ""
+                      longPressPlayerId === player.id 
+                        ? "ring-4 ring-orange-400 animate-pulse" 
+                        : (selectedPlayer === player.id || selectedElements.players.includes(player.id)) ? "ring-2 ring-cyan-400" : ""
                     }`}
                     style={{ backgroundColor: player.color }}
                   >
@@ -2048,6 +2164,98 @@ export default function PlayDesigner() {
           </div>
         </div>
       </div>
+      
+      {/* Long-press cascading menu */}
+      {longPressMenuOpen && (
+        <div
+          data-testid="long-press-menu"
+          className="fixed z-[100] select-none"
+          style={{
+            left: longPressMenuPosition.x,
+            top: longPressMenuPosition.y,
+            transform: "translateX(-50%)",
+          }}
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <div className="bg-gray-800 rounded-lg shadow-xl border border-gray-600 overflow-hidden">
+            <div className="px-3 py-2 bg-gray-700 border-b border-gray-600">
+              <span className="text-white text-sm font-semibold">Route Options</span>
+            </div>
+            <div className="flex">
+              {/* Level 1: Route Types */}
+              <div className="flex flex-col min-w-[100px]">
+                {(["pass", "run", "blocking"] as const).map((type) => (
+                  <div
+                    key={type}
+                    className={`px-4 py-2 text-sm cursor-pointer flex items-center justify-between transition-colors ${
+                      hoveredRouteType === type ? "bg-orange-500 text-white" : "text-gray-200 hover:bg-gray-700"
+                    }`}
+                    onMouseEnter={() => {
+                      setHoveredRouteType(type);
+                      setHoveredRouteStyle(null);
+                    }}
+                    data-testid={`menu-route-type-${type}`}
+                  >
+                    <span className="capitalize">{type === "blocking" ? "Block" : type}</span>
+                    <span className="ml-2 text-xs">→</span>
+                  </div>
+                ))}
+              </div>
+              
+              {/* Level 2: Route Styles (shown when route type is hovered) */}
+              {hoveredRouteType && (
+                <div className="flex flex-col min-w-[100px] border-l border-gray-600">
+                  {(["straight", "curved"] as const).map((style) => (
+                    <div
+                      key={style}
+                      className={`px-4 py-2 text-sm cursor-pointer flex items-center justify-between transition-colors ${
+                        hoveredRouteStyle === style ? "bg-orange-500 text-white" : "text-gray-200 hover:bg-gray-700"
+                      }`}
+                      onMouseEnter={() => setHoveredRouteStyle(style)}
+                      onClick={() => startRouteFromMenu(hoveredRouteType, style)}
+                      data-testid={`menu-route-style-${style}`}
+                    >
+                      <span className="capitalize">{style}</span>
+                      {hoveredRouteType !== "blocking" && <span className="ml-2 text-xs">→</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Level 3: Options (only for Pass/Run, not Block) */}
+              {hoveredRouteType && hoveredRouteType !== "blocking" && hoveredRouteStyle && (
+                <div className="flex flex-col min-w-[130px] border-l border-gray-600 py-1">
+                  <label
+                    className="flex items-center px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 cursor-pointer"
+                    data-testid="menu-motion-checkbox"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={menuMotion}
+                      onChange={(e) => setMenuMotion(e.target.checked)}
+                      className="mr-2 w-4 h-4 accent-orange-500"
+                    />
+                    Motion?
+                  </label>
+                  <label
+                    className="flex items-center px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 cursor-pointer"
+                    data-testid="menu-primary-checkbox"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={menuMakePrimary}
+                      onChange={(e) => setMenuMakePrimary(e.target.checked)}
+                      className="mr-2 w-4 h-4 accent-orange-500"
+                    />
+                    Make Primary?
+                  </label>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
