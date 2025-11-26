@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Download, Copy, Plus, Trash2, Circle as CircleIcon, MoveHorizontal, PenTool, Square as SquareIcon, Type, Hexagon, RotateCcw } from "lucide-react";
 import { toPng } from "html-to-image";
 import { useToast } from "@/hooks/use-toast";
+import underConstructionImage from "@assets/generated_images/under_construction_warning_banner.png";
 
 const FIELD = {
   WIDTH: 694,
@@ -1518,6 +1519,16 @@ export default function PlayDesigner() {
         </div>
 
         <div className="flex-1 bg-muted/30 p-2 overflow-auto flex items-center justify-center">
+          {(playType === "defense" || playType === "special") && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
+              <img 
+                src={underConstructionImage} 
+                alt="Under Construction" 
+                className="max-w-lg max-h-96 object-contain"
+                data-testid="under-construction-image"
+              />
+            </div>
+          )}
           <div className="bg-background rounded-lg shadow-lg p-2">
             <div
               ref={canvasRef}
