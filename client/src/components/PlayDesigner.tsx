@@ -139,7 +139,9 @@ export default function PlayDesigner() {
   const [hoveredRouteStyle, setHoveredRouteStyle] = useState<"straight" | "curved" | null>(null);
   const [menuMotion, setMenuMotion] = useState(false);
   const [menuMakePrimary, setMenuMakePrimary] = useState(false);
+  const [menuBoth, setMenuBoth] = useState(false);
   const [menuConfirming, setMenuConfirming] = useState(false);
+  const [confirmingStyle, setConfirmingStyle] = useState<"straight" | "curved" | null>(null);
   
   const canvasRef = useRef<HTMLDivElement>(null);
   const currentRoutePointsRef = useRef<{ x: number; y: number }[]>([]);
@@ -268,6 +270,9 @@ export default function PlayDesigner() {
     };
     
     const handleClickOutside = (e: MouseEvent) => {
+      // Don't close during confirmation dwell
+      if (menuConfirming) return;
+      
       const target = e.target as HTMLElement;
       if (longPressMenuOpen && !target.closest('[data-testid="long-press-menu"]')) {
         closeLongPressMenu();
@@ -281,7 +286,7 @@ export default function PlayDesigner() {
       window.removeEventListener("mouseup", handleWindowMouseUp);
       document.removeEventListener("click", handleClickOutside);
     };
-  }, [longPressMenuOpen]);
+  }, [longPressMenuOpen, menuConfirming]);
 
   const addPlayer = (color: string) => {
     saveToHistory();
@@ -437,16 +442,29 @@ export default function PlayDesigner() {
         longPressStartPos.current = { x: e.clientX, y: e.clientY };
         setIsLongPressHolding(true);
         longPressTimerRef.current = setTimeout(() => {
-          // Long press detected - open menu
+          // Long press detected - open menu anchored under player center
           setIsLongPressHolding(false);
           setLongPressPlayerId(playerId);
-          setLongPressMenuPosition({ x: e.clientX, y: e.clientY + 20 });
+          
+          // Calculate menu position: left edge aligned with player center
+          const rect = canvasRef.current?.getBoundingClientRect();
+          if (rect) {
+            const menuX = rect.left + player.x;
+            const menuY = rect.top + player.y + 16; // 16px below player (12px radius + 4px gap)
+            // Clamp to viewport (assume max menu width ~360px)
+            const clampedX = Math.max(8, Math.min(menuX, window.innerWidth - 368));
+            setLongPressMenuPosition({ x: clampedX, y: menuY });
+          } else {
+            setLongPressMenuPosition({ x: e.clientX, y: e.clientY + 20 });
+          }
+          
           setLongPressMenuOpen(true);
           setIsDragging(false); // Cancel drag to prevent accidental movement
           setHoveredRouteType(null);
           setHoveredRouteStyle(null);
           setMenuMotion(false);
           setMenuMakePrimary(false);
+          setMenuBoth(false);
         }, 300);
       }
     } else if (tool === "route") {
@@ -481,6 +499,9 @@ export default function PlayDesigner() {
     setHoveredRouteStyle(null);
     setMenuMotion(false);
     setMenuMakePrimary(false);
+    setMenuBoth(false);
+    setMenuConfirming(false);
+    setConfirmingStyle(null);
   };
   
   const startRouteFromMenu = (type: "pass" | "run" | "blocking", style: "straight" | "curved") => {
@@ -491,12 +512,13 @@ export default function PlayDesigner() {
     
     const playerId = longPressPlayerId;
     
-    // Show brief confirmation for non-blocking routes with options
-    if (type !== "blocking" && (menuMotion || menuMakePrimary)) {
+    // Show extended confirmation for non-blocking routes with options selected
+    if (type !== "blocking" && (menuMotion || menuMakePrimary || menuBoth)) {
       setMenuConfirming(true);
+      setConfirmingStyle(style);
       setTimeout(() => {
         executeRouteStart(type, style, player, playerId);
-      }, 200);
+      }, 450); // Extended delay for clear visual feedback
     } else {
       executeRouteStart(type, style, player, playerId);
     }
@@ -510,8 +532,11 @@ export default function PlayDesigner() {
       setIsMotion(false);
       setMakePrimary(false);
     } else {
-      setIsMotion(menuMotion);
-      setMakePrimary(menuMakePrimary);
+      // Both checkbox means both Motion and Primary are true
+      const applyMotion = menuBoth || menuMotion;
+      const applyPrimary = menuBoth || menuMakePrimary;
+      setIsMotion(applyMotion);
+      setMakePrimary(applyPrimary);
     }
     
     // Start route drawing
@@ -2193,7 +2218,7 @@ export default function PlayDesigner() {
           style={{
             left: longPressMenuPosition.x,
             top: longPressMenuPosition.y,
-            transform: "translateX(-50%)",
+            pointerEvents: menuConfirming ? "none" : "auto",
           }}
           onClick={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
@@ -2201,7 +2226,7 @@ export default function PlayDesigner() {
           <div className="bg-gray-800 rounded-lg shadow-xl border border-gray-600 flex overflow-visible">
             {/* Level 1: Route Types */}
             <div className="flex flex-col min-w-[100px]">
-              <div className="px-3 py-2 bg-gray-700 border-b border-gray-600">
+              <div className="px-3 py-2 bg-gray-700 border-b border-gray-600 rounded-tl-lg">
                 <span className="text-white text-sm font-semibold">Route Type</span>
               </div>
               {(["pass", "run", "blocking"] as const).map((type) => (
@@ -2235,7 +2260,7 @@ export default function PlayDesigner() {
                 <div
                   key={style}
                   className={`px-4 py-2.5 text-sm cursor-pointer flex items-center justify-between transition-all duration-150 ${
-                    menuConfirming && hoveredRouteStyle === style 
+                    menuConfirming && confirmingStyle === style 
                       ? "bg-green-500 text-white" 
                       : hoveredRouteStyle === style 
                         ? "bg-orange-500 text-white" 
@@ -2246,15 +2271,24 @@ export default function PlayDesigner() {
                   data-testid={`menu-route-style-${style}`}
                 >
                   <span className="capitalize font-medium">{style}</span>
-                  {menuConfirming && hoveredRouteStyle === style && <span className="ml-2 text-xs">✓</span>}
+                  {menuConfirming && confirmingStyle === style 
+                    ? <span className="ml-2 text-xs font-bold">✓</span>
+                    : hoveredRouteType !== "blocking" && <span className="ml-3 text-xs opacity-70">▶</span>
+                  }
                 </div>
               ))}
+              {/* Confirmation status text */}
+              {menuConfirming && (
+                <div className="px-3 py-2 bg-green-600 text-white text-xs font-medium border-t border-green-500">
+                  Applied: {menuBoth ? "Motion + Primary" : menuMotion && menuMakePrimary ? "Motion + Primary" : menuMotion ? "Motion" : "Primary"}
+                </div>
+              )}
             </div>
             
-            {/* Level 3: Options - slides out immediately for Pass/Run (not Block) */}
+            {/* Level 3: Options - slides out when hovering Level 2 (Pass/Run only) */}
             <div 
               className={`flex flex-col min-w-[145px] border-l border-gray-600 bg-gray-800 transition-all duration-200 ease-out origin-left ${
-                hoveredRouteType && hoveredRouteType !== "blocking"
+                hoveredRouteType && hoveredRouteType !== "blocking" && hoveredRouteStyle
                   ? "opacity-100 scale-x-100" 
                   : "opacity-0 scale-x-0 w-0 min-w-0 overflow-hidden"
               }`}
@@ -2264,43 +2298,78 @@ export default function PlayDesigner() {
               </div>
               <label
                 className={`flex items-center px-4 py-2.5 text-sm cursor-pointer transition-all duration-200 ${
-                  menuMotion ? "bg-orange-500/30 text-orange-200" : "text-gray-200 hover:bg-gray-700"
+                  menuMotion || menuBoth ? "bg-orange-500/30 text-orange-200" : "text-gray-200 hover:bg-gray-700"
                 }`}
                 data-testid="menu-motion-checkbox"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className={`w-5 h-5 rounded border-2 mr-3 flex items-center justify-center transition-all duration-200 ${
-                  menuMotion ? "bg-orange-500 border-orange-500" : "border-gray-400 bg-transparent"
+                  menuMotion || menuBoth ? "bg-orange-500 border-orange-500" : "border-gray-400 bg-transparent"
                 }`}>
-                  {menuMotion && <span className="text-white text-xs font-bold">✓</span>}
+                  {(menuMotion || menuBoth) && <span className="text-white text-xs font-bold">✓</span>}
                 </div>
                 <input
                   type="checkbox"
-                  checked={menuMotion}
-                  onChange={(e) => setMenuMotion(e.target.checked)}
+                  checked={menuMotion || menuBoth}
+                  onChange={(e) => {
+                    setMenuMotion(e.target.checked);
+                    // If unchecking Motion, also uncheck Both
+                    if (!e.target.checked) setMenuBoth(false);
+                  }}
                   className="sr-only"
                 />
                 <span className="font-medium">Motion?</span>
               </label>
               <label
                 className={`flex items-center px-4 py-2.5 text-sm cursor-pointer transition-all duration-200 ${
-                  menuMakePrimary ? "bg-orange-500/30 text-orange-200" : "text-gray-200 hover:bg-gray-700"
+                  menuMakePrimary || menuBoth ? "bg-orange-500/30 text-orange-200" : "text-gray-200 hover:bg-gray-700"
                 }`}
                 data-testid="menu-primary-checkbox"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className={`w-5 h-5 rounded border-2 mr-3 flex items-center justify-center transition-all duration-200 ${
-                  menuMakePrimary ? "bg-orange-500 border-orange-500" : "border-gray-400 bg-transparent"
+                  menuMakePrimary || menuBoth ? "bg-orange-500 border-orange-500" : "border-gray-400 bg-transparent"
                 }`}>
-                  {menuMakePrimary && <span className="text-white text-xs font-bold">✓</span>}
+                  {(menuMakePrimary || menuBoth) && <span className="text-white text-xs font-bold">✓</span>}
                 </div>
                 <input
                   type="checkbox"
-                  checked={menuMakePrimary}
-                  onChange={(e) => setMenuMakePrimary(e.target.checked)}
+                  checked={menuMakePrimary || menuBoth}
+                  onChange={(e) => {
+                    setMenuMakePrimary(e.target.checked);
+                    // If unchecking Primary, also uncheck Both
+                    if (!e.target.checked) setMenuBoth(false);
+                  }}
                   className="sr-only"
                 />
                 <span className="font-medium">Primary?</span>
+              </label>
+              <label
+                className={`flex items-center px-4 py-2.5 text-sm cursor-pointer transition-all duration-200 border-t border-gray-600 ${
+                  menuBoth ? "bg-orange-500/30 text-orange-200" : "text-gray-200 hover:bg-gray-700"
+                }`}
+                data-testid="menu-both-checkbox"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className={`w-5 h-5 rounded border-2 mr-3 flex items-center justify-center transition-all duration-200 ${
+                  menuBoth ? "bg-orange-500 border-orange-500" : "border-gray-400 bg-transparent"
+                }`}>
+                  {menuBoth && <span className="text-white text-xs font-bold">✓</span>}
+                </div>
+                <input
+                  type="checkbox"
+                  checked={menuBoth}
+                  onChange={(e) => {
+                    setMenuBoth(e.target.checked);
+                    // When Both is checked, also check Motion and Primary visually
+                    if (e.target.checked) {
+                      setMenuMotion(true);
+                      setMenuMakePrimary(true);
+                    }
+                  }}
+                  className="sr-only"
+                />
+                <span className="font-medium">Both</span>
               </label>
             </div>
           </div>
