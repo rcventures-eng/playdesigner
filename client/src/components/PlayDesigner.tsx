@@ -1989,8 +1989,6 @@ export default function PlayDesigner() {
         <div className="w-96 border-l border-border bg-card p-4 overflow-y-auto">
           <h3 className="font-semibold text-base text-foreground mb-3">🏈 Kickoff: How to Build Your Play</h3>
           <div className="space-y-2 text-sm text-muted-foreground">
-            <p className="text-foreground font-semibold">Welcome to the Play Creator! Follow these simple steps to sketch up your next touchdown.</p>
-            
             <p className="font-semibold text-foreground mt-3">1. Set the Stage</p>
             <p>Look for the icons on the left sidebar to populate the field.</p>
             <p>🟢 Add Players: Click the Colored Icons to drop players onto the canvas.</p>
