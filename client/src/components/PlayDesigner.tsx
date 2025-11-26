@@ -2299,7 +2299,8 @@ export default function PlayDesigner() {
                   className="lp-menu-item px-3 py-2 text-sm cursor-pointer flex items-center justify-between text-gray-200"
                   data-testid={`menu-route-type-${type}`}
                   onMouseEnter={() => !menuConfirming && setHoveredRouteType(type)}
-                  data-active={hoveredRouteType === type}
+                  onMouseLeave={() => setHoveredRouteType(null)}
+                  data-active={hoveredRouteType === type ? "true" : undefined}
                 >
                   <span className="capitalize font-medium">{type === "blocking" ? "Block" : type}</span>
                   <span className="text-xs opacity-60">▶</span>
