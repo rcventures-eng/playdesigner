@@ -714,6 +714,16 @@ export default function PlayDesigner() {
     setIsPlayAction(false);
   };
 
+  const handleBackgroundClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      setSelectedPlayer(null);
+      setSelectedRoute(null);
+      setSelectedShape(null);
+      setSelectedFootball(null);
+      setSelectedElements({ players: [], routes: [] });
+    }
+  };
+
   const generateScaledExport = async (targetWidth: number, targetHeight: number): Promise<string> => {
     if (!canvasRef.current) throw new Error("Canvas not available");
     
@@ -1522,7 +1532,7 @@ export default function PlayDesigner() {
           </div>
         </div>
 
-        <div className="flex-1 bg-muted/30 p-2 overflow-auto flex items-center justify-center">
+        <div className="flex-1 bg-muted/30 p-2 overflow-auto flex items-center justify-center" onClick={handleBackgroundClick}>
           {(playType === "defense" || playType === "special") && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
               <img 
