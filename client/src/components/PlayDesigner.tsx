@@ -611,13 +611,6 @@ export default function PlayDesigner() {
   };
 
   const handleCanvasClick = (e: React.MouseEvent) => {
-    if (tool === "select" && (e.target as HTMLElement).closest('[data-testid="canvas-field"]') === canvasRef.current) {
-      setSelectedPlayer(null);
-      setSelectedRoute(null);
-      setSelectedShape(null);
-      setSelectedFootball(null);
-      setSelectedElements({ players: [], routes: [] });
-    }
   };
 
   const handleCanvasDoubleClick = (e: React.MouseEvent) => {
