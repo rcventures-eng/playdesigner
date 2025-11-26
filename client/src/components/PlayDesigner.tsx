@@ -142,6 +142,7 @@ export default function PlayDesigner() {
   const [menuBoth, setMenuBoth] = useState(false);
   const [menuConfirming, setMenuConfirming] = useState(false);
   const [confirmingStyle, setConfirmingStyle] = useState<"straight" | "curved" | null>(null);
+  const [confirmingWidth, setConfirmingWidth] = useState<number | null>(null); // Lock width during confirmation
   
   const canvasRef = useRef<HTMLDivElement>(null);
   const currentRoutePointsRef = useRef<{ x: number; y: number }[]>([]);
@@ -502,23 +503,39 @@ export default function PlayDesigner() {
     setMenuBoth(false);
     setMenuConfirming(false);
     setConfirmingStyle(null);
+    setConfirmingWidth(null);
   };
   
+  // Debounce ref to prevent double-clicking
+  const routeStartDebounceRef = useRef(false);
+  
   const startRouteFromMenu = (type: "pass" | "run" | "blocking", style: "straight" | "curved") => {
-    if (!longPressPlayerId || menuConfirming) return;
+    // Debounce protection - prevent rapid double-clicks
+    if (!longPressPlayerId || menuConfirming || routeStartDebounceRef.current) return;
+    routeStartDebounceRef.current = true;
+    setTimeout(() => { routeStartDebounceRef.current = false; }, 1000);
     
     const player = players.find(p => p.id === longPressPlayerId);
     if (!player) return;
     
     const playerId = longPressPlayerId;
     
-    // Show extended confirmation for non-blocking routes with options selected
+    // Show UNMISTAKABLE confirmation for non-blocking routes with options selected
     if (type !== "blocking" && (menuMotion || menuMakePrimary || menuBoth)) {
+      // Lock current width before clearing hovers
+      const L1_WIDTH = 108;
+      const L2_WIDTH = 118;
+      const L3_WIDTH = 150;
+      const currentWidth = L1_WIDTH + L2_WIDTH + L3_WIDTH; // Full expanded state
+      setConfirmingWidth(currentWidth);
       setMenuConfirming(true);
       setConfirmingStyle(style);
+      // Clear hover states during confirmation to prevent flicker
+      setHoveredRouteType(null);
+      setHoveredRouteStyle(null);
       setTimeout(() => {
         executeRouteStart(type, style, player, playerId);
-      }, 450); // Extended delay for clear visual feedback
+      }, 900); // 900ms for UNMISTAKABLE visual feedback
     } else {
       executeRouteStart(type, style, player, playerId);
     }
@@ -2210,171 +2227,262 @@ export default function PlayDesigner() {
         </div>
       </div>
       
-      {/* Long-press cascading menu */}
-      {longPressMenuOpen && (
-        <div
-          data-testid="long-press-menu"
-          className="fixed z-[100] select-none"
-          style={{
-            left: longPressMenuPosition.x,
-            top: longPressMenuPosition.y,
-            pointerEvents: menuConfirming ? "none" : "auto",
-          }}
-          onClick={(e) => e.stopPropagation()}
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          <div className="bg-gray-800 rounded-lg shadow-xl border border-gray-600 flex overflow-visible">
-            {/* Level 1: Route Types */}
-            <div className="flex flex-col min-w-[100px]">
-              <div className="px-3 py-2 bg-gray-700 border-b border-gray-600 rounded-tl-lg">
-                <span className="text-white text-sm font-semibold">Route Type</span>
-              </div>
-              {(["pass", "run", "blocking"] as const).map((type) => (
-                <div
-                  key={type}
-                  className={`px-4 py-2.5 text-sm cursor-pointer flex items-center justify-between transition-all duration-150 ${
-                    hoveredRouteType === type ? "bg-orange-500 text-white" : "text-gray-200 hover:bg-gray-700"
-                  }`}
-                  onMouseEnter={() => {
-                    setHoveredRouteType(type);
-                    setHoveredRouteStyle(null);
-                  }}
-                  data-testid={`menu-route-type-${type}`}
-                >
-                  <span className="capitalize font-medium">{type === "blocking" ? "Block" : type}</span>
-                  <span className="ml-3 text-xs opacity-70">▶</span>
-                </div>
-              ))}
-            </div>
-            
-            {/* Level 2: Route Styles - slides out from Level 1 */}
+      {/* Long-press cascading menu - TRUE PROGRESSIVE CASCADE */}
+      {longPressMenuOpen && (() => {
+        // Calculate dynamic width based on visible levels
+        const L1_WIDTH = 108;
+        const L2_WIDTH = 118;
+        const L3_WIDTH = 150;
+        const showL2 = !!hoveredRouteType;
+        const showL3 = hoveredRouteType && hoveredRouteType !== "blocking" && hoveredRouteStyle;
+        // Use locked width during confirmation, otherwise calculate dynamically
+        const containerWidth = menuConfirming && confirmingWidth 
+          ? confirmingWidth 
+          : L1_WIDTH + (showL2 ? L2_WIDTH : 0) + (showL3 ? L3_WIDTH : 0);
+        
+        // Dynamic X clamping based on current width
+        const viewportMargin = 10;
+        const maxX = window.innerWidth - containerWidth - viewportMargin;
+        const clampedX = Math.min(longPressMenuPosition.x, maxX);
+        
+        return (
+          <div
+            data-testid="long-press-menu"
+            className="fixed z-[100] select-none"
+            style={{
+              left: clampedX,
+              top: longPressMenuPosition.y,
+              pointerEvents: menuConfirming ? "none" : "auto",
+            }}
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            {/* Parent container with navy background - width animates */}
             <div 
-              className={`flex flex-col min-w-[110px] border-l border-gray-600 bg-gray-800 transition-all duration-200 ease-out origin-left ${
-                hoveredRouteType ? "opacity-100 scale-x-100" : "opacity-0 scale-x-0 w-0 min-w-0 overflow-hidden"
-              }`}
+              className="bg-gray-800 rounded-lg shadow-xl border border-gray-600 overflow-hidden relative"
+              style={{
+                width: containerWidth,
+                transition: "width 200ms ease-out",
+                willChange: "width",
+              }}
             >
-              <div className="px-3 py-2 bg-gray-700 border-b border-gray-600">
-                <span className="text-white text-sm font-semibold">Style</span>
-              </div>
-              {(["straight", "curved"] as const).map((style) => (
-                <div
-                  key={style}
-                  className={`px-4 py-2.5 text-sm cursor-pointer flex items-center justify-between transition-all duration-150 ${
-                    menuConfirming && confirmingStyle === style 
-                      ? "bg-green-500 text-white" 
-                      : hoveredRouteStyle === style 
-                        ? "bg-orange-500 text-white" 
-                        : "text-gray-200 hover:bg-gray-700"
-                  }`}
-                  onMouseEnter={() => setHoveredRouteStyle(style)}
-                  onClick={() => startRouteFromMenu(hoveredRouteType!, style)}
-                  data-testid={`menu-route-style-${style}`}
-                >
-                  <span className="capitalize font-medium">{style}</span>
-                  {menuConfirming && confirmingStyle === style 
-                    ? <span className="ml-2 text-xs font-bold">✓</span>
-                    : hoveredRouteType !== "blocking" && <span className="ml-3 text-xs opacity-70">▶</span>
-                  }
-                </div>
-              ))}
-              {/* Confirmation status text */}
+              {/* Confirmation overlay - UNMISTAKABLE */}
               {menuConfirming && (
-                <div className="px-3 py-2 bg-green-600 text-white text-xs font-medium border-t border-green-500">
-                  Applied: {menuBoth ? "Motion + Primary" : menuMotion && menuMakePrimary ? "Motion + Primary" : menuMotion ? "Motion" : "Primary"}
+                <div 
+                  className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-green-600 rounded-lg"
+                  style={{
+                    animation: "confirmPulse 900ms ease-in-out",
+                  }}
+                >
+                  {/* Animated checkmark */}
+                  <div className="relative w-16 h-16 mb-3">
+                    <svg 
+                      viewBox="0 0 52 52" 
+                      className="w-full h-full"
+                      style={{
+                        animation: "checkDraw 400ms ease-out forwards",
+                      }}
+                    >
+                      <circle 
+                        cx="26" cy="26" r="24" 
+                        fill="none" 
+                        stroke="white" 
+                        strokeWidth="3"
+                        opacity="0.3"
+                      />
+                      <path 
+                        fill="none" 
+                        stroke="white" 
+                        strokeWidth="4"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M14 27l8 8 16-16"
+                        style={{
+                          strokeDasharray: 50,
+                          strokeDashoffset: 50,
+                          animation: "checkStroke 350ms ease-out 150ms forwards",
+                        }}
+                      />
+                    </svg>
+                  </div>
+                  <div className="text-white text-lg font-bold tracking-wide">
+                    APPLIED
+                  </div>
+                  <div className="text-white/90 text-sm font-medium mt-1">
+                    {menuBoth || (menuMotion && menuMakePrimary) 
+                      ? "Motion + Primary" 
+                      : menuMotion 
+                        ? "Motion" 
+                        : menuMakePrimary 
+                          ? "Primary" 
+                          : "Route"}
+                  </div>
+                  {/* Progress bar */}
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-green-800">
+                    <div 
+                      className="h-full bg-white"
+                      style={{
+                        animation: "progressFill 900ms linear forwards",
+                      }}
+                    />
+                  </div>
                 </div>
               )}
-            </div>
-            
-            {/* Level 3: Options - slides out when hovering Level 2 (Pass/Run only) */}
-            <div 
-              className={`flex flex-col min-w-[145px] border-l border-gray-600 bg-gray-800 transition-all duration-200 ease-out origin-left ${
-                hoveredRouteType && hoveredRouteType !== "blocking" && hoveredRouteStyle
-                  ? "opacity-100 scale-x-100" 
-                  : "opacity-0 scale-x-0 w-0 min-w-0 overflow-hidden"
-              }`}
-            >
-              <div className="px-3 py-2 bg-gray-700 border-b border-gray-600">
-                <span className="text-white text-sm font-semibold">Options</span>
+              
+              <div className="flex">
+                {/* Level 1: Route Types - always visible */}
+                <div className="flex flex-col" style={{ width: L1_WIDTH }}>
+                  <div className="px-3 py-2 bg-gray-700/50 border-b border-gray-600">
+                    <span className="text-white text-sm font-semibold">Route Type</span>
+                  </div>
+                  {(["pass", "run", "blocking"] as const).map((type) => (
+                    <div
+                      key={type}
+                      className={`px-4 py-2.5 text-sm cursor-pointer flex items-center justify-between transition-colors duration-150 ${
+                        hoveredRouteType === type ? "bg-orange-500 text-white" : "text-gray-200 hover:bg-gray-700/50"
+                      }`}
+                      onMouseEnter={() => {
+                        if (!menuConfirming) {
+                          setHoveredRouteType(type);
+                          setHoveredRouteStyle(null);
+                        }
+                      }}
+                      data-testid={`menu-route-type-${type}`}
+                    >
+                      <span className="capitalize font-medium">{type === "blocking" ? "Block" : type}</span>
+                      <span className="ml-2 text-xs opacity-70">▶</span>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Level 2: Route Styles - appears when L1 hovered */}
+                {showL2 && (
+                  <div 
+                    className="flex flex-col border-l border-gray-600" 
+                    style={{ width: L2_WIDTH }}
+                  >
+                    <div className="px-3 py-2 bg-gray-700/50 border-b border-gray-600">
+                      <span className="text-white text-sm font-semibold">Style</span>
+                    </div>
+                    {(["straight", "curved"] as const).map((style) => (
+                      <div
+                        key={style}
+                        className={`px-4 py-2.5 text-sm cursor-pointer flex items-center justify-between transition-colors duration-150 ${
+                          hoveredRouteStyle === style 
+                            ? "bg-orange-500 text-white" 
+                            : "text-gray-200 hover:bg-gray-700/50"
+                        }`}
+                        onMouseEnter={() => {
+                          if (!menuConfirming) {
+                            setHoveredRouteStyle(style);
+                          }
+                        }}
+                        onClick={() => startRouteFromMenu(hoveredRouteType!, style)}
+                        data-testid={`menu-route-style-${style}`}
+                      >
+                        <span className="capitalize font-medium">{style}</span>
+                        {hoveredRouteType !== "blocking" && (
+                          <span className="ml-2 text-xs opacity-70">▶</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Level 3: Options - appears when L2 hovered (Pass/Run only) */}
+                {showL3 && (
+                  <div 
+                    className="flex flex-col border-l border-gray-600"
+                    style={{ width: L3_WIDTH }}
+                  >
+                    <div className="px-3 py-2 bg-gray-700/50 border-b border-gray-600">
+                      <span className="text-white text-sm font-semibold">Options</span>
+                    </div>
+                    <label
+                      className={`flex items-center px-4 py-2.5 text-sm cursor-pointer transition-colors duration-150 ${
+                        menuMotion || menuBoth ? "bg-orange-500/30 text-orange-200" : "text-gray-200 hover:bg-gray-700/50"
+                      }`}
+                      data-testid="menu-motion-checkbox"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className={`w-5 h-5 rounded border-2 mr-3 flex items-center justify-center transition-all duration-200 ${
+                        menuMotion || menuBoth ? "bg-orange-500 border-orange-500" : "border-gray-400 bg-transparent"
+                      }`}>
+                        {(menuMotion || menuBoth) && <span className="text-white text-xs font-bold">✓</span>}
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={menuMotion || menuBoth}
+                        onChange={(e) => {
+                          if (!menuConfirming) {
+                            setMenuMotion(e.target.checked);
+                            if (!e.target.checked) setMenuBoth(false);
+                          }
+                        }}
+                        className="sr-only"
+                      />
+                      <span className="font-medium">Motion?</span>
+                    </label>
+                    <label
+                      className={`flex items-center px-4 py-2.5 text-sm cursor-pointer transition-colors duration-150 ${
+                        menuMakePrimary || menuBoth ? "bg-orange-500/30 text-orange-200" : "text-gray-200 hover:bg-gray-700/50"
+                      }`}
+                      data-testid="menu-primary-checkbox"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className={`w-5 h-5 rounded border-2 mr-3 flex items-center justify-center transition-all duration-200 ${
+                        menuMakePrimary || menuBoth ? "bg-orange-500 border-orange-500" : "border-gray-400 bg-transparent"
+                      }`}>
+                        {(menuMakePrimary || menuBoth) && <span className="text-white text-xs font-bold">✓</span>}
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={menuMakePrimary || menuBoth}
+                        onChange={(e) => {
+                          if (!menuConfirming) {
+                            setMenuMakePrimary(e.target.checked);
+                            if (!e.target.checked) setMenuBoth(false);
+                          }
+                        }}
+                        className="sr-only"
+                      />
+                      <span className="font-medium">Primary?</span>
+                    </label>
+                    <label
+                      className={`flex items-center px-4 py-2.5 text-sm cursor-pointer transition-colors duration-150 border-t border-gray-600 ${
+                        menuBoth ? "bg-orange-500/30 text-orange-200" : "text-gray-200 hover:bg-gray-700/50"
+                      }`}
+                      data-testid="menu-both-checkbox"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className={`w-5 h-5 rounded border-2 mr-3 flex items-center justify-center transition-all duration-200 ${
+                        menuBoth ? "bg-orange-500 border-orange-500" : "border-gray-400 bg-transparent"
+                      }`}>
+                        {menuBoth && <span className="text-white text-xs font-bold">✓</span>}
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={menuBoth}
+                        onChange={(e) => {
+                          if (!menuConfirming) {
+                            setMenuBoth(e.target.checked);
+                            if (e.target.checked) {
+                              setMenuMotion(true);
+                              setMenuMakePrimary(true);
+                            }
+                          }
+                        }}
+                        className="sr-only"
+                      />
+                      <span className="font-medium">Both</span>
+                    </label>
+                  </div>
+                )}
               </div>
-              <label
-                className={`flex items-center px-4 py-2.5 text-sm cursor-pointer transition-all duration-200 ${
-                  menuMotion || menuBoth ? "bg-orange-500/30 text-orange-200" : "text-gray-200 hover:bg-gray-700"
-                }`}
-                data-testid="menu-motion-checkbox"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className={`w-5 h-5 rounded border-2 mr-3 flex items-center justify-center transition-all duration-200 ${
-                  menuMotion || menuBoth ? "bg-orange-500 border-orange-500" : "border-gray-400 bg-transparent"
-                }`}>
-                  {(menuMotion || menuBoth) && <span className="text-white text-xs font-bold">✓</span>}
-                </div>
-                <input
-                  type="checkbox"
-                  checked={menuMotion || menuBoth}
-                  onChange={(e) => {
-                    setMenuMotion(e.target.checked);
-                    // If unchecking Motion, also uncheck Both
-                    if (!e.target.checked) setMenuBoth(false);
-                  }}
-                  className="sr-only"
-                />
-                <span className="font-medium">Motion?</span>
-              </label>
-              <label
-                className={`flex items-center px-4 py-2.5 text-sm cursor-pointer transition-all duration-200 ${
-                  menuMakePrimary || menuBoth ? "bg-orange-500/30 text-orange-200" : "text-gray-200 hover:bg-gray-700"
-                }`}
-                data-testid="menu-primary-checkbox"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className={`w-5 h-5 rounded border-2 mr-3 flex items-center justify-center transition-all duration-200 ${
-                  menuMakePrimary || menuBoth ? "bg-orange-500 border-orange-500" : "border-gray-400 bg-transparent"
-                }`}>
-                  {(menuMakePrimary || menuBoth) && <span className="text-white text-xs font-bold">✓</span>}
-                </div>
-                <input
-                  type="checkbox"
-                  checked={menuMakePrimary || menuBoth}
-                  onChange={(e) => {
-                    setMenuMakePrimary(e.target.checked);
-                    // If unchecking Primary, also uncheck Both
-                    if (!e.target.checked) setMenuBoth(false);
-                  }}
-                  className="sr-only"
-                />
-                <span className="font-medium">Primary?</span>
-              </label>
-              <label
-                className={`flex items-center px-4 py-2.5 text-sm cursor-pointer transition-all duration-200 border-t border-gray-600 ${
-                  menuBoth ? "bg-orange-500/30 text-orange-200" : "text-gray-200 hover:bg-gray-700"
-                }`}
-                data-testid="menu-both-checkbox"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className={`w-5 h-5 rounded border-2 mr-3 flex items-center justify-center transition-all duration-200 ${
-                  menuBoth ? "bg-orange-500 border-orange-500" : "border-gray-400 bg-transparent"
-                }`}>
-                  {menuBoth && <span className="text-white text-xs font-bold">✓</span>}
-                </div>
-                <input
-                  type="checkbox"
-                  checked={menuBoth}
-                  onChange={(e) => {
-                    setMenuBoth(e.target.checked);
-                    // When Both is checked, also check Motion and Primary visually
-                    if (e.target.checked) {
-                      setMenuMotion(true);
-                      setMenuMakePrimary(true);
-                    }
-                  }}
-                  className="sr-only"
-                />
-                <span className="font-medium">Both</span>
-              </label>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
