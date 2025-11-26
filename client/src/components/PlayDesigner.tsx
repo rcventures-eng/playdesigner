@@ -1196,9 +1196,9 @@ export default function PlayDesigner() {
                   variant={tool === "select" ? "default" : "secondary"}
                   onClick={() => setTool("select")}
                   data-testid="button-tool-select"
-                  className="justify-start px-2"
+                  className="gap-1 justify-center px-2"
                 >
-                  <MoveHorizontal className="h-4 w-4 mr-1.5" />
+                  <MoveHorizontal className="h-4 w-4" />
                   Select
                 </Button>
                 <Button
