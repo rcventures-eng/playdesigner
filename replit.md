@@ -77,6 +77,23 @@ Preferred communication style: Simple, everyday language.
 
 **Interaction Model**: Drag-and-drop for player positioning (24×24px circles, bounds from FIELD.PLAYER_BOUNDS), click-to-draw for routes, and property panels for metadata entry.
 
+**Long-Press Cascading Menu**: Mouse-only route creation workflow (NO keyboard shortcuts):
+- **Trigger**: 300ms hold on any player triggers the menu (movement threshold of 8px cancels if dragging)
+- **Visual Feedback**: Pulsing orange ring around player during long-press (suppresses cyan selection ring)
+- **Menu Structure**: Three-level horizontal cascade, centered below cursor:
+  - Level 1: Pass, Run, Block (vertical stack, arrows indicate submenus)
+  - Level 2: Straight, Curved (expands right on hover)
+  - Level 3: Motion? and Make Primary? checkboxes (only for Pass/Run, not Block)
+- **Route Start**: Clicking Straight/Curved immediately starts route drawing from that player with chosen settings
+- **Auto-Reset**: After completing a route, tool auto-returns to Select, and Motion/Primary toggles reset
+- **Dismissal**: Click-outside closes menu; leaving canvas cancels long-press
+
+**Player Interaction Patterns**:
+- Quick tap: Select player (cyan ring)
+- Double tap: Edit player label (2-character max)
+- Long-press (300ms): Open Route Options menu (orange pulsing ring)
+- Drag: Move player position (8px movement threshold)
+
 **Rationale**: Follows design guidelines emphasizing ease of use and touch-friendly interactions for mobile/tablet support. Drag bounds calculated from FIELD config ensure players stay within the visible field area.
 
 ### Backend Architecture
