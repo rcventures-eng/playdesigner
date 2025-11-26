@@ -134,10 +134,12 @@ export default function PlayDesigner() {
   const [longPressMenuPosition, setLongPressMenuPosition] = useState({ x: 0, y: 0 });
   const [longPressPlayerId, setLongPressPlayerId] = useState<string | null>(null);
   const [longPressPlayerRef, setLongPressPlayerRef] = useState<string | null>(null);
+  const [isLongPressHolding, setIsLongPressHolding] = useState(false);
   const [hoveredRouteType, setHoveredRouteType] = useState<"pass" | "run" | "blocking" | null>(null);
   const [hoveredRouteStyle, setHoveredRouteStyle] = useState<"straight" | "curved" | null>(null);
   const [menuMotion, setMenuMotion] = useState(false);
   const [menuMakePrimary, setMenuMakePrimary] = useState(false);
+  const [menuConfirming, setMenuConfirming] = useState(false);
   
   const canvasRef = useRef<HTMLDivElement>(null);
   const currentRoutePointsRef = useRef<{ x: number; y: number }[]>([]);
@@ -433,8 +435,10 @@ export default function PlayDesigner() {
         // Start long-press timer (300ms) and store start position for movement threshold
         setLongPressPlayerRef(playerId);
         longPressStartPos.current = { x: e.clientX, y: e.clientY };
+        setIsLongPressHolding(true);
         longPressTimerRef.current = setTimeout(() => {
           // Long press detected - open menu
+          setIsLongPressHolding(false);
           setLongPressPlayerId(playerId);
           setLongPressMenuPosition({ x: e.clientX, y: e.clientY + 20 });
           setLongPressMenuOpen(true);
@@ -466,6 +470,7 @@ export default function PlayDesigner() {
       longPressTimerRef.current = null;
     }
     setLongPressPlayerRef(null);
+    setIsLongPressHolding(false);
     longPressStartPos.current = null;
   };
   
@@ -479,11 +484,25 @@ export default function PlayDesigner() {
   };
   
   const startRouteFromMenu = (type: "pass" | "run" | "blocking", style: "straight" | "curved") => {
-    if (!longPressPlayerId) return;
+    if (!longPressPlayerId || menuConfirming) return;
     
     const player = players.find(p => p.id === longPressPlayerId);
     if (!player) return;
     
+    const playerId = longPressPlayerId;
+    
+    // Show brief confirmation for non-blocking routes with options
+    if (type !== "blocking" && (menuMotion || menuMakePrimary)) {
+      setMenuConfirming(true);
+      setTimeout(() => {
+        executeRouteStart(type, style, player, playerId);
+      }, 200);
+    } else {
+      executeRouteStart(type, style, player, playerId);
+    }
+  };
+  
+  const executeRouteStart = (type: "pass" | "run" | "blocking", style: "straight" | "curved", player: { x: number; y: number }, playerId: string) => {
     // Set route options (motion and primary only apply to pass/run, not blocking)
     setRouteType(type);
     setRouteStyle(style);
@@ -499,14 +518,15 @@ export default function PlayDesigner() {
     setTool("route");
     setIsDrawingRoute(true);
     setIsDraggingStraightRoute(true);
-    setSelectedPlayer(longPressPlayerId);
+    setSelectedPlayer(playerId);
     setSelectedElements({ players: [], routes: [] });
     
     const initialPoint = { x: player.x, y: player.y };
     setCurrentRoutePoints([initialPoint]);
     currentRoutePointsRef.current = [initialPoint];
     
-    // Close menu
+    // Close menu and reset confirming state
+    setMenuConfirming(false);
     closeLongPressMenu();
   };
 
@@ -1159,7 +1179,7 @@ export default function PlayDesigner() {
   };
 
   return (
-    <div className="flex flex-col h-screen w-full overflow-hidden">
+    <div className={`flex flex-col h-screen w-full overflow-hidden ${isLongPressHolding || longPressMenuOpen ? "select-none" : ""}`}>
       {(metadata.name || metadata.formation || metadata.concept || metadata.personnel) && (
         <div className="bg-gradient-to-r from-[#1a2332] to-[#2a3342] border-b border-border px-6 py-3 flex items-center gap-3 flex-wrap">
           {metadata.name && (
@@ -2178,80 +2198,110 @@ export default function PlayDesigner() {
           onClick={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
         >
-          <div className="bg-gray-800 rounded-lg shadow-xl border border-gray-600 overflow-hidden">
-            <div className="px-3 py-2 bg-gray-700 border-b border-gray-600">
-              <span className="text-white text-sm font-semibold">Route Options</span>
-            </div>
-            <div className="flex">
-              {/* Level 1: Route Types */}
-              <div className="flex flex-col min-w-[100px]">
-                {(["pass", "run", "blocking"] as const).map((type) => (
-                  <div
-                    key={type}
-                    className={`px-4 py-2 text-sm cursor-pointer flex items-center justify-between transition-colors ${
-                      hoveredRouteType === type ? "bg-orange-500 text-white" : "text-gray-200 hover:bg-gray-700"
-                    }`}
-                    onMouseEnter={() => {
-                      setHoveredRouteType(type);
-                      setHoveredRouteStyle(null);
-                    }}
-                    data-testid={`menu-route-type-${type}`}
-                  >
-                    <span className="capitalize">{type === "blocking" ? "Block" : type}</span>
-                    <span className="ml-2 text-xs">→</span>
-                  </div>
-                ))}
+          <div className="bg-gray-800 rounded-lg shadow-xl border border-gray-600 flex overflow-visible">
+            {/* Level 1: Route Types */}
+            <div className="flex flex-col min-w-[100px]">
+              <div className="px-3 py-2 bg-gray-700 border-b border-gray-600">
+                <span className="text-white text-sm font-semibold">Route Type</span>
               </div>
-              
-              {/* Level 2: Route Styles (shown when route type is hovered) */}
-              {hoveredRouteType && (
-                <div className="flex flex-col min-w-[100px] border-l border-gray-600">
-                  {(["straight", "curved"] as const).map((style) => (
-                    <div
-                      key={style}
-                      className={`px-4 py-2 text-sm cursor-pointer flex items-center justify-between transition-colors ${
-                        hoveredRouteStyle === style ? "bg-orange-500 text-white" : "text-gray-200 hover:bg-gray-700"
-                      }`}
-                      onMouseEnter={() => setHoveredRouteStyle(style)}
-                      onClick={() => startRouteFromMenu(hoveredRouteType, style)}
-                      data-testid={`menu-route-style-${style}`}
-                    >
-                      <span className="capitalize">{style}</span>
-                      {hoveredRouteType !== "blocking" && <span className="ml-2 text-xs">→</span>}
-                    </div>
-                  ))}
+              {(["pass", "run", "blocking"] as const).map((type) => (
+                <div
+                  key={type}
+                  className={`px-4 py-2.5 text-sm cursor-pointer flex items-center justify-between transition-all duration-150 ${
+                    hoveredRouteType === type ? "bg-orange-500 text-white" : "text-gray-200 hover:bg-gray-700"
+                  }`}
+                  onMouseEnter={() => {
+                    setHoveredRouteType(type);
+                    setHoveredRouteStyle(null);
+                  }}
+                  data-testid={`menu-route-type-${type}`}
+                >
+                  <span className="capitalize font-medium">{type === "blocking" ? "Block" : type}</span>
+                  <span className="ml-3 text-xs opacity-70">▶</span>
                 </div>
-              )}
-              
-              {/* Level 3: Options (only for Pass/Run, not Block) */}
-              {hoveredRouteType && hoveredRouteType !== "blocking" && hoveredRouteStyle && (
-                <div className="flex flex-col min-w-[130px] border-l border-gray-600 py-1">
-                  <label
-                    className="flex items-center px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 cursor-pointer"
-                    data-testid="menu-motion-checkbox"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={menuMotion}
-                      onChange={(e) => setMenuMotion(e.target.checked)}
-                      className="mr-2 w-4 h-4 accent-orange-500"
-                    />
-                    Motion?
-                  </label>
-                  <label
-                    className="flex items-center px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 cursor-pointer"
-                    data-testid="menu-primary-checkbox"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={menuMakePrimary}
-                      onChange={(e) => setMenuMakePrimary(e.target.checked)}
-                      className="mr-2 w-4 h-4 accent-orange-500"
-                    />
-                    Make Primary?
-                  </label>
+              ))}
+            </div>
+            
+            {/* Level 2: Route Styles - slides out from Level 1 */}
+            <div 
+              className={`flex flex-col min-w-[110px] border-l border-gray-600 bg-gray-800 transition-all duration-200 ease-out origin-left ${
+                hoveredRouteType ? "opacity-100 scale-x-100" : "opacity-0 scale-x-0 w-0 min-w-0 overflow-hidden"
+              }`}
+            >
+              <div className="px-3 py-2 bg-gray-700 border-b border-gray-600">
+                <span className="text-white text-sm font-semibold">Style</span>
+              </div>
+              {(["straight", "curved"] as const).map((style) => (
+                <div
+                  key={style}
+                  className={`px-4 py-2.5 text-sm cursor-pointer flex items-center justify-between transition-all duration-150 ${
+                    menuConfirming && hoveredRouteStyle === style 
+                      ? "bg-green-500 text-white" 
+                      : hoveredRouteStyle === style 
+                        ? "bg-orange-500 text-white" 
+                        : "text-gray-200 hover:bg-gray-700"
+                  }`}
+                  onMouseEnter={() => setHoveredRouteStyle(style)}
+                  onClick={() => startRouteFromMenu(hoveredRouteType!, style)}
+                  data-testid={`menu-route-style-${style}`}
+                >
+                  <span className="capitalize font-medium">{style}</span>
+                  {menuConfirming && hoveredRouteStyle === style && <span className="ml-2 text-xs">✓</span>}
                 </div>
-              )}
+              ))}
+            </div>
+            
+            {/* Level 3: Options - slides out immediately for Pass/Run (not Block) */}
+            <div 
+              className={`flex flex-col min-w-[145px] border-l border-gray-600 bg-gray-800 transition-all duration-200 ease-out origin-left ${
+                hoveredRouteType && hoveredRouteType !== "blocking"
+                  ? "opacity-100 scale-x-100" 
+                  : "opacity-0 scale-x-0 w-0 min-w-0 overflow-hidden"
+              }`}
+            >
+              <div className="px-3 py-2 bg-gray-700 border-b border-gray-600">
+                <span className="text-white text-sm font-semibold">Options</span>
+              </div>
+              <label
+                className={`flex items-center px-4 py-2.5 text-sm cursor-pointer transition-all duration-200 ${
+                  menuMotion ? "bg-orange-500/30 text-orange-200" : "text-gray-200 hover:bg-gray-700"
+                }`}
+                data-testid="menu-motion-checkbox"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className={`w-5 h-5 rounded border-2 mr-3 flex items-center justify-center transition-all duration-200 ${
+                  menuMotion ? "bg-orange-500 border-orange-500" : "border-gray-400 bg-transparent"
+                }`}>
+                  {menuMotion && <span className="text-white text-xs font-bold">✓</span>}
+                </div>
+                <input
+                  type="checkbox"
+                  checked={menuMotion}
+                  onChange={(e) => setMenuMotion(e.target.checked)}
+                  className="sr-only"
+                />
+                <span className="font-medium">Motion?</span>
+              </label>
+              <label
+                className={`flex items-center px-4 py-2.5 text-sm cursor-pointer transition-all duration-200 ${
+                  menuMakePrimary ? "bg-orange-500/30 text-orange-200" : "text-gray-200 hover:bg-gray-700"
+                }`}
+                data-testid="menu-primary-checkbox"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className={`w-5 h-5 rounded border-2 mr-3 flex items-center justify-center transition-all duration-200 ${
+                  menuMakePrimary ? "bg-orange-500 border-orange-500" : "border-gray-400 bg-transparent"
+                }`}>
+                  {menuMakePrimary && <span className="text-white text-xs font-bold">✓</span>}
+                </div>
+                <input
+                  type="checkbox"
+                  checked={menuMakePrimary}
+                  onChange={(e) => setMenuMakePrimary(e.target.checked)}
+                  className="sr-only"
+                />
+                <span className="font-medium">Primary?</span>
+              </label>
             </div>
           </div>
         </div>
