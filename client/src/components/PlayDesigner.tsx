@@ -1487,7 +1487,7 @@ export default function PlayDesigner() {
                   className="w-full"
                 >
                   <Download className="h-4 w-4 mr-2" />
-                  Export as Image
+                  Download as Image
                 </Button>
                 <Button
                   size="sm"
