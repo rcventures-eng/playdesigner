@@ -141,7 +141,6 @@ export default function PlayDesigner() {
   // Only checkbox state remains in React (user clicks)
   const [menuMotion, setMenuMotion] = useState(false);
   const [menuMakePrimary, setMenuMakePrimary] = useState(false);
-  const [menuBoth, setMenuBoth] = useState(false);
   const [menuConfirming, setMenuConfirming] = useState(false);
   
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -466,7 +465,6 @@ export default function PlayDesigner() {
           // Reset menu state - these are only set on CLICK, not hover
           setMenuMotion(false);
           setMenuMakePrimary(false);
-          setMenuBoth(false);
         }, 280); // Slightly faster detection
       }
     } else if (tool === "route") {
@@ -501,7 +499,6 @@ export default function PlayDesigner() {
     setHoveredRouteStyle(null);
     setMenuMotion(false);
     setMenuMakePrimary(false);
-    setMenuBoth(false);
     setMenuConfirming(false);
   };
   
@@ -520,7 +517,7 @@ export default function PlayDesigner() {
     const playerId = longPressPlayerId;
     
     // OPTIMISTIC: Apply action immediately, show fast non-blocking confirmation
-    if (type !== "blocking" && (menuMotion || menuMakePrimary || menuBoth)) {
+    if (type !== "blocking" && (menuMotion || menuMakePrimary)) {
       setMenuConfirming(true);
       // Execute IMMEDIATELY (optimistic) - don't wait for animation
       requestAnimationFrame(() => {
@@ -544,9 +541,8 @@ export default function PlayDesigner() {
       setIsMotion(false);
       setMakePrimary(false);
     } else {
-      // Both checkbox means both Motion and Primary are true
-      const applyMotion = menuBoth || menuMotion;
-      const applyPrimary = menuBoth || menuMakePrimary;
+      const applyMotion = menuMotion;
+      const applyPrimary = menuMakePrimary;
       setIsMotion(applyMotion);
       setMakePrimary(applyPrimary);
     }
@@ -2279,7 +2275,7 @@ export default function PlayDesigner() {
                 </div>
                 <div className="text-white text-base font-bold tracking-wide">APPLIED</div>
                 <div className="text-white/90 text-xs font-medium mt-0.5">
-                  {menuBoth || (menuMotion && menuMakePrimary) ? "Motion + Primary" : menuMotion ? "Motion" : menuMakePrimary ? "Primary" : "Route"}
+                  {menuMotion && menuMakePrimary ? "Motion + Primary" : menuMotion ? "Motion" : menuMakePrimary ? "Primary" : "Route"}
                 </div>
                 {/* GPU-accelerated progress bar (transform: scaleX instead of width) */}
                 <div className="absolute bottom-0 left-0 right-0 h-1 bg-green-800 overflow-hidden">
@@ -2352,50 +2348,34 @@ export default function PlayDesigner() {
                 <label
                   className="lp-checkbox-item flex items-center px-3 py-2 text-sm cursor-pointer text-gray-200"
                   data-testid="menu-motion-checkbox"
-                  data-checked={menuMotion || menuBoth}
+                  data-checked={menuMotion}
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className={`w-4 h-4 rounded border-2 mr-2 flex items-center justify-center ${
-                    menuMotion || menuBoth ? "bg-orange-500 border-orange-500" : "border-gray-400"
+                    menuMotion ? "bg-orange-500 border-orange-500" : "border-gray-400"
                   }`} style={{ transition: "all 80ms ease-out" }}>
-                    {(menuMotion || menuBoth) && <span className="text-white text-[10px] font-bold">✓</span>}
+                    {menuMotion && <span className="text-white text-[10px] font-bold">✓</span>}
                   </div>
-                  <input type="checkbox" checked={menuMotion || menuBoth} onChange={(e) => {
-                    if (!menuConfirming) { setMenuMotion(e.target.checked); if (!e.target.checked) setMenuBoth(false); }
+                  <input type="checkbox" checked={menuMotion} onChange={(e) => {
+                    if (!menuConfirming) { setMenuMotion(e.target.checked); }
                   }} className="sr-only" />
                   <span className="font-medium text-xs">Motion?</span>
                 </label>
                 <label
                   className="lp-checkbox-item flex items-center px-3 py-2 text-sm cursor-pointer text-gray-200"
                   data-testid="menu-primary-checkbox"
-                  data-checked={menuMakePrimary || menuBoth}
+                  data-checked={menuMakePrimary}
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className={`w-4 h-4 rounded border-2 mr-2 flex items-center justify-center ${
-                    menuMakePrimary || menuBoth ? "bg-orange-500 border-orange-500" : "border-gray-400"
+                    menuMakePrimary ? "bg-orange-500 border-orange-500" : "border-gray-400"
                   }`} style={{ transition: "all 80ms ease-out" }}>
-                    {(menuMakePrimary || menuBoth) && <span className="text-white text-[10px] font-bold">✓</span>}
+                    {menuMakePrimary && <span className="text-white text-[10px] font-bold">✓</span>}
                   </div>
-                  <input type="checkbox" checked={menuMakePrimary || menuBoth} onChange={(e) => {
-                    if (!menuConfirming) { setMenuMakePrimary(e.target.checked); if (!e.target.checked) setMenuBoth(false); }
+                  <input type="checkbox" checked={menuMakePrimary} onChange={(e) => {
+                    if (!menuConfirming) { setMenuMakePrimary(e.target.checked); }
                   }} className="sr-only" />
                   <span className="font-medium text-xs">Primary?</span>
-                </label>
-                <label
-                  className="lp-checkbox-item flex items-center px-3 py-2 text-sm cursor-pointer text-gray-200 border-t border-gray-600"
-                  data-testid="menu-both-checkbox"
-                  data-checked={menuBoth}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className={`w-4 h-4 rounded border-2 mr-2 flex items-center justify-center ${
-                    menuBoth ? "bg-orange-500 border-orange-500" : "border-gray-400"
-                  }`} style={{ transition: "all 80ms ease-out" }}>
-                    {menuBoth && <span className="text-white text-[10px] font-bold">✓</span>}
-                  </div>
-                  <input type="checkbox" checked={menuBoth} onChange={(e) => {
-                    if (!menuConfirming) { setMenuBoth(e.target.checked); if (e.target.checked) { setMenuMotion(true); setMenuMakePrimary(true); } }
-                  }} className="sr-only" />
-                  <span className="font-medium text-xs">Both</span>
                 </label>
               </div>
             )}
