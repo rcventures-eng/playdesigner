@@ -287,31 +287,97 @@
   }
 }
 
-/* Long-press menu confirmation animations - UNMISTAKABLE feedback */
-@keyframes confirmPulse {
-  0% {
+/* ========== LONG-PRESS MENU - GPU-ACCELERATED ANIMATIONS ========== */
+
+/* Menu container - hardware acceleration */
+.lp-menu {
+  contain: layout paint;
+  transform: translateZ(0);
+  will-change: transform, opacity;
+}
+
+/* Menu entrance - fast fade + scale */
+@keyframes menuEnter {
+  from {
     opacity: 0;
-    transform: scale(0.95);
+    transform: scale(0.95) translateZ(0);
   }
-  15% {
+  to {
     opacity: 1;
-    transform: scale(1.02);
-  }
-  25% {
-    transform: scale(1);
-  }
-  50% {
-    box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.4);
-  }
-  75% {
-    box-shadow: 0 0 0 8px rgba(34, 197, 94, 0.2);
-  }
-  100% {
-    box-shadow: 0 0 0 0px rgba(34, 197, 94, 0);
+    transform: scale(1) translateZ(0);
   }
 }
 
-@keyframes checkStroke {
+/* Column slide-in from right - GPU only (transform + opacity) */
+@keyframes columnSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-12px) translateZ(0);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) translateZ(0);
+  }
+}
+
+/* Pressed ring pulse - immediate feedback within 80ms */
+@keyframes pressRing {
+  0% {
+    box-shadow: 0 0 0 0px rgba(251, 146, 60, 0.8);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(251, 146, 60, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 0 4px rgba(251, 146, 60, 0.6);
+  }
+}
+
+/* CSS-driven hover states for menu items (no React re-renders) */
+.lp-menu-item {
+  transition: background-color 80ms ease-out, color 80ms ease-out;
+  will-change: background-color;
+}
+.lp-menu-item:hover:not([data-disabled="true"]) {
+  background-color: rgba(55, 65, 81, 0.5);
+}
+.lp-menu-item[data-active="true"] {
+  background-color: rgb(249, 115, 22);
+  color: white;
+}
+
+/* Checkbox item hover states */
+.lp-checkbox-item {
+  transition: background-color 80ms ease-out;
+}
+.lp-checkbox-item:hover {
+  background-color: rgba(55, 65, 81, 0.5);
+}
+.lp-checkbox-item[data-checked="true"] {
+  background-color: rgba(249, 115, 22, 0.3);
+  color: rgb(254, 215, 170);
+}
+
+/* Fast confirmation overlay - 500ms, transform-only, non-blocking */
+@keyframes confirmFast {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateZ(0);
+  }
+  20% {
+    opacity: 1;
+    transform: scale(1.02) translateZ(0);
+  }
+  40% {
+    transform: scale(1) translateZ(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateZ(0);
+  }
+}
+
+@keyframes checkStrokeFast {
   0% {
     stroke-dashoffset: 50;
   }
@@ -320,22 +386,13 @@
   }
 }
 
-@keyframes checkDraw {
+@keyframes progressFillFast {
   0% {
-    opacity: 0;
-    transform: scale(0.8);
+    transform: scaleX(0) translateZ(0);
+    transform-origin: left;
   }
   100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes progressFill {
-  0% {
-    width: 0%;
-  }
-  100% {
-    width: 100%;
+    transform: scaleX(1) translateZ(0);
+    transform-origin: left;
   }
 }
