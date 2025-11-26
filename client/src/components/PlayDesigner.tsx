@@ -709,6 +709,9 @@ export default function PlayDesigner() {
     setSelectedElements({ players: [], routes: [] });
     setIsDraggingStraightRoute(false);
     setTool("select");
+    setMakePrimary(false);
+    setIsMotion(false);
+    setIsPlayAction(false);
   };
 
   const generateScaledExport = async (targetWidth: number, targetHeight: number): Promise<string> => {
