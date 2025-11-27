@@ -176,23 +176,23 @@ export default function PlayDesigner() {
     "trick": "Trick",
   };
   
-  // Preset positions for offensive players based on standard formation
-  // Uses FIELD config for positioning relative to LOS
+  // Player positioning constants (used for spacing calculations)
   const centerX = FIELD.WIDTH / 2;
-  const offensePositions: Record<string, { x: number; y: number }> = {
-    "#39ff14": { x: centerX, y: FIELD.LOS_Y + 6 * FIELD.PIXELS_PER_YARD },  // Neon Green - Running back (center, 6 yards back)
-    "#1d4ed8": { x: FIELD.FIELD_LEFT + 50, y: FIELD.LOS_Y },   // Blue - Split end (far left on line)
-    "#ef4444": { x: FIELD.FIELD_RIGHT - 50, y: FIELD.LOS_Y },  // Red - Right receiver (far right on line)
-    "#eab308": { x: centerX - 80, y: FIELD.LOS_Y },  // Yellow - Left guard (left of center on line)
-    "#000000": { x: centerX, y: FIELD.LOS_Y },  // Black - Center (middle on line)
-    "#f97316": { x: centerX + 40, y: FIELD.LOS_Y + 3 * FIELD.PIXELS_PER_YARD },  // Orange - Quarterback (behind line, slightly right)
-    "#6b7280": { x: centerX - 12, y: FIELD.LOS_Y },  // Gray - default first position (will be overridden by sequence)
-  };
-  
-  // Gray player positioning constants for center-out alternating pattern
-  const PLAYER_SIZE = 24;  // Gray squares are 24px (w-6 h-6)
-  const GAP_SIZE = 6;      // Small gap between adjacent linemen
+  const PLAYER_SIZE = 24;  // Players are 24px (w-6 h-6)
+  const GAP_SIZE = 6;      // Small gap between adjacent players
   const FILL_ORDER = [0, -1, 1, -2, 2];  // Center, left, right, further left, further right
+
+  // Preset positions for offensive players based on standard formation
+  // Uses FIELD config and spacing constants for positioning relative to LOS
+  const offensePositions: Record<string, { x: number; y: number }> = {
+    "#39ff14": { x: centerX, y: FIELD.LOS_Y + 6 * FIELD.PIXELS_PER_YARD },  // Green - Running back (center, 6 yards back)
+    "#1d4ed8": { x: FIELD.FIELD_LEFT + 50, y: FIELD.LOS_Y },   // Blue (Z) - Split end (far left on line)
+    "#ef4444": { x: FIELD.FIELD_RIGHT - 50, y: FIELD.LOS_Y },  // Red (X) - Right receiver (far right on line)
+    "#eab308": { x: centerX - (3 * (PLAYER_SIZE + GAP_SIZE)), y: FIELD.LOS_Y },  // Yellow (Y) - Slot -3 (left of LT)
+    "#000000": { x: centerX, y: FIELD.LOS_Y + PLAYER_SIZE + 5 },  // Black (QB) - Behind Center with 5px gap
+    "#f97316": { x: centerX + (3 * (PLAYER_SIZE + GAP_SIZE)), y: FIELD.LOS_Y },  // Orange (TE) - Slot +3 (right of RT)
+    "#6b7280": { x: centerX, y: FIELD.LOS_Y },  // Gray - default (will be overridden by sequence)
+  };
   
   // Generate gray positions using the center-out formula
   // x = centerX + (offset * (PLAYER_SIZE + GAP_SIZE))
