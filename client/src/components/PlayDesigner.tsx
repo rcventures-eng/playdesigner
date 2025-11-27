@@ -2223,7 +2223,9 @@ export default function PlayDesigner() {
                   data-testid={`player-${player.id}`}
                 >
                   <div
-                    className={`w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs ${
+                    className={`w-6 h-6 ${
+                      playType === "offense" && player.color === "#6b7280" ? "" : "rounded-full"
+                    } flex items-center justify-center text-white font-bold text-xs ${
                       pendingRouteSelection?.playerId === player.id ? "player-pending-route" : ""
                     }`}
                     style={{ 
