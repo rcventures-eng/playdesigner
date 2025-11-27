@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Download, Copy, Plus, Trash2, Circle as CircleIcon, MoveHorizontal, PenTool, Square as SquareIcon, Type, Hexagon, RotateCcw } from "lucide-react";
+import { Download, Copy, Plus, Trash2, Circle as CircleIcon, MoveHorizontal, PenTool, Square as SquareIcon, Type, Hexagon, RotateCcw, Flag } from "lucide-react";
 import { toPng } from "html-to-image";
 import { useToast } from "@/hooks/use-toast";
 import underConstructionImage from "@assets/generated_images/under_construction_warning_banner.png";
@@ -1505,6 +1505,44 @@ export default function PlayDesigner() {
                     Shape
                   </Button>
                 )}
+              </div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <Label className="text-xs">Game Format</Label>
+                <div className="flex flex-col gap-1.5">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    data-testid="button-format-5on5"
+                    className="w-full justify-center bg-green-600 hover:bg-green-700 text-white border-0"
+                  >
+                    <Flag className="h-4 w-4 text-red-500 mr-2" />
+                    5-on-5 Flag
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    data-testid="button-format-7on7"
+                    className="w-full justify-center bg-green-600 hover:bg-green-700 text-white border-0"
+                  >
+                    <Flag className="h-4 w-4 text-red-500 mr-2" />
+                    7-on-7 Flag
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    data-testid="button-format-11on11"
+                    className="w-full justify-center bg-green-600 hover:bg-green-700 text-white border-0"
+                  >
+                    <svg className="h-4 w-4 mr-2" viewBox="0 0 20 40" fill="currentColor">
+                      <ellipse cx="10" cy="20" rx="9.5" ry="19.5" fill="#8B4513" stroke="#654321" strokeWidth="1" />
+                      <line x1="10" y1="2" x2="10" y2="38" stroke="#FFFFFF" strokeWidth="1.2" />
+                    </svg>
+                    11-on-11 Tackle
+                  </Button>
+                </div>
               </div>
 
               <Separator />
