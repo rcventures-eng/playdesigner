@@ -471,6 +471,43 @@ export default function PlayDesigner() {
     setTool("select");
   };
 
+  const generate11v11Formation = (): Player[] => {
+    return [
+      // Offensive Line (5 Gray Squares) - slots 0, -1, +1, -2, +2
+      { id: `player-${Date.now()}-1`, x: centerX, y: FIELD.LOS_Y, color: "#6b7280", label: "C" },
+      { id: `player-${Date.now()}-2`, x: centerX - (1 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#6b7280", label: "LG" },
+      { id: `player-${Date.now()}-3`, x: centerX + (1 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#6b7280", label: "RG" },
+      { id: `player-${Date.now()}-4`, x: centerX - (2 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#6b7280", label: "LT" },
+      { id: `player-${Date.now()}-5`, x: centerX + (2 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#6b7280", label: "RT" },
+      // Tight Ends / Slots (Circles) - slots -3, +3
+      { id: `player-${Date.now()}-6`, x: centerX - (3 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#eab308", label: "Y" },
+      { id: `player-${Date.now()}-7`, x: centerX + (3 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#f97316", label: "TE" },
+      // Wideouts (Circles) - slots -7, +7
+      { id: `player-${Date.now()}-8`, x: centerX - (7 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#1d4ed8", label: "Z" },
+      { id: `player-${Date.now()}-9`, x: centerX + (7 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#ef4444", label: "X" },
+      // Backfield (Circles) - stacked center
+      { id: `player-${Date.now()}-10`, x: centerX, y: FIELD.LOS_Y + 40, color: "#000000", label: "QB" },
+      { id: `player-${Date.now()}-11`, x: centerX, y: FIELD.LOS_Y + 100, color: "#39ff14", label: "RB" },
+    ];
+  };
+
+  const handleLoad11v11 = () => {
+    if (players.length > 0 || routes.length > 0 || shapes.length > 0 || footballs.length > 0) {
+      saveToHistory();
+    }
+    setPlayers(generate11v11Formation());
+    setRoutes([]);
+    setShapes([]);
+    setFootballs([]);
+    setMetadata({ name: "", formation: "", concept: "", personnel: "" });
+    setSelectedPlayer(null);
+    setSelectedRoute(null);
+    setSelectedShape(null);
+    setSelectedFootball(null);
+    setSelectedElements({ players: [], routes: [] });
+    setTool("select");
+  };
+
   const deleteSelected = () => {
     const hasSelection = selectedFootball || selectedPlayer || selectedRoute || selectedShape;
     if (hasSelection) saveToHistory();
@@ -1593,6 +1630,7 @@ export default function PlayDesigner() {
                     size="sm"
                     variant="secondary"
                     data-testid="button-format-11on11"
+                    onClick={handleLoad11v11}
                     className="w-full justify-center bg-green-600 hover:bg-green-700 text-white border-0"
                   >
                     <svg className="h-4 w-4 mr-2" viewBox="0 0 20 40" fill="currentColor">
