@@ -1462,26 +1462,16 @@ export default function PlayDesigner() {
 
             <Card className="p-4 space-y-3">
               <h3 className="font-semibold text-sm text-foreground">Tools</h3>
-              <div className="grid grid-cols-4 gap-1.5">
+              <div className="grid grid-cols-3 gap-1.5">
                 <Button
                   size="sm"
                   variant={tool === "select" ? "default" : "secondary"}
                   onClick={() => setTool("select")}
                   data-testid="button-tool-select"
-                  className="gap-1 justify-center px-2"
+                  className="flex justify-center items-center gap-1"
                 >
                   <MoveHorizontal className="h-4 w-4" />
                   Select
-                </Button>
-                <Button
-                  size="sm"
-                  variant={tool === "route" ? "default" : "secondary"}
-                  onClick={() => setTool("route")}
-                  data-testid="button-tool-route"
-                  className="gap-1 justify-center px-2"
-                >
-                  <PenTool className="h-4 w-4" />
-                  Route
                 </Button>
                 <Button
                   size="sm"
@@ -1489,7 +1479,7 @@ export default function PlayDesigner() {
                   onClick={undo}
                   disabled={history.length === 0}
                   data-testid="button-tool-undo"
-                  className="gap-1 justify-center px-2"
+                  className="flex justify-center items-center gap-1"
                 >
                   <RotateCcw className="h-4 w-4" />
                   Undo
@@ -1499,7 +1489,7 @@ export default function PlayDesigner() {
                   variant="outline"
                   onClick={clearAll}
                   data-testid="button-clear-all"
-                  className="bg-white text-black border-gray-300 px-2"
+                  className="flex justify-center items-center gap-1 bg-white text-black border-gray-300"
                 >
                   Clear All
                 </Button>
