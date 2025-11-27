@@ -159,7 +159,7 @@ export default function PlayDesigner() {
   const pendingDragRef = useRef<{ playerId: string; offset: { x: number; y: number } } | null>(null);
   const { toast } = useToast();
 
-  const offenseColors = ["#39ff14", "#1d4ed8", "#ef4444", "#eab308", "#000000", "#f97316", "#6b7280", "#6b7281", "#6b7282", "#6b7283", "#6b7284"];
+  const offenseColors = ["#39ff14", "#1d4ed8", "#ef4444", "#eab308", "#000000", "#f97316", "#6b7280"];
   const defenseColors = ["#92400e", "#db2777", "#9333ea"];
   const shapeColors = ["#ec4899", "#1d4ed8", "#86efac"];
   const colors = playType === "offense" ? offenseColors : defenseColors;
@@ -186,11 +186,7 @@ export default function PlayDesigner() {
     "#eab308": { x: centerX - 80, y: FIELD.LOS_Y },  // Yellow - Left guard (left of center on line)
     "#000000": { x: centerX, y: FIELD.LOS_Y },  // Black - Center (middle on line)
     "#f97316": { x: centerX + 40, y: FIELD.LOS_Y + 3 * FIELD.PIXELS_PER_YARD },  // Orange - Quarterback (behind line, slightly right)
-    "#6b7280": { x: centerX - 120, y: FIELD.LOS_Y },  // Gray 1 - Left (on line)
-    "#6b7281": { x: centerX - 60, y: FIELD.LOS_Y },   // Gray 2 - Left-center (on line)
-    "#6b7282": { x: centerX, y: FIELD.LOS_Y + 24 },   // Gray 3 - Center (below line)
-    "#6b7283": { x: centerX + 60, y: FIELD.LOS_Y },   // Gray 4 - Right-center (on line)
-    "#6b7284": { x: centerX + 120, y: FIELD.LOS_Y },  // Gray 5 - Right (on line)
+    "#6b7280": { x: centerX + 80, y: FIELD.LOS_Y },  // Gray - Right guard (right of center on line)
   };
   
   const formationLabels: Record<string, string> = {
