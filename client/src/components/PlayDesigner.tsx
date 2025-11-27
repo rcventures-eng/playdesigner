@@ -155,6 +155,8 @@ export default function PlayDesigner() {
   const currentRoutePointsRef = useRef<{ x: number; y: number }[]>([]);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const longPressStartPos = useRef<{ x: number; y: number } | null>(null);
+  const menuJustOpenedRef = useRef(false);
+  const menuOpenRef = useRef(false); // Ref to track menu open state for event handlers
   const { toast } = useToast();
 
   const offenseColors = ["#39ff14", "#1d4ed8", "#ef4444", "#eab308", "#000000", "#f97316", "#6b7280"];
@@ -274,12 +276,20 @@ export default function PlayDesigner() {
   // Handle click-outside to close long-press menu and cancel long-press on window mouseup
   useEffect(() => {
     const handleWindowMouseUp = () => {
-      cancelLongPress();
+      // Only cancel if menu hasn't opened yet (use ref for immediate check)
+      if (!menuOpenRef.current) {
+        cancelLongPress();
+      }
     };
     
     const handleClickOutside = (e: MouseEvent) => {
       // Don't close during confirmation dwell
       if (menuConfirming) return;
+      
+      // Don't close if menu just opened (prevents race condition with click event)
+      if (menuJustOpenedRef.current) {
+        return;
+      }
       
       const target = e.target as HTMLElement;
       if (longPressMenuOpen && !target.closest('[data-testid="long-press-menu"]')) {
@@ -479,9 +489,23 @@ export default function PlayDesigner() {
         requestAnimationFrame(() => setIsLongPressHolding(true));
         
         longPressTimerRef.current = setTimeout(() => {
+          // Clear ref FIRST so cancelLongPress won't interfere
+          longPressTimerRef.current = null;
+          
+          // Set ref BEFORE state update so mouseup handlers see it immediately
+          menuOpenRef.current = true;
+          menuJustOpenedRef.current = true;
+          
           // Long press detected - open menu anchored under player center
           setIsLongPressHolding(false);
           setLongPressPlayerId(playerId);
+          
+          // Reset the just-opened guard after the event loop settles
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              menuJustOpenedRef.current = false;
+            });
+          });
           
           // Calculate menu position with max width clamping
           const rect = canvasRef.current?.getBoundingClientRect();
@@ -528,6 +552,7 @@ export default function PlayDesigner() {
   };
   
   const closeLongPressMenu = () => {
+    menuOpenRef.current = false; // Clear ref immediately
     setLongPressMenuOpen(false);
     setLongPressPlayerId(null);
     setHoveredRouteType(null);
@@ -770,8 +795,10 @@ export default function PlayDesigner() {
   };
 
   const handleCanvasMouseUp = () => {
-    // Cancel long-press timer if mouse released before 300ms
-    cancelLongPress();
+    // Only cancel if menu hasn't opened yet (use ref for immediate check)
+    if (!menuOpenRef.current) {
+      cancelLongPress();
+    }
     
     if (tool === "route" && isDraggingStraightRoute && isDrawingRoute && currentRoutePointsRef.current.length >= 2) {
       finishRoute();
@@ -1760,7 +1787,7 @@ export default function PlayDesigner() {
               onMouseDown={handleCanvasMouseDown}
               onClick={handleCanvasClick}
               onDoubleClick={handleCanvasDoubleClick}
-              onMouseLeave={cancelLongPress}
+              onMouseLeave={() => cancelLongPress()}
               data-testid="canvas-field"
             >
               {/* White header for metadata */}
@@ -2336,6 +2363,8 @@ export default function PlayDesigner() {
       {longPressMenuOpen && (
         <div
           data-testid="long-press-menu"
+          role="menu"
+          aria-label="Route options menu"
           className="fixed z-[100] select-none lp-menu"
           style={{
             left: longPressMenuPosition.x,
@@ -2393,6 +2422,8 @@ export default function PlayDesigner() {
               {(["pass", "run", "blocking"] as const).map((type) => (
                 <div
                   key={type}
+                  role="menuitem"
+                  tabIndex={0}
                   className="lp-menu-item px-3 py-2 text-sm cursor-pointer flex items-center justify-between text-gray-200"
                   data-testid={`menu-route-type-${type}`}
                   onMouseEnter={() => !menuConfirming && setHoveredRouteType(type)}
@@ -2420,6 +2451,8 @@ export default function PlayDesigner() {
                 {(["straight", "curved"] as const).map((style) => (
                   <div
                     key={style}
+                    role="menuitem"
+                    tabIndex={0}
                     className="lp-menu-item px-3 py-2 text-sm cursor-pointer flex items-center justify-between text-gray-200"
                     data-testid={`menu-route-style-${style}`}
                     onMouseEnter={() => !menuConfirming && setHoveredRouteStyle(style)}
