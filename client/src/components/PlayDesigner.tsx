@@ -186,8 +186,18 @@ export default function PlayDesigner() {
     "#eab308": { x: centerX - 80, y: FIELD.LOS_Y },  // Yellow - Left guard (left of center on line)
     "#000000": { x: centerX, y: FIELD.LOS_Y },  // Black - Center (middle on line)
     "#f97316": { x: centerX + 40, y: FIELD.LOS_Y + 3 * FIELD.PIXELS_PER_YARD },  // Orange - Quarterback (behind line, slightly right)
-    "#6b7280": { x: centerX + 80, y: FIELD.LOS_Y },  // Gray - Right guard (right of center on line)
+    "#6b7280": { x: centerX - 12, y: FIELD.LOS_Y },  // Gray - default first position (will be overridden by sequence)
   };
+  
+  // Gray player positions added in sequence (1-5) when clicking gray button
+  // Based on offensive line formation: 1=center-left, 2=right of 1, 3=left of 1, 4=far right, 5=far left
+  const grayPositions = [
+    { x: centerX - 12, y: FIELD.LOS_Y },   // Position 1: Just left of center
+    { x: centerX + 12, y: FIELD.LOS_Y },   // Position 2: Just right of position 1
+    { x: centerX - 36, y: FIELD.LOS_Y },   // Position 3: Left of position 1
+    { x: centerX + 60, y: FIELD.LOS_Y },   // Position 4: Far right
+    { x: centerX - 60, y: FIELD.LOS_Y },   // Position 5: Far left
+  ];
   
   const formationLabels: Record<string, string> = {
     "man-to-man": "Man-to-Man",
@@ -301,10 +311,19 @@ export default function PlayDesigner() {
   const addPlayer = (color: string) => {
     saveToHistory();
     
-    // Use preset position for offense players, default to center for defense
-    const position = playType === "offense" && offensePositions[color] 
-      ? offensePositions[color] 
-      : { x: FIELD.WIDTH / 2, y: FIELD.LOS_Y };
+    let position: { x: number; y: number };
+    
+    // For gray players on offense, use sequential positions based on how many exist
+    if (playType === "offense" && color === "#6b7280") {
+      const existingGrayCount = players.filter(p => p.color === "#6b7280").length;
+      const positionIndex = existingGrayCount % grayPositions.length;
+      position = grayPositions[positionIndex];
+    } else {
+      // Use preset position for other offense players, default to center for defense
+      position = playType === "offense" && offensePositions[color] 
+        ? offensePositions[color] 
+        : { x: FIELD.WIDTH / 2, y: FIELD.LOS_Y };
+    }
     
     const newPlayer: Player = {
       id: `player-${Date.now()}`,
