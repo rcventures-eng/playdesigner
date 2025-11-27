@@ -396,3 +396,17 @@
     transform-origin: left;
   }
 }
+
+/* Pulsing glow for player with pending route selection */
+@keyframes pulsingGlow {
+  0%, 100% {
+    box-shadow: 0 0 8px 3px rgba(251, 146, 60, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 18px 8px rgba(251, 146, 60, 0.95);
+  }
+}
+
+.player-pending-route {
+  animation: pulsingGlow 1s ease-in-out infinite;
+}

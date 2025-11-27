@@ -925,6 +925,8 @@ export default function PlayDesigner() {
     setMakePrimary(false);
     setIsMotion(false);
     setIsPlayAction(false);
+    // Close the long-press menu when route is completed
+    closeLongPressMenu();
   };
 
   const handleBackgroundClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -2221,19 +2223,23 @@ export default function PlayDesigner() {
                   data-testid={`player-${player.id}`}
                 >
                   <div
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs"
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs ${
+                      pendingRouteSelection?.playerId === player.id ? "player-pending-route" : ""
+                    }`}
                     style={{ 
                       backgroundColor: player.color,
                       transition: "transform 80ms ease-out, box-shadow 80ms ease-out",
                       transform: isLongPressHolding && longPressPlayerRef === player.id ? "scale(1.1)" : "scale(1)",
-                      // Immediate pressed ring feedback (within 80ms)
-                      animation: isLongPressHolding && longPressPlayerRef === player.id ? "pressRing 280ms ease-out forwards" : "none",
-                      // Selection rings
-                      boxShadow: longPressPlayerId === player.id 
-                        ? "0 0 0 4px rgba(251, 146, 60, 0.8)" 
-                        : (selectedPlayer === player.id || selectedElements.players.includes(player.id)) 
-                          ? "0 0 0 2px rgba(34, 211, 238, 1)" 
-                          : "none",
+                      // Immediate pressed ring feedback (within 80ms) - but NOT when pending route (glow takes over)
+                      animation: isLongPressHolding && longPressPlayerRef === player.id && !pendingRouteSelection ? "pressRing 280ms ease-out forwards" : "none",
+                      // Selection rings - pending route glow is handled by CSS class
+                      boxShadow: pendingRouteSelection?.playerId === player.id
+                        ? "none" // CSS animation handles the glow
+                        : longPressPlayerId === player.id 
+                          ? "0 0 0 4px rgba(251, 146, 60, 0.8)" 
+                          : (selectedPlayer === player.id || selectedElements.players.includes(player.id)) 
+                            ? "0 0 0 2px rgba(34, 211, 238, 1)" 
+                            : "none",
                     }}
                   >
                     {editingPlayer === player.id ? (
@@ -2434,17 +2440,19 @@ export default function PlayDesigner() {
                     key={style}
                     className="lp-menu-item px-3 py-2 text-sm cursor-pointer flex items-center justify-between text-gray-200"
                     data-testid={`menu-route-style-${style}`}
-                    onMouseEnter={() => !menuConfirming && setHoveredRouteStyle(style)}
-                    onClick={() => {
-                      if (hoveredRouteType && longPressPlayerId) {
-                        setPendingRouteSelection({
-                          playerId: longPressPlayerId,
-                          type: hoveredRouteType,
-                          style: style,
-                          motion: menuMotion,
-                          primary: menuMakePrimary,
-                        });
-                        closeLongPressMenu();
+                    onMouseEnter={() => {
+                      if (!menuConfirming) {
+                        setHoveredRouteStyle(style);
+                        // Set pending route on HOVER - player will glow, menu stays open
+                        if (hoveredRouteType && longPressPlayerId) {
+                          setPendingRouteSelection({
+                            playerId: longPressPlayerId,
+                            type: hoveredRouteType,
+                            style: style,
+                            motion: menuMotion,
+                            primary: menuMakePrimary,
+                          });
+                        }
                       }
                     }}
                     data-active={hoveredRouteStyle === style}
@@ -2481,7 +2489,17 @@ export default function PlayDesigner() {
                     {menuMotion && <span className="text-white text-[10px] font-bold">✓</span>}
                   </div>
                   <input type="checkbox" checked={menuMotion} onChange={(e) => {
-                    if (!menuConfirming) { setMenuMotion(e.target.checked); }
+                    if (!menuConfirming) {
+                      const newMotion = e.target.checked;
+                      setMenuMotion(newMotion);
+                      // Update pending selection if it exists
+                      if (pendingRouteSelection && hoveredRouteType && hoveredRouteStyle) {
+                        setPendingRouteSelection({
+                          ...pendingRouteSelection,
+                          motion: newMotion,
+                        });
+                      }
+                    }
                   }} className="sr-only" />
                   <span className="font-medium text-xs">Motion?</span>
                 </label>
@@ -2497,7 +2515,17 @@ export default function PlayDesigner() {
                     {menuMakePrimary && <span className="text-white text-[10px] font-bold">✓</span>}
                   </div>
                   <input type="checkbox" checked={menuMakePrimary} onChange={(e) => {
-                    if (!menuConfirming) { setMenuMakePrimary(e.target.checked); }
+                    if (!menuConfirming) {
+                      const newPrimary = e.target.checked;
+                      setMenuMakePrimary(newPrimary);
+                      // Update pending selection if it exists
+                      if (pendingRouteSelection && hoveredRouteType && hoveredRouteStyle) {
+                        setPendingRouteSelection({
+                          ...pendingRouteSelection,
+                          primary: newPrimary,
+                        });
+                      }
+                    }
                   }} className="sr-only" />
                   <span className="font-medium text-xs">Primary?</span>
                 </label>
