@@ -551,21 +551,17 @@ export default function PlayDesigner() {
     
     const playerId = longPressPlayerId;
     
-    // OPTIMISTIC: Apply action immediately, show fast non-blocking confirmation
-    if (type !== "blocking" && (menuMotion || menuMakePrimary)) {
-      setMenuConfirming(true);
-      // Execute IMMEDIATELY (optimistic) - don't wait for animation
-      requestAnimationFrame(() => {
-        executeRouteStart(type, style, player, playerId);
-      });
-      // Menu closes after brief confirmation (500ms)
-      setTimeout(() => {
-        closeLongPressMenu();
-      }, 500);
-    } else {
-      // No options selected - instant execution
-      executeRouteStart(type, style, player, playerId);
-    }
+    // Store pending selection - route starts when user hovers over the player
+    setPendingRouteSelection({
+      playerId,
+      type,
+      style,
+      motion: type === "blocking" ? false : menuMotion,
+      primary: type === "blocking" ? false : menuMakePrimary,
+    });
+    
+    // Close the menu - user will hover over player to start drawing
+    closeLongPressMenu();
   };
   
   const executeRouteStart = (type: "pass" | "run" | "blocking", style: "straight" | "curved", player: { x: number; y: number }, playerId: string) => {
@@ -2143,50 +2139,69 @@ export default function PlayDesigner() {
                   onDoubleClick={(e) => handlePlayerDoubleClick(e, player.id)}
                   onMouseEnter={() => {
                     if (pendingRouteSelection && pendingRouteSelection.playerId === player.id) {
-                      const pending = pendingRouteSelection;
+                      // Capture all values immediately before any state changes
+                      const pending = { ...pendingRouteSelection };
+                      const playerX = player.x;
+                      const playerY = player.y;
+                      const pId = player.id;
+                      
+                      // Clear pending state and long press
                       setPendingRouteSelection(null);
                       cancelLongPress();
                       
-                      setRouteType(pending.type);
-                      setRouteStyle(pending.style);
-                      setIsMotion(pending.motion);
-                      setMakePrimary(pending.primary);
+                      // Set tool to route - this triggers the tool-change effect
                       setTool("route");
                       
-                      // Defer drawing state to after the tool-change effect runs
+                      // Double RAF to ensure we're past the tool-change effect
                       requestAnimationFrame(() => {
-                        setIsDrawingRoute(true);
-                        setIsDraggingStraightRoute(true);
-                        setSelectedPlayer(player.id);
-                        setSelectedElements({ players: [], routes: [] });
-                        
-                        const initialPoint = { x: player.x, y: player.y };
-                        setCurrentRoutePoints([initialPoint]);
-                        currentRoutePointsRef.current = [initialPoint];
+                        requestAnimationFrame(() => {
+                          setRouteType(pending.type);
+                          setRouteStyle(pending.style);
+                          setIsMotion(pending.motion);
+                          setMakePrimary(pending.primary);
+                          setIsDrawingRoute(true);
+                          setIsDraggingStraightRoute(true);
+                          setSelectedPlayer(pId);
+                          setSelectedElements({ players: [], routes: [] });
+                          
+                          const initialPoint = { x: playerX, y: playerY };
+                          setCurrentRoutePoints([initialPoint]);
+                          currentRoutePointsRef.current = [initialPoint];
+                        });
                       });
                     }
                   }}
                   onPointerEnter={() => {
                     if (pendingRouteSelection && pendingRouteSelection.playerId === player.id) {
-                      const pending = pendingRouteSelection;
+                      // Capture all values immediately before any state changes
+                      const pending = { ...pendingRouteSelection };
+                      const playerX = player.x;
+                      const playerY = player.y;
+                      const pId = player.id;
+                      
+                      // Clear pending state and long press
                       setPendingRouteSelection(null);
                       cancelLongPress();
                       
-                      setRouteType(pending.type);
-                      setRouteStyle(pending.style);
-                      setIsMotion(pending.motion);
-                      setMakePrimary(pending.primary);
+                      // Set tool to route - this triggers the tool-change effect
                       setTool("route");
                       
+                      // Double RAF to ensure we're past the tool-change effect
                       requestAnimationFrame(() => {
-                        setIsDrawingRoute(true);
-                        setIsDraggingStraightRoute(true);
-                        setSelectedPlayer(player.id);
-                        setSelectedElements({ players: [], routes: [] });
-                        
-                        const initialPoint = { x: player.x, y: player.y };
-                        setCurrentRoutePoints([initialPoint]);
-                        currentRoutePointsRef.current = [initialPoint];
+                        requestAnimationFrame(() => {
+                          setRouteType(pending.type);
+                          setRouteStyle(pending.style);
+                          setIsMotion(pending.motion);
+                          setMakePrimary(pending.primary);
+                          setIsDrawingRoute(true);
+                          setIsDraggingStraightRoute(true);
+                          setSelectedPlayer(pId);
+                          setSelectedElements({ players: [], routes: [] });
+                          
+                          const initialPoint = { x: playerX, y: playerY };
+                          setCurrentRoutePoints([initialPoint]);
+                          currentRoutePointsRef.current = [initialPoint];
+                        });
                       });
                     }
                   }}
