@@ -643,12 +643,13 @@ export default function PlayDesigner() {
   };
 
   const handleCanvasMouseMove = (e: React.MouseEvent) => {
-    // Cancel long-press if mouse moves more than 8 pixels (prevents menu opening during drag)
+    // Cancel long-press if mouse moves more than 18 pixels (prevents menu opening during drag)
+    // 18px threshold allows for natural hand micro-movements during a 280ms hold
     if (longPressStartPos.current && longPressTimerRef.current) {
       const dx = e.clientX - longPressStartPos.current.x;
       const dy = e.clientY - longPressStartPos.current.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
-      if (distance > 8) {
+      if (distance > 18) {
         cancelLongPress();
       }
     }
