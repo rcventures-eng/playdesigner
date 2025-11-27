@@ -2482,39 +2482,37 @@ export default function PlayDesigner() {
         </div>
 
         <div className="w-96 border-l border-border bg-card p-4 overflow-y-auto">
-          <h3 className="font-semibold text-base text-foreground mb-3">🏈 Kickoff: How to Build Your Play</h3>
+          <h3 className="font-semibold text-base text-foreground mb-3">🏈 How to Build Your Play</h3>
           <div className="space-y-2 text-sm text-muted-foreground">
-            <p className="font-semibold text-foreground mt-3">1. Set the Stage</p>
-            <p>Look for the icons on the left sidebar to populate the field.</p>
-            <p>🟢 Add Players: Click the Colored Icons to drop players onto the canvas.</p>
-            <p>🏈 Add the Ball: Click the Football Icon to set the tee. Tip: You can add extra footballs to show hand-offs or reverses.</p>
+            <p className="font-semibold text-foreground mt-3">1. Add Players</p>
+            <p>🎮 Choose a Game Format preset (5v5, 7v7, or 11v11) to instantly load a formation, or add players one at a time using the colored icons.</p>
             
-            <p className="font-semibold text-foreground mt-3">2. Move & Label Players</p>
-            <p>Switch to the Select Tool (mouse cursor icon) to organize the formation.</p>
-            <p>Move a Player: Single-click and drag the circle to where they line up.</p>
-            <p>Name a Position: Double-click any circle to type an abbreviation (e.g., QB, WR, LT).</p>
+            <p className="font-semibold text-foreground mt-3">2. Position & Label</p>
+            <p>👆 <span className="font-medium">Move:</span> Click and drag quickly to reposition.</p>
+            <p>✏️ <span className="font-medium">Rename:</span> Double-click a player circle to edit its label (e.g., QB, WR, LT).</p>
             
-            <p className="font-semibold text-foreground mt-3">3. Draw the Action</p>
-            <p>Switch to the Route Tool to show players what to do.</p>
-            <p className="font-semibold">🏃 Running & Blocking</p>
-            <p>Run Routes: Just draw! Routes automatically appear as solid black lines.</p>
-            <p>Blocking: Toggle the Block switch for blocking assignments.</p>
-            <p className="font-semibold mt-2">🎯 Passing</p>
-            <p>Pass Routes: These will automatically appear in the player's color.</p>
-            <p>Primary Receiver: Toggle the Primary switch to mark the main target.</p>
-            <p>Route Shape: Choose Straight for fly routes or posts; choose Curved for crossing routes or drags.</p>
-            <p className="font-semibold mt-2">💨 Motion & Fakes</p>
-            <p>Pre-Snap Motion: Check the Motion box. Lines behind the scrimmage line will be dashed, then turn solid once the ball is snapped.</p>
-            <p>Play-Action: Select a football icon, check Play-Action, and place it where the fake happens.</p>
+            <p className="font-semibold text-foreground mt-3">3. Draw Routes</p>
+            <p>👇 Long-press any player to open the Route Menu:</p>
+            <p>🎯 Choose <span className="font-medium">Pass</span>, <span className="font-medium">Run</span>, or <span className="font-medium">Block</span></p>
+            <p>📐 Select <span className="font-medium">Straight</span> or <span className="font-medium">Curved</span></p>
+            <p>💨 Toggle <span className="font-medium">Motion</span> for pre-snap movement</p>
+            <p>⭐ Toggle <span className="font-medium">Primary</span> to mark the main target</p>
+            <p>Click points on the field to draw, then click the player again to finish.</p>
             
-            <p className="font-semibold text-foreground mt-3">4. Fixes & Finishes</p>
-            <p>↩️ Undo: Removes the very last thing you did.</p>
-            <p>🗑️ Clear All: Wipes the board clean to start a brand new play.</p>
+            <p className="font-semibold text-foreground mt-3">4. Tag Your Play</p>
+            <p>📝 Use the metadata fields to organize your playbook:</p>
+            <p><span className="font-medium">Name</span> your play (e.g., "Mesh Left")</p>
+            <p><span className="font-medium">Formation</span> (e.g., "Shotgun", "I-Form")</p>
+            <p><span className="font-medium">Concept</span> (e.g., "Play Action", "Screen")</p>
+            <p><span className="font-medium">Personnel</span> grouping (e.g., "11", "12", "21")</p>
             
-            <p className="font-semibold text-foreground mt-3">5. Save Your Play</p>
-            <p>Ready to put this in your playbook? You have two easy options:</p>
-            <p>📥 Download as Image: Best for printing (fits perfectly on a standard sheet of paper).</p>
-            <p>📋 Copy to Clipboard: Best for pasting directly into a document or presentation.</p>
+            <p className="font-semibold text-foreground mt-3">5. Quick Actions</p>
+            <p>↩️ <span className="font-medium">Undo</span> reverses your last change</p>
+            <p>🗑️ <span className="font-medium">Clear All</span> wipes the field clean</p>
+            
+            <p className="font-semibold text-foreground mt-3">6. Save to Your Playbook</p>
+            <p>📥 <span className="font-medium">Download</span> saves as an image for printing</p>
+            <p>📋 <span className="font-medium">Copy</span> puts it on your clipboard for pasting into docs or slides</p>
           </div>
         </div>
       </div>
