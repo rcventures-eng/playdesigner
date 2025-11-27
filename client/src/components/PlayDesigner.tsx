@@ -200,6 +200,19 @@ export default function PlayDesigner() {
     x: centerX + (offset * (PLAYER_SIZE + GAP_SIZE)),
     y: FIELD.LOS_Y
   }));
+
+  // Auto-labels for each color when players are added
+  const colorLabels: Record<string, string> = {
+    "#000000": "QB",   // Black - Quarterback
+    "#39ff14": "RB",   // Green - Running back
+    "#1d4ed8": "Z",    // Blue - Z receiver (split end)
+    "#eab308": "Y",    // Yellow - Y receiver (slot/tight)
+    "#ef4444": "X",    // Red - X receiver (flanker)
+    "#f97316": "TE",   // Orange - Tight end
+  };
+
+  // Sequential labels for gray offensive linemen (C, LG, RG, LT, RT, then OL for extras)
+  const grayLabels = ["C", "LG", "RG", "LT", "RT"];
   
   const formationLabels: Record<string, string> = {
     "man-to-man": "Man-to-Man",
@@ -314,17 +327,24 @@ export default function PlayDesigner() {
     saveToHistory();
     
     let position: { x: number; y: number };
+    let label: string | undefined;
     
-    // For gray players on offense, use sequential positions based on how many exist
+    // For gray players on offense, use sequential positions and labels based on how many exist
     if (playType === "offense" && color === "#6b7280") {
       const existingGrayCount = players.filter(p => p.color === "#6b7280").length;
       const positionIndex = existingGrayCount % grayPositions.length;
       position = grayPositions[positionIndex];
+      // Assign sequential label: C, LG, RG, LT, RT, then OL for any extras
+      label = existingGrayCount < grayLabels.length ? grayLabels[existingGrayCount] : "OL";
     } else {
       // Use preset position for other offense players, default to center for defense
       position = playType === "offense" && offensePositions[color] 
         ? offensePositions[color] 
         : { x: FIELD.WIDTH / 2, y: FIELD.LOS_Y };
+      // Assign color-based label for offense (no auto-labels for defense)
+      if (playType === "offense" && colorLabels[color]) {
+        label = colorLabels[color];
+      }
     }
     
     const newPlayer: Player = {
@@ -332,6 +352,7 @@ export default function PlayDesigner() {
       x: position.x,
       y: position.y,
       color,
+      label,
     };
     setPlayers([...players, newPlayer]);
     
