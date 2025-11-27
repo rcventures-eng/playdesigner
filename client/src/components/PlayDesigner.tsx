@@ -648,7 +648,7 @@ export default function PlayDesigner() {
       const dx = e.clientX - longPressStartPos.current.x;
       const dy = e.clientY - longPressStartPos.current.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
-      if (distance > 8) {
+      if (distance > 20) {
         cancelLongPress();
       }
     }
