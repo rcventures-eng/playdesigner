@@ -602,6 +602,7 @@ export default function PlayDesigner() {
 
   const handlePlayerDoubleClick = (e: React.MouseEvent, playerId: string) => {
     e.stopPropagation();
+    cancelLongPress();
     const player = players.find(p => p.id === playerId);
     if (player) {
       setEditingPlayer(playerId);
