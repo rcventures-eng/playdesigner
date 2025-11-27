@@ -189,16 +189,17 @@ export default function PlayDesigner() {
     "#6b7280": { x: centerX - 12, y: FIELD.LOS_Y },  // Gray - default first position (will be overridden by sequence)
   };
   
-  // Gray player positions added in sequence (1-5) when clicking gray button
-  // Based on offensive line formation: 1=center-left, 2=right of 1, 3=left of 1, 4=far right, 5=far left
-  // Spacing: ~30px between adjacent linemen, ~90px to tackles
-  const grayPositions = [
-    { x: centerX - 30, y: FIELD.LOS_Y },   // Position 1: Just left of center
-    { x: centerX, y: FIELD.LOS_Y },        // Position 2: Center (right of position 1)
-    { x: centerX - 60, y: FIELD.LOS_Y },   // Position 3: Left guard (left of position 1)
-    { x: centerX + 90, y: FIELD.LOS_Y },   // Position 4: Right tackle (far right)
-    { x: centerX - 90, y: FIELD.LOS_Y },   // Position 5: Left tackle (far left)
-  ];
+  // Gray player positioning constants for center-out alternating pattern
+  const PLAYER_SIZE = 24;  // Gray squares are 24px (w-6 h-6)
+  const GAP_SIZE = 6;      // Small gap between adjacent linemen
+  const FILL_ORDER = [0, -1, 1, -2, 2];  // Center, left, right, further left, further right
+  
+  // Generate gray positions using the center-out formula
+  // x = centerX + (offset * (PLAYER_SIZE + GAP_SIZE))
+  const grayPositions = FILL_ORDER.map(offset => ({
+    x: centerX + (offset * (PLAYER_SIZE + GAP_SIZE)),
+    y: FIELD.LOS_Y
+  }));
   
   const formationLabels: Record<string, string> = {
     "man-to-man": "Man-to-Man",
