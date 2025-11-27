@@ -324,6 +324,28 @@ export default function PlayDesigner() {
     };
   }, [longPressMenuOpen, menuConfirming]);
 
+  // Dynamic QB positioning based on Formation field (Shotgun/Pistol = deeper, otherwise under center)
+  useEffect(() => {
+    const formation = metadata.formation.toLowerCase();
+    const isShotgunOrPistol = formation.includes("shotgun") || formation.includes("pistol");
+    
+    // Find QB player
+    const qbIndex = players.findIndex(p => p.label === "QB");
+    if (qbIndex === -1) return;
+    
+    const qb = players[qbIndex];
+    const underCenterY = FIELD.LOS_Y + PLAYER_SIZE + 4;
+    const shotgunY = FIELD.LOS_Y + 40;
+    const targetY = isShotgunOrPistol ? shotgunY : underCenterY;
+    
+    // Only update if position actually needs to change
+    if (Math.abs(qb.y - targetY) > 1) {
+      setPlayers(prev => prev.map((p, i) => 
+        i === qbIndex ? { ...p, y: targetY } : p
+      ));
+    }
+  }, [metadata.formation]);
+
   const addPlayer = (color: string) => {
     saveToHistory();
     
@@ -417,7 +439,7 @@ export default function PlayDesigner() {
 
   const generate5v5Formation = (): Player[] => {
     return [
-      { id: `player-${Date.now()}-1`, x: centerX, y: FIELD.LOS_Y + 40, color: "#000000", label: "QB" },
+      { id: `player-${Date.now()}-1`, x: centerX, y: FIELD.LOS_Y + PLAYER_SIZE + 4, color: "#000000", label: "QB" },
       { id: `player-${Date.now()}-2`, x: centerX, y: FIELD.LOS_Y + 75, color: "#39ff14", label: "RB" },
       { id: `player-${Date.now()}-3`, x: centerX - (2 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#eab308", label: "Y" },
       { id: `player-${Date.now()}-4`, x: centerX - (6 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#1d4ed8", label: "Z" },
@@ -445,7 +467,7 @@ export default function PlayDesigner() {
   const generate7v7Formation = (): Player[] => {
     return [
       { id: `player-${Date.now()}-1`, x: centerX, y: FIELD.LOS_Y, color: "#6b7280", label: "C" },
-      { id: `player-${Date.now()}-2`, x: centerX, y: FIELD.LOS_Y + 40, color: "#000000", label: "QB" },
+      { id: `player-${Date.now()}-2`, x: centerX, y: FIELD.LOS_Y + PLAYER_SIZE + 4, color: "#000000", label: "QB" },
       { id: `player-${Date.now()}-3`, x: centerX, y: FIELD.LOS_Y + 75, color: "#39ff14", label: "RB" },
       { id: `player-${Date.now()}-4`, x: centerX - (2.5 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#eab308", label: "Y" },
       { id: `player-${Date.now()}-5`, x: centerX + (2.5 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#f97316", label: "TE" },
@@ -486,7 +508,7 @@ export default function PlayDesigner() {
       { id: `player-${Date.now()}-8`, x: centerX - (7 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#1d4ed8", label: "Z" },
       { id: `player-${Date.now()}-9`, x: centerX + (7 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#ef4444", label: "X" },
       // Backfield (Circles) - stacked center
-      { id: `player-${Date.now()}-10`, x: centerX, y: FIELD.LOS_Y + 40, color: "#000000", label: "QB" },
+      { id: `player-${Date.now()}-10`, x: centerX, y: FIELD.LOS_Y + PLAYER_SIZE + 4, color: "#000000", label: "QB" },
       { id: `player-${Date.now()}-11`, x: centerX, y: FIELD.LOS_Y + 75, color: "#39ff14", label: "RB" },
     ];
   };
