@@ -180,6 +180,7 @@ export default function PlayDesigner() {
   const centerX = FIELD.WIDTH / 2;
   const PLAYER_SIZE = 24;  // Players are 24px (w-6 h-6)
   const GAP_SIZE = 6;      // Small gap between adjacent players
+  const SPACING_UNIT = PLAYER_SIZE + GAP_SIZE;  // 30px spacing unit for formations
   const FILL_ORDER = [0, -1, 1, -2, 2];  // Center, left, right, further left, further right
 
   // Preset positions for offensive players based on standard formation
@@ -412,6 +413,33 @@ export default function PlayDesigner() {
     setSelectedShape(null);
     setSelectedFootball(null);
     setSelectedElements({ players: [], routes: [] });
+  };
+
+  const generate5v5Formation = (): Player[] => {
+    return [
+      { id: `player-${Date.now()}-1`, x: centerX, y: FIELD.LOS_Y + 40, color: "#000000", label: "QB" },
+      { id: `player-${Date.now()}-2`, x: centerX, y: FIELD.LOS_Y + 100, color: "#39ff14", label: "RB" },
+      { id: `player-${Date.now()}-3`, x: centerX - (2 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#eab308", label: "Y" },
+      { id: `player-${Date.now()}-4`, x: centerX - (6 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#1d4ed8", label: "Z" },
+      { id: `player-${Date.now()}-5`, x: centerX + (6 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#ef4444", label: "X" },
+    ];
+  };
+
+  const handleLoad5v5 = () => {
+    if (players.length > 0 || routes.length > 0 || shapes.length > 0 || footballs.length > 0) {
+      saveToHistory();
+    }
+    setPlayers(generate5v5Formation());
+    setRoutes([]);
+    setShapes([]);
+    setFootballs([]);
+    setMetadata({ name: "", formation: "5-on-5 Flag", concept: "", personnel: "" });
+    setSelectedPlayer(null);
+    setSelectedRoute(null);
+    setSelectedShape(null);
+    setSelectedFootball(null);
+    setSelectedElements({ players: [], routes: [] });
+    setTool("select");
   };
 
   const deleteSelected = () => {
@@ -1516,6 +1544,7 @@ export default function PlayDesigner() {
                     size="sm"
                     variant="secondary"
                     data-testid="button-format-5on5"
+                    onClick={handleLoad5v5}
                     className="w-full justify-center bg-green-600 hover:bg-green-700 text-white border-0"
                   >
                     <Flag className="h-4 w-4 text-red-500 mr-2" />
