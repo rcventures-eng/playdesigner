@@ -2141,6 +2141,55 @@ export default function PlayDesigner() {
                   onMouseDown={(e) => handlePlayerMouseDown(e, player.id)}
                   onPointerDown={(e) => handlePlayerMouseDown(e as unknown as React.MouseEvent, player.id)}
                   onDoubleClick={(e) => handlePlayerDoubleClick(e, player.id)}
+                  onMouseEnter={() => {
+                    if (pendingRouteSelection && pendingRouteSelection.playerId === player.id) {
+                      const pending = pendingRouteSelection;
+                      setPendingRouteSelection(null);
+                      cancelLongPress();
+                      
+                      setRouteType(pending.type);
+                      setRouteStyle(pending.style);
+                      setIsMotion(pending.motion);
+                      setMakePrimary(pending.primary);
+                      setTool("route");
+                      
+                      // Defer drawing state to after the tool-change effect runs
+                      requestAnimationFrame(() => {
+                        setIsDrawingRoute(true);
+                        setIsDraggingStraightRoute(true);
+                        setSelectedPlayer(player.id);
+                        setSelectedElements({ players: [], routes: [] });
+                        
+                        const initialPoint = { x: player.x, y: player.y };
+                        setCurrentRoutePoints([initialPoint]);
+                        currentRoutePointsRef.current = [initialPoint];
+                      });
+                    }
+                  }}
+                  onPointerEnter={() => {
+                    if (pendingRouteSelection && pendingRouteSelection.playerId === player.id) {
+                      const pending = pendingRouteSelection;
+                      setPendingRouteSelection(null);
+                      cancelLongPress();
+                      
+                      setRouteType(pending.type);
+                      setRouteStyle(pending.style);
+                      setIsMotion(pending.motion);
+                      setMakePrimary(pending.primary);
+                      setTool("route");
+                      
+                      requestAnimationFrame(() => {
+                        setIsDrawingRoute(true);
+                        setIsDraggingStraightRoute(true);
+                        setSelectedPlayer(player.id);
+                        setSelectedElements({ players: [], routes: [] });
+                        
+                        const initialPoint = { x: player.x, y: player.y };
+                        setCurrentRoutePoints([initialPoint]);
+                        currentRoutePointsRef.current = [initialPoint];
+                      });
+                    }
+                  }}
                   data-testid={`player-${player.id}`}
                 >
                   <div
