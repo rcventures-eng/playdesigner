@@ -191,12 +191,13 @@ export default function PlayDesigner() {
   
   // Gray player positions added in sequence (1-5) when clicking gray button
   // Based on offensive line formation: 1=center-left, 2=right of 1, 3=left of 1, 4=far right, 5=far left
+  // Spacing: ~30px between adjacent linemen, ~90px to tackles
   const grayPositions = [
-    { x: centerX - 12, y: FIELD.LOS_Y },   // Position 1: Just left of center
-    { x: centerX + 12, y: FIELD.LOS_Y },   // Position 2: Just right of position 1
-    { x: centerX - 36, y: FIELD.LOS_Y },   // Position 3: Left of position 1
-    { x: centerX + 60, y: FIELD.LOS_Y },   // Position 4: Far right
-    { x: centerX - 60, y: FIELD.LOS_Y },   // Position 5: Far left
+    { x: centerX - 30, y: FIELD.LOS_Y },   // Position 1: Just left of center
+    { x: centerX, y: FIELD.LOS_Y },        // Position 2: Center (right of position 1)
+    { x: centerX - 60, y: FIELD.LOS_Y },   // Position 3: Left guard (left of position 1)
+    { x: centerX + 90, y: FIELD.LOS_Y },   // Position 4: Right tackle (far right)
+    { x: centerX - 90, y: FIELD.LOS_Y },   // Position 5: Left tackle (far left)
   ];
   
   const formationLabels: Record<string, string> = {
