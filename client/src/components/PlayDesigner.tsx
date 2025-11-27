@@ -433,7 +433,7 @@ export default function PlayDesigner() {
     setRoutes([]);
     setShapes([]);
     setFootballs([]);
-    setMetadata({ name: "", formation: "5-on-5 Flag", concept: "", personnel: "" });
+    setMetadata({ name: "", formation: "", concept: "", personnel: "" });
     setSelectedPlayer(null);
     setSelectedRoute(null);
     setSelectedShape(null);
