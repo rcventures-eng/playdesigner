@@ -142,6 +142,14 @@ export default function PlayDesigner() {
   const [menuMotion, setMenuMotion] = useState(false);
   const [menuMakePrimary, setMenuMakePrimary] = useState(false);
   const [menuConfirming, setMenuConfirming] = useState(false);
+  // Pending route selection - stored when user selects Style, cleared when they click player to confirm
+  const [pendingRouteSelection, setPendingRouteSelection] = useState<{
+    playerId: string;
+    type: "pass" | "run" | "blocking";
+    style: "straight" | "curved";
+    motion: boolean;
+    primary: boolean;
+  } | null>(null);
   
   const canvasRef = useRef<HTMLDivElement>(null);
   const currentRoutePointsRef = useRef<{ x: number; y: number }[]>([]);
@@ -419,6 +427,33 @@ export default function PlayDesigner() {
   };
 
   const handlePlayerMouseDown = (e: React.MouseEvent, playerId: string) => {
+    // Check if there's a pending route selection waiting for confirmation
+    if (pendingRouteSelection && pendingRouteSelection.playerId === playerId) {
+      e.stopPropagation();
+      const player = players.find(p => p.id === playerId);
+      if (player) {
+        // Start the route with the stored selection
+        setRouteType(pendingRouteSelection.type);
+        setRouteStyle(pendingRouteSelection.style);
+        setIsMotion(pendingRouteSelection.motion);
+        setMakePrimary(pendingRouteSelection.primary);
+        
+        setTool("route");
+        setIsDrawingRoute(true);
+        setIsDraggingStraightRoute(true);
+        setSelectedPlayer(playerId);
+        setSelectedElements({ players: [], routes: [] });
+        
+        const initialPoint = { x: player.x, y: player.y };
+        setCurrentRoutePoints([initialPoint]);
+        currentRoutePointsRef.current = [initialPoint];
+        
+        // Clear the pending selection
+        setPendingRouteSelection(null);
+      }
+      return;
+    }
+    
     if (tool === "select") {
       e.stopPropagation();
       const player = players.find(p => p.id === playerId);
@@ -2322,7 +2357,18 @@ export default function PlayDesigner() {
                     className="lp-menu-item px-3 py-2 text-sm cursor-pointer flex items-center justify-between text-gray-200"
                     data-testid={`menu-route-style-${style}`}
                     onMouseEnter={() => !menuConfirming && setHoveredRouteStyle(style)}
-                    onClick={() => startRouteFromMenu(hoveredRouteType, style)}
+                    onClick={() => {
+                      if (hoveredRouteType && longPressPlayerId) {
+                        setPendingRouteSelection({
+                          playerId: longPressPlayerId,
+                          type: hoveredRouteType,
+                          style: style,
+                          motion: menuMotion,
+                          primary: menuMakePrimary,
+                        });
+                        closeLongPressMenu();
+                      }
+                    }}
                     data-active={hoveredRouteStyle === style}
                   >
                     <span className="capitalize font-medium">{style}</span>
