@@ -155,6 +155,8 @@ export default function PlayDesigner() {
   const currentRoutePointsRef = useRef<{ x: number; y: number }[]>([]);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const longPressStartPos = useRef<{ x: number; y: number } | null>(null);
+  // Pending drag intent - drag only starts after long-press is cancelled
+  const pendingDragRef = useRef<{ playerId: string; offset: { x: number; y: number } } | null>(null);
   const { toast } = useToast();
 
   const offenseColors = ["#39ff14", "#1d4ed8", "#ef4444", "#eab308", "#000000", "#f97316", "#6b7280"];
@@ -463,13 +465,18 @@ export default function PlayDesigner() {
         setSelectedRoute(null);
         setSelectedShape(null);
         setSelectedElements({ players: [], routes: [] });
-        setIsDragging(true);
+        
+        // DON'T start dragging immediately - store intent and wait
+        // Drag only starts if long-press is cancelled (movement detected)
         const rect = canvasRef.current?.getBoundingClientRect();
         if (rect) {
-          setDragOffset({
-            x: e.clientX - rect.left - player.x,
-            y: e.clientY - rect.top - player.y,
-          });
+          pendingDragRef.current = {
+            playerId,
+            offset: {
+              x: e.clientX - rect.left - player.x,
+              y: e.clientY - rect.top - player.y,
+            }
+          };
         }
         
         // Start long-press with IMMEDIATE visual feedback (80ms ring appears)
@@ -482,6 +489,7 @@ export default function PlayDesigner() {
           // Long press detected - open menu anchored under player center
           setIsLongPressHolding(false);
           setLongPressPlayerId(playerId);
+          pendingDragRef.current = null; // Clear drag intent - menu wins
           
           // Calculate menu position with max width clamping
           const rect = canvasRef.current?.getBoundingClientRect();
@@ -496,7 +504,6 @@ export default function PlayDesigner() {
           }
           
           setLongPressMenuOpen(true);
-          setIsDragging(false);
           // Reset menu state - these are only set on CLICK, not hover
           setMenuMotion(false);
           setMenuMakePrimary(false);
@@ -521,6 +528,12 @@ export default function PlayDesigner() {
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
+    }
+    // If there was a pending drag intent, activate it now
+    if (pendingDragRef.current) {
+      setIsDragging(true);
+      setDragOffset(pendingDragRef.current.offset);
+      pendingDragRef.current = null;
     }
     setLongPressPlayerRef(null);
     setIsLongPressHolding(false);
