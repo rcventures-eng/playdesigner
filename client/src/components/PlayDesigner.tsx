@@ -442,6 +442,35 @@ export default function PlayDesigner() {
     setTool("select");
   };
 
+  const generate7v7Formation = (): Player[] => {
+    return [
+      { id: `player-${Date.now()}-1`, x: centerX, y: FIELD.LOS_Y, color: "#6b7280", label: "C" },
+      { id: `player-${Date.now()}-2`, x: centerX, y: FIELD.LOS_Y + 40, color: "#000000", label: "QB" },
+      { id: `player-${Date.now()}-3`, x: centerX, y: FIELD.LOS_Y + 100, color: "#39ff14", label: "RB" },
+      { id: `player-${Date.now()}-4`, x: centerX - (2.5 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#eab308", label: "Y" },
+      { id: `player-${Date.now()}-5`, x: centerX + (2.5 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#f97316", label: "TE" },
+      { id: `player-${Date.now()}-6`, x: centerX - (6.5 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#1d4ed8", label: "Z" },
+      { id: `player-${Date.now()}-7`, x: centerX + (6.5 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#ef4444", label: "X" },
+    ];
+  };
+
+  const handleLoad7v7 = () => {
+    if (players.length > 0 || routes.length > 0 || shapes.length > 0 || footballs.length > 0) {
+      saveToHistory();
+    }
+    setPlayers(generate7v7Formation());
+    setRoutes([]);
+    setShapes([]);
+    setFootballs([]);
+    setMetadata({ name: "", formation: "", concept: "", personnel: "" });
+    setSelectedPlayer(null);
+    setSelectedRoute(null);
+    setSelectedShape(null);
+    setSelectedFootball(null);
+    setSelectedElements({ players: [], routes: [] });
+    setTool("select");
+  };
+
   const deleteSelected = () => {
     const hasSelection = selectedFootball || selectedPlayer || selectedRoute || selectedShape;
     if (hasSelection) saveToHistory();
@@ -1554,6 +1583,7 @@ export default function PlayDesigner() {
                     size="sm"
                     variant="secondary"
                     data-testid="button-format-7on7"
+                    onClick={handleLoad7v7}
                     className="w-full justify-center bg-green-600 hover:bg-green-700 text-white border-0"
                   >
                     <Flag className="h-4 w-4 text-red-500 mr-2" />
