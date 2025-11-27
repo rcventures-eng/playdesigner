@@ -2504,7 +2504,7 @@ export default function PlayDesigner() {
             <p><span className="font-medium">Name</span> your play (e.g., "Mesh Left")</p>
             <p><span className="font-medium">Formation</span> (e.g., "Shotgun", "I-Form")</p>
             <p><span className="font-medium">Concept</span> (e.g., "Play Action", "Screen")</p>
-            <p><span className="font-medium">Personnel</span> grouping (e.g., "11", "12", "21")</p>
+            <p><span className="font-medium">Personnel</span> grouping (e.g., "1RB/3WR/1TE" or "2RB/2TE/1WR" etc.)</p>
             
             <p className="font-semibold text-foreground mt-3">5. Quick Actions</p>
             <p>↩️ <span className="font-medium">Undo</span> reverses your last change</p>
