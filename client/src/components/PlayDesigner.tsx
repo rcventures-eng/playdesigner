@@ -621,7 +621,7 @@ export default function PlayDesigner() {
     return result;
   };
 
-  const handlePlayerMouseDown = (e: React.MouseEvent, playerId: string) => {
+  const handlePlayerPointerDown = (e: React.PointerEvent, playerId: string) => {
     // Check if there's a pending route selection waiting for confirmation
     if (pendingRouteSelection && pendingRouteSelection.playerId === playerId) {
       e.stopPropagation();
@@ -802,7 +802,7 @@ export default function PlayDesigner() {
     // Otherwise, let the confirmation timer close the menu
   };
 
-  const handlePlayerDoubleClick = (e: React.MouseEvent, playerId: string) => {
+  const handlePlayerDoubleClick = (e: React.PointerEvent, playerId: string) => {
     e.stopPropagation();
     cancelLongPress();
     const player = players.find(p => p.id === playerId);
@@ -812,7 +812,7 @@ export default function PlayDesigner() {
     }
   };
 
-  const handleFootballMouseDown = (e: React.MouseEvent, footballId: string) => {
+  const handleFootballPointerDown = (e: React.PointerEvent, footballId: string) => {
     const football = footballs.find(f => f.id === footballId);
     if (tool === "select" && football) {
       e.stopPropagation();
@@ -848,7 +848,7 @@ export default function PlayDesigner() {
     }
   };
 
-  const handleCanvasMouseMove = (e: React.MouseEvent) => {
+  const handleCanvasPointerMove = (e: React.PointerEvent) => {
     // Cancel long-press if mouse moves more than 8 pixels (prevents menu opening during drag)
     if (longPressStartPos.current && longPressTimerRef.current) {
       const dx = e.clientX - longPressStartPos.current.x;
@@ -1016,13 +1016,13 @@ export default function PlayDesigner() {
     }
   };
 
-  const handleCanvasClick = (e: React.MouseEvent) => {
+  const handleCanvasClick = () => {
   };
 
-  const handleCanvasDoubleClick = (e: React.MouseEvent) => {
+  const handleCanvasDoubleClick = () => {
   };
 
-  const handleCanvasMouseDown = (e: React.MouseEvent) => {
+  const handleCanvasPointerDown = (e: React.PointerEvent) => {
     if ((e.target as HTMLElement).closest('[data-testid^="player-"]')) {
       return;
     }
@@ -1051,13 +1051,13 @@ export default function PlayDesigner() {
     }
   };
 
-  const handleShapeMouseMove = (e: React.MouseEvent) => {
+  const handleShapePointerMove = (e: React.PointerEvent) => {
     if (isDrawingShape && shapeStart) {
       // Visual feedback could be added here
     }
   };
 
-  const handleShapeMouseUp = (e: React.MouseEvent) => {
+  const handleShapePointerUp = (e: React.PointerEvent) => {
     if (isDrawingShape && shapeStart) {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (rect) {
@@ -1122,7 +1122,7 @@ export default function PlayDesigner() {
     closeLongPressMenu();
   };
 
-  const handleBackgroundClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleBackgroundClick = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
       setSelectedPlayer(null);
       setSelectedRoute(null);
@@ -1996,19 +1996,20 @@ export default function PlayDesigner() {
             <div
               ref={canvasRef}
               className="relative rounded cursor-crosshair overflow-hidden"
-              style={{ width: FIELD.WIDTH, height: FIELD.HEIGHT }}
-              onMouseMove={(e) => {
-                handleCanvasMouseMove(e);
-                handleShapeMouseMove(e);
+              style={{ width: FIELD.WIDTH, height: FIELD.HEIGHT, touchAction: "none" }}
+              onPointerMove={(e) => {
+                handleCanvasPointerMove(e);
+                handleShapePointerMove(e);
               }}
-              onMouseUp={(e) => {
+              onPointerUp={(e) => {
                 handleCanvasMouseUp();
-                handleShapeMouseUp(e);
+                handleShapePointerUp(e);
               }}
-              onMouseDown={handleCanvasMouseDown}
+              onPointerDown={handleCanvasPointerDown}
               onClick={handleCanvasClick}
               onDoubleClick={handleCanvasDoubleClick}
-              onMouseLeave={cancelLongPress}
+              onPointerLeave={cancelLongPress}
+              onPointerCancel={cancelLongPress}
               data-testid="canvas-field"
             >
               {/* White header for metadata */}
@@ -2383,43 +2384,8 @@ export default function PlayDesigner() {
                     transform: "translateZ(0)",
                     touchAction: "none",
                   }}
-                  onMouseDown={(e) => handlePlayerMouseDown(e, player.id)}
-                  onPointerDown={(e) => handlePlayerMouseDown(e as unknown as React.MouseEvent, player.id)}
-                  onDoubleClick={(e) => handlePlayerDoubleClick(e, player.id)}
-                  onMouseEnter={() => {
-                    if (pendingRouteSelection && pendingRouteSelection.playerId === player.id) {
-                      // Capture all values immediately before any state changes
-                      const pending = { ...pendingRouteSelection };
-                      const playerX = player.x;
-                      const playerY = player.y;
-                      const pId = player.id;
-                      
-                      // Clear pending state and long press
-                      setPendingRouteSelection(null);
-                      cancelLongPress();
-                      
-                      // Set tool to route - this triggers the tool-change effect
-                      setTool("route");
-                      
-                      // Double RAF to ensure we're past the tool-change effect
-                      requestAnimationFrame(() => {
-                        requestAnimationFrame(() => {
-                          setRouteType(pending.type);
-                          setRouteStyle(pending.style);
-                          setIsMotion(pending.motion);
-                          setMakePrimary(pending.primary);
-                          setIsDrawingRoute(true);
-                          setIsDraggingStraightRoute(true);
-                          setSelectedPlayer(pId);
-                          setSelectedElements({ players: [], routes: [] });
-                          
-                          const initialPoint = { x: playerX, y: playerY };
-                          setCurrentRoutePoints([initialPoint]);
-                          currentRoutePointsRef.current = [initialPoint];
-                        });
-                      });
-                    }
-                  }}
+                  onPointerDown={(e) => handlePlayerPointerDown(e, player.id)}
+                  onDoubleClick={(e) => handlePlayerDoubleClick(e as unknown as React.PointerEvent, player.id)}
                   onPointerEnter={() => {
                     if (pendingRouteSelection && pendingRouteSelection.playerId === player.id) {
                       // Capture all values immediately before any state changes
@@ -2512,7 +2478,7 @@ export default function PlayDesigner() {
                     height: 20,
                     zIndex: 50
                   }}
-                  onMouseDown={(e) => handleFootballMouseDown(e, football.id)}
+                  onPointerDown={(e) => handleFootballPointerDown(e, football.id)}
                   data-testid={`football-${football.id}`}
                 >
                   <svg width="10" height="20" viewBox="0 0 20 40" style={{ pointerEvents: 'none' }}>
