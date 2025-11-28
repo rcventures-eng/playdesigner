@@ -1454,7 +1454,7 @@ export default function PlayDesigner() {
   };
 
   return (
-    <div className={`flex flex-col h-screen w-full overflow-hidden ${isLongPressHolding || longPressMenuOpen ? "select-none" : ""}`}>
+    <div className={`flex flex-col h-screen w-screen overflow-hidden bg-background ${isLongPressHolding || longPressMenuOpen ? "select-none" : ""}`}>
       {(metadata.name || metadata.formation || metadata.concept || metadata.personnel) && (
         <div className="bg-gradient-to-r from-[#1a2332] to-[#2a3342] border-b border-border px-6 py-3 flex items-center gap-3 flex-wrap">
           {metadata.name && (
@@ -1480,8 +1480,8 @@ export default function PlayDesigner() {
         </div>
       )}
 
-      <div className="flex flex-1 overflow-hidden">
-        <div className="w-96 border-r border-border bg-card flex flex-col overflow-hidden">
+      <div className="flex flex-row flex-1 overflow-hidden">
+        <div className="w-96 min-w-72 flex-shrink border-r border-border bg-card flex flex-col h-full overflow-y-auto">
           <div className="p-3 border-b border-border">
             <h1 className="text-xl font-bold text-foreground mb-2">Play Designer</h1>
             <Tabs value={playType} onValueChange={(v) => setPlayType(v as any)} className="w-full">
@@ -1981,7 +1981,7 @@ export default function PlayDesigner() {
           </div>
         </div>
 
-        <div className="flex-1 bg-muted/30 p-2 overflow-auto flex items-center justify-center" onClick={handleBackgroundClick}>
+        <div className="flex-1 h-full relative bg-muted/30 p-2 overflow-auto flex items-center justify-center" onClick={handleBackgroundClick}>
           {(playType === "defense" || playType === "special") && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
               <img 
