@@ -157,6 +157,8 @@ export default function PlayDesigner() {
   const longPressStartPos = useRef<{ x: number; y: number } | null>(null);
   // Pending drag intent - drag only starts after long-press is cancelled
   const pendingDragRef = useRef<{ playerId: string; offset: { x: number; y: number } } | null>(null);
+  // Suppress the click event that follows a long-press menu opening
+  const suppressNextClickRef = useRef(false);
   const { toast } = useToast();
 
   const offenseColors = ["#39ff14", "#1d4ed8", "#ef4444", "#eab308", "#000000", "#f97316", "#6b7280"];
@@ -299,13 +301,19 @@ export default function PlayDesigner() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [selectedPlayer, selectedRoute, selectedShape, selectedFootball, editingPlayer, selectedElements, players, routes, shapes, footballs, metadata]);
 
-  // Handle click-outside to close long-press menu and cancel long-press on window mouseup
+  // Handle click-outside to close long-press menu and cancel long-press on window pointerup
   useEffect(() => {
-    const handleWindowMouseUp = () => {
+    const handleWindowPointerUp = () => {
       cancelLongPress();
     };
     
     const handleClickOutside = (e: MouseEvent) => {
+      // Suppress the click event that follows a long-press menu opening
+      if (suppressNextClickRef.current) {
+        suppressNextClickRef.current = false;
+        return;
+      }
+      
       // Don't close during confirmation dwell
       if (menuConfirming) return;
       
@@ -315,11 +323,11 @@ export default function PlayDesigner() {
       }
     };
     
-    window.addEventListener("mouseup", handleWindowMouseUp);
+    window.addEventListener("pointerup", handleWindowPointerUp);
     document.addEventListener("click", handleClickOutside);
     
     return () => {
-      window.removeEventListener("mouseup", handleWindowMouseUp);
+      window.removeEventListener("pointerup", handleWindowPointerUp);
       document.removeEventListener("click", handleClickOutside);
     };
   }, [longPressMenuOpen, menuConfirming]);
@@ -697,6 +705,8 @@ export default function PlayDesigner() {
           }
           
           setLongPressMenuOpen(true);
+          // Suppress the click event that will follow the pointer release
+          suppressNextClickRef.current = true;
           // Reset menu state - these are only set on CLICK, not hover
           setMenuMotion(false);
           setMenuMakePrimary(false);
@@ -2242,7 +2252,7 @@ export default function PlayDesigner() {
                           }
                           return `url(#arrowhead-${getRouteColor(route).replace('#', '')})`;
                         })()}
-                        onMouseDown={(e) => {
+                        onPointerDown={(e) => {
                           e.stopPropagation();
                         }}
                         onClick={(e) => {
@@ -2254,7 +2264,7 @@ export default function PlayDesigner() {
                           setSelectedElements({ players: [], routes: [] });
                         }}
                         className="cursor-pointer"
-                        style={{ pointerEvents: "auto" }}
+                        style={{ pointerEvents: "auto", touchAction: "none" }}
                         data-testid={`route-${route.id}`}
                       />
                     )}
@@ -2290,7 +2300,8 @@ export default function PlayDesigner() {
                         stroke="#fff"
                         strokeWidth="2"
                         className="cursor-move"
-                        onMouseDown={(e) => {
+                        style={{ touchAction: "none" }}
+                        onPointerDown={(e) => {
                           e.stopPropagation();
                           setDraggingRoutePoint({ routeId: route.id, pointIndex: idx });
                         }}
