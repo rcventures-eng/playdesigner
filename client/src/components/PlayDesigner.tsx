@@ -1493,7 +1493,7 @@ export default function PlayDesigner() {
             </Tabs>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
             <Card className="p-4 space-y-3">
               <h3 className="font-semibold text-sm text-foreground">Play Metadata</h3>
               <div className="space-y-2">
@@ -1661,7 +1661,7 @@ export default function PlayDesigner() {
               <Separator />
 
               <div className="space-y-2">
-                <Label className="text-xs">Game Format</Label>
+                <h3 className="font-semibold text-sm text-foreground">Preloaded Game Format</h3>
                 <div className="flex flex-col gap-1.5">
                   <Button
                     size="sm"
