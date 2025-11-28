@@ -1482,7 +1482,7 @@ export default function PlayDesigner() {
 
       <div className="flex flex-1 overflow-hidden">
         <div className="w-96 border-r border-border bg-card flex flex-col overflow-hidden">
-          <div className="p-4 border-b border-border">
+          <div className="p-3 border-b border-border">
             <h1 className="text-xl font-bold text-foreground mb-2">Play Designer</h1>
             <Tabs value={playType} onValueChange={(v) => setPlayType(v as any)} className="w-full">
               <TabsList className="grid w-full grid-cols-3">
@@ -1493,8 +1493,8 @@ export default function PlayDesigner() {
             </Tabs>
           </div>
 
-          <div className="flex-1 overflow-y-auto pt-2 px-4 pb-4 space-y-3">
-            <Card className="p-4 space-y-3">
+          <div className="flex-1 overflow-y-auto pt-2 px-4 pb-2 space-y-2">
+            <Card className="p-3 space-y-2">
               <h3 className="font-semibold text-sm text-foreground">Play Metadata</h3>
               <div className="space-y-2">
                 <div>
@@ -1611,7 +1611,7 @@ export default function PlayDesigner() {
               </div>
             </Card>
 
-            <Card className="p-4 space-y-3">
+            <Card className="p-3 space-y-2">
               <h3 className="font-semibold text-sm text-foreground">Tools</h3>
               <div className="grid grid-cols-3 gap-1.5">
                 <Button
@@ -1916,7 +1916,7 @@ export default function PlayDesigner() {
               )}
             </Card>
 
-            <Card className="p-4 space-y-3">
+            <Card className="p-3 space-y-2">
               <h3 className="font-semibold text-sm text-foreground">Export</h3>
               <div className="grid grid-cols-2 gap-2">
                 <div>
