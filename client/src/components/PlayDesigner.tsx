@@ -1483,7 +1483,7 @@ export default function PlayDesigner() {
       <div className="flex flex-1 overflow-hidden">
         <div className="w-96 border-r border-border bg-card flex flex-col overflow-hidden">
           <div className="p-4 border-b border-border">
-            <h1 className="text-xl font-bold text-foreground mb-4">Play Designer</h1>
+            <h1 className="text-xl font-bold text-foreground mb-2">Play Designer</h1>
             <Tabs value={playType} onValueChange={(v) => setPlayType(v as any)} className="w-full">
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="offense" data-testid="tab-offense">Offense</TabsTrigger>
@@ -1493,7 +1493,7 @@ export default function PlayDesigner() {
             </Tabs>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          <div className="flex-1 overflow-y-auto pt-2 px-4 pb-4 space-y-3">
             <Card className="p-4 space-y-3">
               <h3 className="font-semibold text-sm text-foreground">Play Metadata</h3>
               <div className="space-y-2">
