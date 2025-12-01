@@ -70,6 +70,7 @@ interface PlayMetadata {
   name: string;
   formation: string;
   concept: string;
+  defenseConcept: string;
   personnel: string;
 }
 
@@ -84,7 +85,7 @@ interface HistoryState {
   routes: Route[];
   shapes: Shape[];
   footballs: Football[];
-  metadata: { name: string; formation: string; concept: string; personnel: string };
+  metadata: { name: string; formation: string; concept: string; defenseConcept: string; personnel: string };
 }
 
 export default function PlayDesigner() {
@@ -113,6 +114,7 @@ export default function PlayDesigner() {
     name: "",
     formation: "",
     concept: "",
+    defenseConcept: "",
     personnel: "",
   });
   const [exportWidth, setExportWidth] = useState(String(FIELD.WIDTH));
@@ -167,6 +169,7 @@ export default function PlayDesigner() {
   const colors = playType === "offense" ? offenseColors : defenseColors;
   
   const conceptLabels: Record<string, string> = {
+    // Offense concepts
     "outside-run": "Outside Run",
     "inside-run": "Inside Run",
     "short-pass": "Short Pass",
@@ -176,6 +179,11 @@ export default function PlayDesigner() {
     "rpo": "RPO",
     "screen-pass": "Screen Pass",
     "trick": "Trick",
+    // Defense concepts
+    "man-to-man": "Man-to-Man",
+    "zone": "Zone",
+    "zone-blitz": "Zone Blitz",
+    "blitz": "Blitz",
   };
   
   // Player positioning constants (used for spacing calculations)
@@ -333,7 +341,10 @@ export default function PlayDesigner() {
   }, [longPressMenuOpen, menuConfirming]);
 
   // Dynamic QB positioning based on Formation field (Shotgun/Pistol = deeper, otherwise under center)
+  // Only applies to offense - defense formations don't affect QB positioning
   useEffect(() => {
+    if (playType !== "offense") return;
+    
     const formation = metadata.formation.toLowerCase();
     const isShotgunOrPistol = formation.includes("shotgun") || formation.includes("pistol");
     
@@ -352,7 +363,7 @@ export default function PlayDesigner() {
         i === qbIndex ? { ...p, y: targetY } : p
       ));
     }
-  }, [metadata.formation]);
+  }, [metadata.formation, playType]);
 
   const addPlayer = (color: string) => {
     saveToHistory();
@@ -437,7 +448,7 @@ export default function PlayDesigner() {
     setRoutes([]);
     setShapes([]);
     setFootballs([]);
-    setMetadata({ name: "", formation: "", concept: "", personnel: "" });
+    setMetadata({ name: "", formation: "", concept: "", defenseConcept: "", personnel: "" });
     setSelectedPlayer(null);
     setSelectedRoute(null);
     setSelectedShape(null);
@@ -463,7 +474,7 @@ export default function PlayDesigner() {
     setRoutes([]);
     setShapes([]);
     setFootballs([]);
-    setMetadata({ name: "", formation: "", concept: "", personnel: "" });
+    setMetadata(prev => ({ ...prev, name: "", formation: "", concept: "", personnel: "" }));
     setSelectedPlayer(null);
     setSelectedRoute(null);
     setSelectedShape(null);
@@ -492,7 +503,7 @@ export default function PlayDesigner() {
     setRoutes([]);
     setShapes([]);
     setFootballs([]);
-    setMetadata({ name: "", formation: "", concept: "", personnel: "" });
+    setMetadata(prev => ({ ...prev, name: "", formation: "", concept: "", personnel: "" }));
     setSelectedPlayer(null);
     setSelectedRoute(null);
     setSelectedShape(null);
@@ -527,7 +538,7 @@ export default function PlayDesigner() {
     setRoutes([]);
     setShapes([]);
     setFootballs([]);
-    setMetadata({ name: "", formation: "", concept: "", personnel: "" });
+    setMetadata(prev => ({ ...prev, name: "", formation: "", concept: "", personnel: "" }));
     setSelectedPlayer(null);
     setSelectedRoute(null);
     setSelectedShape(null);
@@ -564,7 +575,7 @@ export default function PlayDesigner() {
     setRoutes([]);
     setShapes([]);
     setFootballs([]);
-    setMetadata({ name: "", formation: "", concept: "", personnel: "" });
+    setMetadata(prev => ({ ...prev, name: "", formation: "", concept: "", personnel: "" }));
     setSelectedPlayer(null);
     setSelectedRoute(null);
     setSelectedShape(null);
@@ -1465,7 +1476,7 @@ export default function PlayDesigner() {
 
   return (
     <div className={`flex flex-col h-screen w-screen overflow-hidden bg-background ${isLongPressHolding || longPressMenuOpen ? "select-none" : ""}`}>
-      {(metadata.name || metadata.formation || metadata.concept || metadata.personnel) && (
+      {(metadata.name || metadata.formation || metadata.concept || metadata.defenseConcept || metadata.personnel) && (
         <div className="bg-gradient-to-r from-[#1a2332] to-[#2a3342] border-b border-border px-6 py-3 flex items-center gap-3 flex-wrap">
           {metadata.name && (
             <Badge variant="default" className="bg-primary text-primary-foreground font-semibold px-3 py-1.5 text-base" data-testid="badge-play-name">
@@ -1480,6 +1491,11 @@ export default function PlayDesigner() {
           {metadata.concept && (
             <Badge variant="secondary" className="bg-secondary/80 text-secondary-foreground font-medium px-3 py-1.5" data-testid="badge-concept">
               Concept: {getFormattedLabel(metadata.concept, conceptLabels)}
+            </Badge>
+          )}
+          {metadata.defenseConcept && (
+            <Badge variant="secondary" className="bg-secondary/80 text-secondary-foreground font-medium px-3 py-1.5" data-testid="badge-defense-concept">
+              Concept: {getFormattedLabel(metadata.defenseConcept, conceptLabels)}
             </Badge>
           )}
           {metadata.personnel && (
@@ -1531,8 +1547,8 @@ export default function PlayDesigner() {
                     />
                   )}
                   {playType === "defense" && (
-                    <Select value={metadata.formation} onValueChange={(v) => setMetadata({ ...metadata, formation: v })}>
-                      <SelectTrigger id="formation" data-testid="select-formation" className="h-8 text-sm">
+                    <Select value={metadata.defenseConcept} onValueChange={(v) => setMetadata({ ...metadata, defenseConcept: v })}>
+                      <SelectTrigger id="defense-concept" data-testid="select-defense-concept" className="h-8 text-sm">
                         <SelectValue placeholder="Select Concept" />
                       </SelectTrigger>
                       <SelectContent>
@@ -2027,7 +2043,7 @@ export default function PlayDesigner() {
                 className="absolute top-0 left-0 right-0 flex items-center justify-center"
                 style={{ height: FIELD.HEADER_HEIGHT, backgroundColor: "#ffffff", zIndex: 25 }}
               >
-                {(metadata.name || metadata.formation || metadata.concept || metadata.personnel) && (
+                {(metadata.name || metadata.formation || metadata.concept || metadata.defenseConcept || metadata.personnel) && (
                   <div className="flex flex-wrap items-center justify-center gap-2 px-4">
                     {metadata.name && (
                       <div
@@ -2054,6 +2070,15 @@ export default function PlayDesigner() {
                         data-testid="overlay-concept"
                       >
                         Concept: {getFormattedLabel(metadata.concept, conceptLabels)}
+                      </div>
+                    )}
+                    {metadata.defenseConcept && (
+                      <div
+                        className="px-3 py-1.5 rounded text-white font-medium text-sm"
+                        style={{ backgroundColor: "#374151" }}
+                        data-testid="overlay-defense-concept"
+                      >
+                        Concept: {getFormattedLabel(metadata.defenseConcept, conceptLabels)}
                       </div>
                     )}
                     {metadata.personnel && (
