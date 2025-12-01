@@ -88,6 +88,24 @@ interface HistoryState {
   metadata: { name: string; formation: string; concept: string; defenseConcept: string; personnel: string };
 }
 
+interface PlayTypeState {
+  players: Player[];
+  routes: Route[];
+  shapes: Shape[];
+  footballs: Football[];
+  metadata: PlayMetadata;
+  history: HistoryState[];
+}
+
+const createEmptyPlayTypeState = (): PlayTypeState => ({
+  players: [],
+  routes: [],
+  shapes: [],
+  footballs: [],
+  metadata: { name: "", formation: "", concept: "", defenseConcept: "", personnel: "" },
+  history: [],
+});
+
 export default function PlayDesigner() {
   const [playType, setPlayType] = useState<"offense" | "defense" | "special">("offense");
   const [players, setPlayers] = useState<Player[]>([]);
@@ -95,6 +113,12 @@ export default function PlayDesigner() {
   const [shapes, setShapes] = useState<Shape[]>([]);
   const [footballs, setFootballs] = useState<Football[]>([]);
   const [history, setHistory] = useState<HistoryState[]>([]);
+  
+  const [playTypeStates, setPlayTypeStates] = useState<Record<"offense" | "defense" | "special", PlayTypeState>>({
+    offense: createEmptyPlayTypeState(),
+    defense: createEmptyPlayTypeState(),
+    special: createEmptyPlayTypeState(),
+  });
   const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
   const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
   const [selectedShape, setSelectedShape] = useState<string | null>(null);
@@ -238,6 +262,39 @@ export default function PlayDesigner() {
   
   const getFormattedLabel = (value: string, labels: Record<string, string>) => {
     return labels[value] || value;
+  };
+
+  const handlePlayTypeChange = (newPlayType: "offense" | "defense" | "special") => {
+    if (newPlayType === playType) return;
+    
+    setPlayTypeStates(prev => ({
+      ...prev,
+      [playType]: {
+        players: [...players],
+        routes: [...routes],
+        shapes: [...shapes],
+        footballs: [...footballs],
+        metadata: { ...metadata },
+        history: [...history],
+      }
+    }));
+    
+    const targetState = playTypeStates[newPlayType];
+    setPlayers(targetState.players);
+    setRoutes(targetState.routes);
+    setShapes(targetState.shapes);
+    setFootballs(targetState.footballs);
+    setMetadata(targetState.metadata);
+    setHistory(targetState.history);
+    
+    setSelectedPlayer(null);
+    setSelectedRoute(null);
+    setSelectedShape(null);
+    setSelectedFootball(null);
+    setSelectedElements({ players: [], routes: [] });
+    setTool("select");
+    
+    setPlayType(newPlayType);
   };
 
   useEffect(() => {
@@ -1510,7 +1567,7 @@ export default function PlayDesigner() {
         <div className="w-96 min-w-72 flex-shrink border-r border-border bg-card flex flex-col h-full overflow-y-auto">
           <div className="p-3 border-b border-border">
             <h1 className="text-xl font-bold text-foreground mb-2">Play Designer</h1>
-            <Tabs value={playType} onValueChange={(v) => setPlayType(v as any)} className="w-full">
+            <Tabs value={playType} onValueChange={(v) => handlePlayTypeChange(v as "offense" | "defense" | "special")} className="w-full">
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="offense" data-testid="tab-offense">Offense</TabsTrigger>
                 <TabsTrigger value="defense" data-testid="tab-defense">Defense</TabsTrigger>
