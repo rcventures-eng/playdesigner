@@ -141,6 +141,26 @@ Preferred communication style: Simple, everyday language.
 - Shapes (zone coverage drawings)
 - Play type (offense/defense/special teams)
 
+### Play Type Tabs and Metadata Separation
+
+**Play Types**: Three tabs for different play categories:
+- **Offense**: Full editing functionality with formation presets (5v5, 7v7, 9v9, 11v11)
+- **Defense**: Active editing with Concept dropdown (Man-to-Man, Zone, Zone Blitz, Blitz)
+- **Special Teams**: Shows "Under Construction" placeholder (not yet implemented)
+
+**Metadata Field Separation**: Offense and Defense use separate metadata fields to prevent data conflicts:
+- `metadata.concept`: Used by Offense Concept dropdown
+- `metadata.defenseConcept`: Used by Defense Concept dropdown  
+- `metadata.formation`: Used by Offense Formation field
+
+**UI Label Differences by Tab**:
+- Offense: Shows "Formation" with formation options
+- Defense: Shows "Concept" with defensive scheme options (placeholder: "Select Concept")
+
+**Preset Behavior**: Loading an Offense preset (5v5, 7v7, etc.) preserves `defenseConcept` while clearing offense-specific fields. This ensures Defense tab state remains independent when switching between tabs and loading formations.
+
+**QB Positioning Logic**: The automatic QB repositioning after LOS changes only executes when `playType === "offense"` to prevent unintended movement of defensive players.
+
 ## External Dependencies
 
 ### Third-Party UI Libraries
