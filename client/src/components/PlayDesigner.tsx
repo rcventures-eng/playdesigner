@@ -193,7 +193,7 @@ export default function PlayDesigner() {
   const { toast } = useToast();
 
   const offenseColors = ["#39ff14", "#1d4ed8", "#ef4444", "#eab308", "#000000", "#f97316", "#6b7280"];
-  const defenseColors = ["#92400e", "#db2777", "#9333ea"];
+  const defenseColors = ["#87CEEB", "#FFB6C1", "#9333ea"];
   const shapeColors = ["#ec4899", "#1d4ed8", "#86efac"];
   const colors = playType === "offense" ? offenseColors : defenseColors;
   
