@@ -119,6 +119,11 @@ export default function PlayDesigner() {
     defense: createEmptyPlayTypeState(),
     special: createEmptyPlayTypeState(),
   });
+  const playTypeStatesRef = useRef<Record<"offense" | "defense" | "special", PlayTypeState>>({
+    offense: createEmptyPlayTypeState(),
+    defense: createEmptyPlayTypeState(),
+    special: createEmptyPlayTypeState(),
+  });
   const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
   const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
   const [selectedShape, setSelectedShape] = useState<string | null>(null);
@@ -267,25 +272,30 @@ export default function PlayDesigner() {
   const handlePlayTypeChange = (newPlayType: "offense" | "defense" | "special") => {
     if (newPlayType === playType) return;
     
-    setPlayTypeStates(prev => ({
-      ...prev,
-      [playType]: {
-        players: [...players],
-        routes: [...routes],
-        shapes: [...shapes],
-        footballs: [...footballs],
-        metadata: { ...metadata },
-        history: [...history],
-      }
-    }));
+    const currentState: PlayTypeState = {
+      players: JSON.parse(JSON.stringify(players)),
+      routes: JSON.parse(JSON.stringify(routes)),
+      shapes: JSON.parse(JSON.stringify(shapes)),
+      footballs: JSON.parse(JSON.stringify(footballs)),
+      metadata: JSON.parse(JSON.stringify(metadata)),
+      history: JSON.parse(JSON.stringify(history)),
+    };
     
-    const targetState = playTypeStates[newPlayType];
-    setPlayers(targetState.players);
-    setRoutes(targetState.routes);
-    setShapes(targetState.shapes);
-    setFootballs(targetState.footballs);
-    setMetadata(targetState.metadata);
-    setHistory(targetState.history);
+    playTypeStatesRef.current = {
+      ...playTypeStatesRef.current,
+      [playType]: currentState
+    };
+    
+    const targetState = playTypeStatesRef.current[newPlayType];
+    
+    setPlayTypeStates(playTypeStatesRef.current);
+    
+    setPlayers(JSON.parse(JSON.stringify(targetState.players)));
+    setRoutes(JSON.parse(JSON.stringify(targetState.routes)));
+    setShapes(JSON.parse(JSON.stringify(targetState.shapes)));
+    setFootballs(JSON.parse(JSON.stringify(targetState.footballs)));
+    setMetadata(JSON.parse(JSON.stringify(targetState.metadata)));
+    setHistory(JSON.parse(JSON.stringify(targetState.history)));
     
     setSelectedPlayer(null);
     setSelectedRoute(null);
