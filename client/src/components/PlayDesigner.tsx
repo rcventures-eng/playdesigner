@@ -1519,7 +1519,7 @@ export default function PlayDesigner() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="formation" className="text-xs">Formation</Label>
+                  <Label htmlFor="formation" className="text-xs">{playType === "defense" ? "Concept" : "Formation"}</Label>
                   {playType === "offense" && (
                     <Input
                       id="formation"
@@ -1533,7 +1533,7 @@ export default function PlayDesigner() {
                   {playType === "defense" && (
                     <Select value={metadata.formation} onValueChange={(v) => setMetadata({ ...metadata, formation: v })}>
                       <SelectTrigger id="formation" data-testid="select-formation" className="h-8 text-sm">
-                        <SelectValue placeholder="Select formation" />
+                        <SelectValue placeholder="Select Concept" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="man-to-man">Man-to-Man</SelectItem>
@@ -1992,7 +1992,7 @@ export default function PlayDesigner() {
         </div>
 
         <div className="flex-1 h-full relative bg-muted/30 p-2 overflow-auto flex items-center justify-center" onClick={handleBackgroundClick}>
-          {(playType === "defense" || playType === "special") && (
+          {playType === "special" && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
               <img 
                 src={underConstructionImage} 
