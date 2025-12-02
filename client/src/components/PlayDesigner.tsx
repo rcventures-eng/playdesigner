@@ -658,16 +658,17 @@ export default function PlayDesigner() {
   const generateDefense5v5Formation = (): Player[] => {
     const SKY_BLUE = "#87CEEB";
     const PURPLE = "#9333ea";
+    const SPACING = 50; // Tight W-formation spacing in pixels
     const ts = Date.now();
     
     return [
-      // Row 1: The Line (Sky Blue) - Y = LOS - 40
-      { id: `player-${ts}-1`, x: centerX - (2 * SPACING_UNIT), y: FIELD.LOS_Y - 40, color: SKY_BLUE, label: "B", side: "defense" as const },
+      // Row 1: The Line (Sky Blue) - Y = LOS - 40, slots: -2, 0, +2
+      { id: `player-${ts}-1`, x: centerX - (2 * SPACING), y: FIELD.LOS_Y - 40, color: SKY_BLUE, label: "B", side: "defense" as const },
       { id: `player-${ts}-2`, x: centerX, y: FIELD.LOS_Y - 40, color: SKY_BLUE, label: "R", side: "defense" as const },
-      { id: `player-${ts}-3`, x: centerX + (2 * SPACING_UNIT), y: FIELD.LOS_Y - 40, color: SKY_BLUE, label: "B", side: "defense" as const },
-      // Row 2: The Secondary (Purple) - Y = LOS - 100
-      { id: `player-${ts}-4`, x: centerX - (1.5 * SPACING_UNIT), y: FIELD.LOS_Y - 100, color: PURPLE, label: "S", side: "defense" as const },
-      { id: `player-${ts}-5`, x: centerX + (1.5 * SPACING_UNIT), y: FIELD.LOS_Y - 100, color: PURPLE, label: "S", side: "defense" as const },
+      { id: `player-${ts}-3`, x: centerX + (2 * SPACING), y: FIELD.LOS_Y - 40, color: SKY_BLUE, label: "B", side: "defense" as const },
+      // Row 2: The Secondary (Purple) - Y = LOS - 100, slots: -1, +1 (sits in gaps)
+      { id: `player-${ts}-4`, x: centerX - (1 * SPACING), y: FIELD.LOS_Y - 100, color: PURPLE, label: "S", side: "defense" as const },
+      { id: `player-${ts}-5`, x: centerX + (1 * SPACING), y: FIELD.LOS_Y - 100, color: PURPLE, label: "S", side: "defense" as const },
     ];
   };
 
@@ -2627,17 +2628,18 @@ export default function PlayDesigner() {
                         <div
                           style={{
                             position: 'absolute',
-                            top: 0,
+                            top: -2,
                             left: '50%',
                             transform: 'translateX(-50%)',
                             backgroundColor: 'white',
                             color: 'black',
-                            padding: '1px 4px',
-                            borderRadius: '8px',
-                            fontSize: '10px',
+                            padding: '0px 3px',
+                            borderRadius: '6px',
+                            fontSize: '9px',
                             fontWeight: 'bold',
                             whiteSpace: 'nowrap',
                             zIndex: 11,
+                            lineHeight: '13px',
                           }}
                         >
                           {editingPlayer === player.id ? (
@@ -2651,8 +2653,8 @@ export default function PlayDesigner() {
                               }}
                               autoFocus
                               maxLength={2}
-                              className="w-6 bg-transparent text-center text-black font-bold text-xs outline-none uppercase"
-                              style={{ fontSize: '10px' }}
+                              className="w-5 bg-transparent text-center text-black font-bold outline-none uppercase"
+                              style={{ fontSize: '9px' }}
                               data-testid={`input-label-${player.id}`}
                             />
                           ) : (
