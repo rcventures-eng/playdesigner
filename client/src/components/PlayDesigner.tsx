@@ -43,6 +43,7 @@ interface Player {
   y: number;
   color: string;
   label?: string;
+  side?: "offense" | "defense";
 }
 
 interface Route {
@@ -653,11 +654,37 @@ export default function PlayDesigner() {
     setTool("select");
   };
 
+  const generateDefense5v5Formation = (): Player[] => {
+    const SKY_BLUE = "#87CEEB";
+    const PURPLE = "#9333ea";
+    const ts = Date.now();
+    
+    return [
+      // Row 1: The Line (Sky Blue) - Y = LOS - 40
+      { id: `player-${ts}-1`, x: centerX - (2 * SPACING_UNIT), y: FIELD.LOS_Y - 40, color: SKY_BLUE, label: "B", side: "defense" as const },
+      { id: `player-${ts}-2`, x: centerX, y: FIELD.LOS_Y - 40, color: SKY_BLUE, label: "R", side: "defense" as const },
+      { id: `player-${ts}-3`, x: centerX + (2 * SPACING_UNIT), y: FIELD.LOS_Y - 40, color: SKY_BLUE, label: "B", side: "defense" as const },
+      // Row 2: The Secondary (Purple) - Y = LOS - 100
+      { id: `player-${ts}-4`, x: centerX - (1.5 * SPACING_UNIT), y: FIELD.LOS_Y - 100, color: PURPLE, label: "S", side: "defense" as const },
+      { id: `player-${ts}-5`, x: centerX + (1.5 * SPACING_UNIT), y: FIELD.LOS_Y - 100, color: PURPLE, label: "S", side: "defense" as const },
+    ];
+  };
+
   const loadDefensePreset = (format: string) => {
     if (players.length > 0 || routes.length > 0 || shapes.length > 0 || footballs.length > 0) {
       saveToHistory();
     }
-    const newPlayers: Player[] = [];
+    
+    let newPlayers: Player[] = [];
+    
+    switch (format) {
+      case "5v5":
+        newPlayers = generateDefense5v5Formation();
+        break;
+      default:
+        newPlayers = [];
+    }
+    
     const newRoutes: Route[] = [];
     const newShapes: Shape[] = [];
     const newFootballs: Football[] = [];
@@ -688,7 +715,7 @@ export default function PlayDesigner() {
     };
     setPlayTypeStates(playTypeStatesRef.current);
     
-    console.log(`Defense ${format} preset loaded - placeholder`);
+    console.log(`Defense ${format} preset loaded`);
   };
 
   const handleGameFormatClick = (format: "5v5" | "7v7" | "9v9" | "11v11") => {
@@ -2543,100 +2570,161 @@ export default function PlayDesigner() {
                 )}
               </svg>
 
-              {players.map((player) => (
-                <div
-                  key={player.id}
-                  className="absolute cursor-pointer"
-                  style={{
-                    left: player.x - 12,
-                    top: player.y - 12,
-                    width: 24,
-                    height: 24,
-                    zIndex: 10,
-                    pointerEvents: "auto",
-                    transform: "translateZ(0)",
-                    touchAction: "none",
-                  }}
-                  onPointerDown={(e) => handlePlayerPointerDown(e, player.id)}
-                  onDoubleClick={(e) => handlePlayerDoubleClick(e as unknown as React.PointerEvent, player.id)}
-                  onPointerEnter={() => {
-                    if (pendingRouteSelection && pendingRouteSelection.playerId === player.id) {
-                      // Capture all values immediately before any state changes
-                      const pending = { ...pendingRouteSelection };
-                      const playerX = player.x;
-                      const playerY = player.y;
-                      const pId = player.id;
-                      
-                      // Clear pending state and long press
-                      setPendingRouteSelection(null);
-                      cancelLongPress();
-                      
-                      // Set tool to route - this triggers the tool-change effect
-                      setTool("route");
-                      
-                      // Double RAF to ensure we're past the tool-change effect
-                      requestAnimationFrame(() => {
-                        requestAnimationFrame(() => {
-                          setRouteType(pending.type);
-                          setRouteStyle(pending.style);
-                          setIsMotion(pending.motion);
-                          setMakePrimary(pending.primary);
-                          setIsDrawingRoute(true);
-                          setIsDraggingStraightRoute(true);
-                          setSelectedPlayer(pId);
-                          setSelectedElements({ players: [], routes: [] });
-                          
-                          const initialPoint = { x: playerX, y: playerY };
-                          setCurrentRoutePoints([initialPoint]);
-                          currentRoutePointsRef.current = [initialPoint];
-                        });
-                      });
-                    }
-                  }}
-                  data-testid={`player-${player.id}`}
-                >
+              {players.map((player) => {
+                const isDefensivePlayer = player.side === "defense";
+                
+                return (
                   <div
-                    className={`w-6 h-6 ${
-                      playType === "offense" && player.color === "#6b7280" ? "" : "rounded-full"
-                    } flex items-center justify-center text-white font-bold text-xs ${
-                      pendingRouteSelection?.playerId === player.id ? "player-pending-route" : ""
-                    }`}
-                    style={{ 
-                      backgroundColor: player.color,
-                      transition: "transform 80ms ease-out, box-shadow 80ms ease-out",
-                      transform: isLongPressHolding && longPressPlayerRef === player.id ? "scale(1.1)" : "scale(1)",
-                      // Immediate pressed ring feedback (within 80ms) - but NOT when pending route (glow takes over)
-                      animation: isLongPressHolding && longPressPlayerRef === player.id && !pendingRouteSelection ? "pressRing 280ms ease-out forwards" : "none",
-                      // Selection rings - pending route glow is handled by CSS class
-                      boxShadow: pendingRouteSelection?.playerId === player.id
-                        ? "none" // CSS animation handles the glow
-                        : longPressPlayerId === player.id 
-                          ? "0 0 0 4px rgba(251, 146, 60, 0.8)" 
-                          : (selectedPlayer === player.id || selectedElements.players.includes(player.id)) 
-                            ? "0 0 0 2px rgba(34, 211, 238, 1)" 
-                            : "none",
+                    key={player.id}
+                    className="absolute cursor-pointer"
+                    style={{
+                      left: player.x - 12,
+                      top: isDefensivePlayer ? player.y - 12 - 15 : player.y - 12,
+                      width: 24,
+                      height: isDefensivePlayer ? 24 + 15 : 24,
+                      zIndex: 10,
+                      pointerEvents: "auto",
+                      transform: "translateZ(0)",
+                      touchAction: "none",
                     }}
+                    onPointerDown={(e) => handlePlayerPointerDown(e, player.id)}
+                    onDoubleClick={(e) => handlePlayerDoubleClick(e as unknown as React.PointerEvent, player.id)}
+                    onPointerEnter={() => {
+                      if (pendingRouteSelection && pendingRouteSelection.playerId === player.id) {
+                        const pending = { ...pendingRouteSelection };
+                        const playerX = player.x;
+                        const playerY = player.y;
+                        const pId = player.id;
+                        
+                        setPendingRouteSelection(null);
+                        cancelLongPress();
+                        
+                        setTool("route");
+                        
+                        requestAnimationFrame(() => {
+                          requestAnimationFrame(() => {
+                            setRouteType(pending.type);
+                            setRouteStyle(pending.style);
+                            setIsMotion(pending.motion);
+                            setMakePrimary(pending.primary);
+                            setIsDrawingRoute(true);
+                            setIsDraggingStraightRoute(true);
+                            setSelectedPlayer(pId);
+                            setSelectedElements({ players: [], routes: [] });
+                            
+                            const initialPoint = { x: playerX, y: playerY };
+                            setCurrentRoutePoints([initialPoint]);
+                            currentRoutePointsRef.current = [initialPoint];
+                          });
+                        });
+                      }
+                    }}
+                    data-testid={`player-${player.id}`}
                   >
-                    {editingPlayer === player.id ? (
-                      <input
-                        type="text"
-                        value={editingLabel}
-                        onChange={(e) => handleLabelChange(e.target.value)}
-                        onBlur={finishLabelEdit}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") finishLabelEdit();
-                        }}
-                        autoFocus
-                        maxLength={2}
-                        className="w-full h-full bg-transparent text-center text-white font-bold text-xs outline-none uppercase"
-                        data-testid={`input-label-${player.id}`}
-                      />
+                    {isDefensivePlayer ? (
+                      <>
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            backgroundColor: 'white',
+                            color: 'black',
+                            padding: '1px 4px',
+                            borderRadius: '8px',
+                            fontSize: '10px',
+                            fontWeight: 'bold',
+                            whiteSpace: 'nowrap',
+                            zIndex: 11,
+                          }}
+                        >
+                          {editingPlayer === player.id ? (
+                            <input
+                              type="text"
+                              value={editingLabel}
+                              onChange={(e) => handleLabelChange(e.target.value)}
+                              onBlur={finishLabelEdit}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") finishLabelEdit();
+                              }}
+                              autoFocus
+                              maxLength={2}
+                              className="w-6 bg-transparent text-center text-black font-bold text-xs outline-none uppercase"
+                              style={{ fontSize: '10px' }}
+                              data-testid={`input-label-${player.id}`}
+                            />
+                          ) : (
+                            <span>{player.label || ""}</span>
+                          )}
+                        </div>
+                        <svg
+                          width="24"
+                          height="24"
+                          viewBox="0 0 24 24"
+                          style={{
+                            position: 'absolute',
+                            top: 15,
+                            left: 0,
+                            transition: "transform 80ms ease-out",
+                            transform: isLongPressHolding && longPressPlayerRef === player.id ? "scale(1.1)" : "scale(1)",
+                            filter: pendingRouteSelection?.playerId === player.id
+                              ? "none"
+                              : longPressPlayerId === player.id 
+                                ? "drop-shadow(0 0 4px rgba(251, 146, 60, 0.8))" 
+                                : (selectedPlayer === player.id || selectedElements.players.includes(player.id)) 
+                                  ? "drop-shadow(0 0 2px rgba(34, 211, 238, 1))" 
+                                  : "none",
+                          }}
+                          className={pendingRouteSelection?.playerId === player.id ? "player-pending-route" : ""}
+                        >
+                          <line x1="4" y1="4" x2="20" y2="20" stroke={player.color} strokeWidth="4" strokeLinecap="round" />
+                          <line x1="20" y1="4" x2="4" y2="20" stroke={player.color} strokeWidth="4" strokeLinecap="round" />
+                        </svg>
+                      </>
                     ) : (
-                      <span className="text-xs">{player.label || ""}</span>
+                      <div
+                        className={`w-6 h-6 ${
+                          playType === "offense" && player.color === "#6b7280" ? "" : "rounded-full"
+                        } flex items-center justify-center text-white font-bold text-xs ${
+                          pendingRouteSelection?.playerId === player.id ? "player-pending-route" : ""
+                        }`}
+                        style={{ 
+                          backgroundColor: player.color,
+                          transition: "transform 80ms ease-out, box-shadow 80ms ease-out",
+                          transform: isLongPressHolding && longPressPlayerRef === player.id ? "scale(1.1)" : "scale(1)",
+                          animation: isLongPressHolding && longPressPlayerRef === player.id && !pendingRouteSelection ? "pressRing 280ms ease-out forwards" : "none",
+                          boxShadow: pendingRouteSelection?.playerId === player.id
+                            ? "none"
+                            : longPressPlayerId === player.id 
+                              ? "0 0 0 4px rgba(251, 146, 60, 0.8)" 
+                              : (selectedPlayer === player.id || selectedElements.players.includes(player.id)) 
+                                ? "0 0 0 2px rgba(34, 211, 238, 1)" 
+                                : "none",
+                        }}
+                      >
+                        {editingPlayer === player.id ? (
+                          <input
+                            type="text"
+                            value={editingLabel}
+                            onChange={(e) => handleLabelChange(e.target.value)}
+                            onBlur={finishLabelEdit}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") finishLabelEdit();
+                            }}
+                            autoFocus
+                            maxLength={2}
+                            className="w-full h-full bg-transparent text-center text-white font-bold text-xs outline-none uppercase"
+                            data-testid={`input-label-${player.id}`}
+                          />
+                        ) : (
+                          <span className="text-xs">{player.label || ""}</span>
+                        )}
+                      </div>
                     )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
 
               {footballs.map((football) => (
                 <div
