@@ -31,9 +31,16 @@ Players have a `side` property (`"offense"` or `"defense"`) that determines thei
 -   **Offensive Players**: Rendered as filled circles with centered labels (white text on colored background).
 -   **Defensive Players**: Rendered as X shapes (SVG with two crossed lines, strokeWidth 4) with labels in white pill-shaped badges positioned above the X.
 
-**Defense 5v5 Formation** (loaded via Defense tab + "Add Offense?" unchecked + 5-on-5 button):
--   Row 1 (Line): 3 players at Y = LOS - 40 (slots -2, 0, +2), Sky Blue (#87CEEB), labels B, R, B
--   Row 2 (Secondary): 2 players at Y = LOS - 100 (slots -1.5, +1.5), Purple (#9333ea), labels S, S
+**Defense 5v5 Formation** (loaded via Defense tab + 5-on-5 button):
+-   Uses SPACING = 60px for tight "W" formation
+-   Row 1 (Line): 3 players at Y = LOS - 40, X at centerX ± (2 * SPACING), Sky Blue (#87CEEB), labels B, R, B
+-   Row 2 (Secondary): 2 players at Y = LOS - 100, X at centerX ± (1 * SPACING), Purple (#9333ea), labels S, S
+-   "Add Offense?" toggle: When checked, loads BOTH defense5v5 AND offense5v5 players (10 total); when unchecked, loads only defense (5 total)
+
+**Defensive Label Styling** (Tailwind classes):
+-   Container: `w-4 h-4 rounded-full bg-white flex items-center justify-center shadow-sm absolute top-0`
+-   Font: `text-[9px] font-bold text-black`
+-   Positioned just above the X shape
 
 ### Backend Architecture
 
