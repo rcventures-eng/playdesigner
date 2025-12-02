@@ -658,17 +658,19 @@ export default function PlayDesigner() {
   const generateDefense5v5Formation = (): Player[] => {
     const SKY_BLUE = "#87CEEB";
     const PURPLE = "#9333ea";
-    const SPACING = 60; // Tight W-formation spacing in pixels
+    const SPACING = 60; // Base spacing unit in pixels
     const ts = Date.now();
     
     return [
-      // Row 1: The Line (Sky Blue) - Y = LOS - 40, slots: -2, 0, +2
-      { id: `player-${ts}-d1`, x: centerX - (2 * SPACING), y: FIELD.LOS_Y - 40, color: SKY_BLUE, label: "B", side: "defense" as const },
+      // Row 1: The Line (Sky Blue) - Y = LOS - 40
+      // Rusher (R) at center, Blitzers (B) wide near hashmarks at ±3.5x spacing
+      { id: `player-${ts}-d1`, x: centerX - (3.5 * SPACING), y: FIELD.LOS_Y - 40, color: SKY_BLUE, label: "B", side: "defense" as const },
       { id: `player-${ts}-d2`, x: centerX, y: FIELD.LOS_Y - 40, color: SKY_BLUE, label: "R", side: "defense" as const },
-      { id: `player-${ts}-d3`, x: centerX + (2 * SPACING), y: FIELD.LOS_Y - 40, color: SKY_BLUE, label: "B", side: "defense" as const },
-      // Row 2: The Secondary (Purple) - Y = LOS - 100, slots: -1, +1 (sits in gaps)
-      { id: `player-${ts}-d4`, x: centerX - (1 * SPACING), y: FIELD.LOS_Y - 100, color: PURPLE, label: "S", side: "defense" as const },
-      { id: `player-${ts}-d5`, x: centerX + (1 * SPACING), y: FIELD.LOS_Y - 100, color: PURPLE, label: "S", side: "defense" as const },
+      { id: `player-${ts}-d3`, x: centerX + (3.5 * SPACING), y: FIELD.LOS_Y - 40, color: SKY_BLUE, label: "B", side: "defense" as const },
+      // Row 2: The Secondary (Purple) - Y = LOS - 100
+      // Safeties (S) in wide gaps at ±1.8x spacing
+      { id: `player-${ts}-d4`, x: centerX - (1.8 * SPACING), y: FIELD.LOS_Y - 100, color: PURPLE, label: "S", side: "defense" as const },
+      { id: `player-${ts}-d5`, x: centerX + (1.8 * SPACING), y: FIELD.LOS_Y - 100, color: PURPLE, label: "S", side: "defense" as const },
     ];
   };
 
