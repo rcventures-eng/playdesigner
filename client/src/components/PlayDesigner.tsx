@@ -253,6 +253,13 @@ export default function PlayDesigner() {
     "#f97316": "TE",   // Orange - Tight end
   };
 
+  // Auto-labels for defense colors
+  const defenseColorLabels: Record<string, string> = {
+    "#FFB6C1": "DL",   // Pink - Defensive Line
+    "#87CEEB": "LB",   // Light Blue - Linebacker
+    "#9333ea": "DB",   // Purple - Defensive Back
+  };
+
   // Sequential labels for gray offensive linemen (C, LG, RG, LT, RT, then OL for extras)
   const grayLabels = ["C", "LG", "RG", "LT", "RT"];
   
@@ -452,9 +459,11 @@ export default function PlayDesigner() {
       position = playType === "offense" && offensePositions[color] 
         ? offensePositions[color] 
         : { x: FIELD.WIDTH / 2, y: FIELD.LOS_Y };
-      // Assign color-based label for offense (no auto-labels for defense)
+      // Assign color-based label for offense or defense
       if (playType === "offense" && colorLabels[color]) {
         label = colorLabels[color];
+      } else if (playType === "defense" && defenseColorLabels[color]) {
+        label = defenseColorLabels[color];
       }
     }
     
