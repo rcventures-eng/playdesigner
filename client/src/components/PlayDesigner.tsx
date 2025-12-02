@@ -653,86 +653,47 @@ export default function PlayDesigner() {
     setTool("select");
   };
 
-  const loadDefense5v5 = () => {
+  const loadDefensePreset = (format: string) => {
     if (players.length > 0 || routes.length > 0 || shapes.length > 0 || footballs.length > 0) {
       saveToHistory();
     }
-    setPlayers([]);
-    setRoutes([]);
-    setShapes([]);
-    setFootballs([]);
-    setMetadata(prev => ({ ...prev, name: "", formation: "", defenseConcept: "", personnel: "" }));
+    const newPlayers: Player[] = [];
+    const newRoutes: Route[] = [];
+    const newShapes: Shape[] = [];
+    const newFootballs: Football[] = [];
+    const newMetadata = { ...metadata, name: "", formation: "", personnel: "" };
+    
+    setPlayers(newPlayers);
+    setRoutes(newRoutes);
+    setShapes(newShapes);
+    setFootballs(newFootballs);
+    setMetadata(newMetadata);
     setSelectedPlayer(null);
     setSelectedRoute(null);
     setSelectedShape(null);
     setSelectedFootball(null);
     setSelectedElements({ players: [], routes: [] });
     setTool("select");
-    console.log("Defense 5v5 preset loaded - placeholder");
-  };
-
-  const loadDefense7v7 = () => {
-    if (players.length > 0 || routes.length > 0 || shapes.length > 0 || footballs.length > 0) {
-      saveToHistory();
-    }
-    setPlayers([]);
-    setRoutes([]);
-    setShapes([]);
-    setFootballs([]);
-    setMetadata(prev => ({ ...prev, name: "", formation: "", defenseConcept: "", personnel: "" }));
-    setSelectedPlayer(null);
-    setSelectedRoute(null);
-    setSelectedShape(null);
-    setSelectedFootball(null);
-    setSelectedElements({ players: [], routes: [] });
-    setTool("select");
-    console.log("Defense 7v7 preset loaded - placeholder");
-  };
-
-  const loadDefense9v9 = () => {
-    if (players.length > 0 || routes.length > 0 || shapes.length > 0 || footballs.length > 0) {
-      saveToHistory();
-    }
-    setPlayers([]);
-    setRoutes([]);
-    setShapes([]);
-    setFootballs([]);
-    setMetadata(prev => ({ ...prev, name: "", formation: "", defenseConcept: "", personnel: "" }));
-    setSelectedPlayer(null);
-    setSelectedRoute(null);
-    setSelectedShape(null);
-    setSelectedFootball(null);
-    setSelectedElements({ players: [], routes: [] });
-    setTool("select");
-    console.log("Defense 9v9 preset loaded - placeholder");
-  };
-
-  const loadDefense11v11 = () => {
-    if (players.length > 0 || routes.length > 0 || shapes.length > 0 || footballs.length > 0) {
-      saveToHistory();
-    }
-    setPlayers([]);
-    setRoutes([]);
-    setShapes([]);
-    setFootballs([]);
-    setMetadata(prev => ({ ...prev, name: "", formation: "", defenseConcept: "", personnel: "" }));
-    setSelectedPlayer(null);
-    setSelectedRoute(null);
-    setSelectedShape(null);
-    setSelectedFootball(null);
-    setSelectedElements({ players: [], routes: [] });
-    setTool("select");
-    console.log("Defense 11v11 preset loaded - placeholder");
+    
+    playTypeStatesRef.current = {
+      ...playTypeStatesRef.current,
+      defense: {
+        players: newPlayers,
+        routes: newRoutes,
+        shapes: newShapes,
+        footballs: newFootballs,
+        metadata: newMetadata,
+        history: [],
+      }
+    };
+    setPlayTypeStates(playTypeStatesRef.current);
+    
+    console.log(`Defense ${format} preset loaded - placeholder`);
   };
 
   const handleGameFormatClick = (format: "5v5" | "7v7" | "9v9" | "11v11") => {
     if (playType === "defense" && !includeOffense) {
-      switch (format) {
-        case "5v5": loadDefense5v5(); break;
-        case "7v7": loadDefense7v7(); break;
-        case "9v9": loadDefense9v9(); break;
-        case "11v11": loadDefense11v11(); break;
-      }
+      loadDefensePreset(format);
     } else {
       switch (format) {
         case "5v5": handleLoad5v5(); break;
