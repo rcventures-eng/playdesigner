@@ -33,9 +33,14 @@ Players have a `side` property (`"offense"` or `"defense"`) that determines thei
 
 **Defense 5v5 Formation** (loaded via Defense tab + 5-on-5 button):
 -   Uses SPACING = 60px base unit for broad "W" formation
--   Row 1 (Line): Rusher (R) at centerX, Blitzers (B) at centerX ± (3.5 * SPACING) = ±210px (wide near hashmarks), Y = LOS - 40, Sky Blue (#87CEEB)
--   Row 2 (Secondary): Safeties (S) at centerX ± (1.8 * SPACING) = ±108px (in gaps), Y = LOS - 100, Purple (#9333ea)
+-   Row 1 (Linebackers): 3x "LB" at centerX and centerX ± (3.5 * SPACING) = ±210px (wide near hashmarks), Y = LOS - 40, Light Blue (#87CEEB)
+-   Row 2 (Defensive Backs): 2x "DB" at centerX ± (1.8 * SPACING) = ±108px (in gaps), Y = LOS - 100, Purple (#9333ea)
 -   "Add Offense?" toggle: When checked, loads BOTH defense5v5 AND offense5v5 players (10 total); when unchecked, loads only defense (5 total)
+
+**Defense Color-Label Mapping** (consistent across manual add and presets):
+-   Pink (#FFB6C1) → "DL" (Defensive Line)
+-   Light Blue (#87CEEB) → "LB" (Linebacker)
+-   Purple (#9333ea) → "DB" (Defensive Back)
 
 **Defensive Label Styling** (Tailwind classes):
 -   Container: `w-4 h-4 rounded-full bg-white flex items-center justify-center shadow-sm absolute top-0`
