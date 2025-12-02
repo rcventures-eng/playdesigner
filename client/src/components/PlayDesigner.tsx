@@ -658,35 +658,49 @@ export default function PlayDesigner() {
   const generateDefense5v5Formation = (): Player[] => {
     const SKY_BLUE = "#87CEEB";
     const PURPLE = "#9333ea";
-    const SPACING = 50; // Tight W-formation spacing in pixels
+    const SPACING = 60; // Tight W-formation spacing in pixels
     const ts = Date.now();
     
     return [
       // Row 1: The Line (Sky Blue) - Y = LOS - 40, slots: -2, 0, +2
-      { id: `player-${ts}-1`, x: centerX - (2 * SPACING), y: FIELD.LOS_Y - 40, color: SKY_BLUE, label: "B", side: "defense" as const },
-      { id: `player-${ts}-2`, x: centerX, y: FIELD.LOS_Y - 40, color: SKY_BLUE, label: "R", side: "defense" as const },
-      { id: `player-${ts}-3`, x: centerX + (2 * SPACING), y: FIELD.LOS_Y - 40, color: SKY_BLUE, label: "B", side: "defense" as const },
+      { id: `player-${ts}-d1`, x: centerX - (2 * SPACING), y: FIELD.LOS_Y - 40, color: SKY_BLUE, label: "B", side: "defense" as const },
+      { id: `player-${ts}-d2`, x: centerX, y: FIELD.LOS_Y - 40, color: SKY_BLUE, label: "R", side: "defense" as const },
+      { id: `player-${ts}-d3`, x: centerX + (2 * SPACING), y: FIELD.LOS_Y - 40, color: SKY_BLUE, label: "B", side: "defense" as const },
       // Row 2: The Secondary (Purple) - Y = LOS - 100, slots: -1, +1 (sits in gaps)
-      { id: `player-${ts}-4`, x: centerX - (1 * SPACING), y: FIELD.LOS_Y - 100, color: PURPLE, label: "S", side: "defense" as const },
-      { id: `player-${ts}-5`, x: centerX + (1 * SPACING), y: FIELD.LOS_Y - 100, color: PURPLE, label: "S", side: "defense" as const },
+      { id: `player-${ts}-d4`, x: centerX - (1 * SPACING), y: FIELD.LOS_Y - 100, color: PURPLE, label: "S", side: "defense" as const },
+      { id: `player-${ts}-d5`, x: centerX + (1 * SPACING), y: FIELD.LOS_Y - 100, color: PURPLE, label: "S", side: "defense" as const },
     ];
   };
 
-  const loadDefensePreset = (format: string) => {
+  const generateOffense5v5Formation = (): Player[] => {
+    const ts = Date.now();
+    return [
+      { id: `player-${ts}-o1`, x: centerX, y: FIELD.LOS_Y + PLAYER_SIZE + 4, color: "#000000", label: "QB", side: "offense" as const },
+      { id: `player-${ts}-o2`, x: centerX, y: FIELD.LOS_Y + 75, color: "#39ff14", label: "RB", side: "offense" as const },
+      { id: `player-${ts}-o3`, x: centerX - (2 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#eab308", label: "Y", side: "offense" as const },
+      { id: `player-${ts}-o4`, x: centerX - (6 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#1d4ed8", label: "Z", side: "offense" as const },
+      { id: `player-${ts}-o5`, x: centerX + (6 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#ef4444", label: "X", side: "offense" as const },
+    ];
+  };
+
+  const loadDefensePreset = (format: string, withOffense: boolean) => {
     if (players.length > 0 || routes.length > 0 || shapes.length > 0 || footballs.length > 0) {
       saveToHistory();
     }
     
-    let newPlayers: Player[] = [];
+    let defensePlayers: Player[] = [];
+    let offensePlayers: Player[] = [];
     
     switch (format) {
       case "5v5":
-        newPlayers = generateDefense5v5Formation();
+        defensePlayers = generateDefense5v5Formation();
+        if (withOffense) offensePlayers = generateOffense5v5Formation();
         break;
       default:
-        newPlayers = [];
+        defensePlayers = [];
     }
     
+    const newPlayers = withOffense ? [...defensePlayers, ...offensePlayers] : defensePlayers;
     const newRoutes: Route[] = [];
     const newShapes: Shape[] = [];
     const newFootballs: Football[] = [];
@@ -717,12 +731,12 @@ export default function PlayDesigner() {
     };
     setPlayTypeStates(playTypeStatesRef.current);
     
-    console.log(`Defense ${format} preset loaded`);
+    console.log(`Defense ${format} preset loaded${withOffense ? ' with offense' : ''}`);
   };
 
   const handleGameFormatClick = (format: "5v5" | "7v7" | "9v9" | "11v11") => {
-    if (playType === "defense" && !includeOffense) {
-      loadDefensePreset(format);
+    if (playType === "defense") {
+      loadDefensePreset(format, includeOffense);
     } else {
       switch (format) {
         case "5v5": handleLoad5v5(); break;
@@ -2581,9 +2595,9 @@ export default function PlayDesigner() {
                     className="absolute cursor-pointer"
                     style={{
                       left: player.x - 12,
-                      top: isDefensivePlayer ? player.y - 12 - 15 : player.y - 12,
+                      top: isDefensivePlayer ? player.y - 12 - 20 : player.y - 12,
                       width: 24,
-                      height: isDefensivePlayer ? 24 + 15 : 24,
+                      height: isDefensivePlayer ? 24 + 20 : 24,
                       zIndex: 10,
                       pointerEvents: "auto",
                       transform: "translateZ(0)",
@@ -2625,23 +2639,7 @@ export default function PlayDesigner() {
                   >
                     {isDefensivePlayer ? (
                       <>
-                        <div
-                          style={{
-                            position: 'absolute',
-                            top: -2,
-                            left: '50%',
-                            transform: 'translateX(-50%)',
-                            backgroundColor: 'white',
-                            color: 'black',
-                            padding: '0px 3px',
-                            borderRadius: '6px',
-                            fontSize: '9px',
-                            fontWeight: 'bold',
-                            whiteSpace: 'nowrap',
-                            zIndex: 11,
-                            lineHeight: '13px',
-                          }}
-                        >
+                        <div className="w-4 h-4 rounded-full bg-white flex items-center justify-center shadow-sm absolute top-0 left-1/2 -translate-x-1/2 z-10">
                           {editingPlayer === player.id ? (
                             <input
                               type="text"
@@ -2653,12 +2651,11 @@ export default function PlayDesigner() {
                               }}
                               autoFocus
                               maxLength={2}
-                              className="w-5 bg-transparent text-center text-black font-bold outline-none uppercase"
-                              style={{ fontSize: '9px' }}
+                              className="w-4 h-4 bg-transparent text-center text-[9px] font-bold text-black outline-none uppercase"
                               data-testid={`input-label-${player.id}`}
                             />
                           ) : (
-                            <span>{player.label || ""}</span>
+                            <span className="text-[9px] font-bold text-black">{player.label || ""}</span>
                           )}
                         </div>
                         <svg
@@ -2667,7 +2664,7 @@ export default function PlayDesigner() {
                           viewBox="0 0 24 24"
                           style={{
                             position: 'absolute',
-                            top: 15,
+                            top: 20,
                             left: 0,
                             transition: "transform 80ms ease-out",
                             transform: isLongPressHolding && longPressPlayerRef === player.id ? "scale(1.1)" : "scale(1)",
