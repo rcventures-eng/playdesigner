@@ -32,9 +32,9 @@ Players have a `side` property (`"offense"` or `"defense"`) that determines thei
 -   **Defensive Players**: Rendered as X shapes (SVG with two crossed lines, strokeWidth 4) with labels in white pill-shaped badges positioned above the X.
 
 **Defense 5v5 Formation** (loaded via Defense tab + 5-on-5 button):
--   Uses SPACING = 60px for tight "W" formation
--   Row 1 (Line): 3 players at Y = LOS - 40, X at centerX ± (2 * SPACING), Sky Blue (#87CEEB), labels B, R, B
--   Row 2 (Secondary): 2 players at Y = LOS - 100, X at centerX ± (1 * SPACING), Purple (#9333ea), labels S, S
+-   Uses SPACING = 60px base unit for broad "W" formation
+-   Row 1 (Line): Rusher (R) at centerX, Blitzers (B) at centerX ± (3.5 * SPACING) = ±210px (wide near hashmarks), Y = LOS - 40, Sky Blue (#87CEEB)
+-   Row 2 (Secondary): Safeties (S) at centerX ± (1.8 * SPACING) = ±108px (in gaps), Y = LOS - 100, Purple (#9333ea)
 -   "Add Offense?" toggle: When checked, loads BOTH defense5v5 AND offense5v5 players (10 total); when unchecked, loads only defense (5 total)
 
 **Defensive Label Styling** (Tailwind classes):
