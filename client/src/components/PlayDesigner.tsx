@@ -1712,11 +1712,12 @@ export default function PlayDesigner() {
                     />
                   )}
                   {playType === "defense" && (
-                    <Select value={metadata.defenseConcept} onValueChange={(v) => setMetadata({ ...metadata, defenseConcept: v })}>
+                    <Select value={metadata.defenseConcept} onValueChange={(v) => setMetadata({ ...metadata, defenseConcept: v === "clear_selection" ? "" : v })}>
                       <SelectTrigger id="defense-concept" data-testid="select-defense-concept" className="h-8 text-sm">
                         <SelectValue placeholder="Select Concept" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="clear_selection">None</SelectItem>
                         <SelectItem value="man-to-man">Man-to-Man</SelectItem>
                         <SelectItem value="zone">Zone</SelectItem>
                         <SelectItem value="zone-blitz">Zone Blitz</SelectItem>
@@ -1743,11 +1744,12 @@ export default function PlayDesigner() {
                   <>
                     <div>
                       <Label htmlFor="concept" className="text-xs">Concept</Label>
-                      <Select value={metadata.concept} onValueChange={(v) => setMetadata({ ...metadata, concept: v })}>
+                      <Select value={metadata.concept} onValueChange={(v) => setMetadata({ ...metadata, concept: v === "clear_selection" ? "" : v })}>
                         <SelectTrigger id="concept" data-testid="select-concept" className="h-8 text-sm">
                           <SelectValue placeholder="Select Concept" />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="clear_selection">None</SelectItem>
                           <SelectItem value="outside-run">Outside Run</SelectItem>
                           <SelectItem value="inside-run">Inside Run</SelectItem>
                           <SelectItem value="short-pass">Short Pass</SelectItem>
