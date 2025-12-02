@@ -24,6 +24,17 @@ The core play design functionality utilizes **HTML5 Canvas** and SVG for renderi
 -   **Interaction Model**: Drag-and-drop for players, click-to-draw for routes. A **long-press cascading menu** on players allows mouse-only route creation with options for route type and properties.
 -   **Player Interactions**: Quick tap to select, double tap to edit label, long-press for route menu, drag to move.
 
+### Player Rendering
+
+Players have a `side` property (`"offense"` or `"defense"`) that determines their visual rendering:
+
+-   **Offensive Players**: Rendered as filled circles with centered labels (white text on colored background).
+-   **Defensive Players**: Rendered as X shapes (SVG with two crossed lines, strokeWidth 4) with labels in white pill-shaped badges positioned above the X.
+
+**Defense 5v5 Formation** (loaded via Defense tab + "Add Offense?" unchecked + 5-on-5 button):
+-   Row 1 (Line): 3 players at Y = LOS - 40 (slots -2, 0, +2), Sky Blue (#87CEEB), labels B, R, B
+-   Row 2 (Secondary): 2 players at Y = LOS - 100 (slots -1.5, +1.5), Purple (#9333ea), labels S, S
+
 ### Backend Architecture
 
 The backend uses **Express.js** with **TypeScript** on Node.js. It's designed to be lightweight, primarily serving static assets, with most application logic handled client-side. Separate entry points (`index-dev.ts`, `index-prod.ts`) manage development with Vite integration and production serving. API routes are prefixed with `/api`.
