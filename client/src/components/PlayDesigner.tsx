@@ -139,6 +139,7 @@ export default function PlayDesigner() {
   const [isMotion, setIsMotion] = useState(false);
   const [isPlayAction, setIsPlayAction] = useState(false);
   const [showBlocking, setShowBlocking] = useState(true);
+  const [includeOffense, setIncludeOffense] = useState(false);
   const [metadata, setMetadata] = useState<PlayMetadata>({
     name: "",
     formation: "",
@@ -521,6 +522,7 @@ export default function PlayDesigner() {
     setSelectedShape(null);
     setSelectedFootball(null);
     setSelectedElements({ players: [], routes: [] });
+    setIncludeOffense(false);
   };
 
   const generate5v5Formation = (): Player[] => {
@@ -649,6 +651,96 @@ export default function PlayDesigner() {
     setSelectedFootball(null);
     setSelectedElements({ players: [], routes: [] });
     setTool("select");
+  };
+
+  const loadDefense5v5 = () => {
+    if (players.length > 0 || routes.length > 0 || shapes.length > 0 || footballs.length > 0) {
+      saveToHistory();
+    }
+    setPlayers([]);
+    setRoutes([]);
+    setShapes([]);
+    setFootballs([]);
+    setMetadata(prev => ({ ...prev, name: "", formation: "", defenseConcept: "", personnel: "" }));
+    setSelectedPlayer(null);
+    setSelectedRoute(null);
+    setSelectedShape(null);
+    setSelectedFootball(null);
+    setSelectedElements({ players: [], routes: [] });
+    setTool("select");
+    console.log("Defense 5v5 preset loaded - placeholder");
+  };
+
+  const loadDefense7v7 = () => {
+    if (players.length > 0 || routes.length > 0 || shapes.length > 0 || footballs.length > 0) {
+      saveToHistory();
+    }
+    setPlayers([]);
+    setRoutes([]);
+    setShapes([]);
+    setFootballs([]);
+    setMetadata(prev => ({ ...prev, name: "", formation: "", defenseConcept: "", personnel: "" }));
+    setSelectedPlayer(null);
+    setSelectedRoute(null);
+    setSelectedShape(null);
+    setSelectedFootball(null);
+    setSelectedElements({ players: [], routes: [] });
+    setTool("select");
+    console.log("Defense 7v7 preset loaded - placeholder");
+  };
+
+  const loadDefense9v9 = () => {
+    if (players.length > 0 || routes.length > 0 || shapes.length > 0 || footballs.length > 0) {
+      saveToHistory();
+    }
+    setPlayers([]);
+    setRoutes([]);
+    setShapes([]);
+    setFootballs([]);
+    setMetadata(prev => ({ ...prev, name: "", formation: "", defenseConcept: "", personnel: "" }));
+    setSelectedPlayer(null);
+    setSelectedRoute(null);
+    setSelectedShape(null);
+    setSelectedFootball(null);
+    setSelectedElements({ players: [], routes: [] });
+    setTool("select");
+    console.log("Defense 9v9 preset loaded - placeholder");
+  };
+
+  const loadDefense11v11 = () => {
+    if (players.length > 0 || routes.length > 0 || shapes.length > 0 || footballs.length > 0) {
+      saveToHistory();
+    }
+    setPlayers([]);
+    setRoutes([]);
+    setShapes([]);
+    setFootballs([]);
+    setMetadata(prev => ({ ...prev, name: "", formation: "", defenseConcept: "", personnel: "" }));
+    setSelectedPlayer(null);
+    setSelectedRoute(null);
+    setSelectedShape(null);
+    setSelectedFootball(null);
+    setSelectedElements({ players: [], routes: [] });
+    setTool("select");
+    console.log("Defense 11v11 preset loaded - placeholder");
+  };
+
+  const handleGameFormatClick = (format: "5v5" | "7v7" | "9v9" | "11v11") => {
+    if (playType === "defense" && !includeOffense) {
+      switch (format) {
+        case "5v5": loadDefense5v5(); break;
+        case "7v7": loadDefense7v7(); break;
+        case "9v9": loadDefense9v9(); break;
+        case "11v11": loadDefense11v11(); break;
+      }
+    } else {
+      switch (format) {
+        case "5v5": handleLoad5v5(); break;
+        case "7v7": handleLoad7v7(); break;
+        case "9v9": handleLoad9v9(); break;
+        case "11v11": handleLoad11v11(); break;
+      }
+    }
   };
 
   const deleteSelected = () => {
@@ -1288,6 +1380,7 @@ export default function PlayDesigner() {
         title: "Export Successful",
         description: `Play exported as ${exportWidth}x${exportHeight} image`,
       });
+      setIncludeOffense(false);
     } catch (err) {
       toast({
         title: "Export Failed",
@@ -1315,6 +1408,7 @@ export default function PlayDesigner() {
         title: "Copied!",
         description: `Play copied to clipboard at ${exportWidth}x${exportHeight}`,
       });
+      setIncludeOffense(false);
     } catch (err) {
       toast({
         title: "Copy Failed",
@@ -1754,13 +1848,28 @@ export default function PlayDesigner() {
               <Separator />
 
               <div className="space-y-2">
-                <h3 className="font-semibold text-sm text-foreground">Preloaded Game Format</h3>
+                <div className="flex justify-between items-center">
+                  <h3 className="font-semibold text-sm text-foreground">Preloaded Game Format</h3>
+                  {playType === "defense" && (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="include-offense"
+                        checked={includeOffense}
+                        onChange={(e) => setIncludeOffense(e.target.checked)}
+                        className="rounded"
+                        data-testid="checkbox-include-offense"
+                      />
+                      <Label htmlFor="include-offense" className="text-xs">Add Offense?</Label>
+                    </div>
+                  )}
+                </div>
                 <div className="flex flex-col gap-1.5">
                   <Button
                     size="sm"
                     variant="secondary"
                     data-testid="button-format-5on5"
-                    onClick={handleLoad5v5}
+                    onClick={() => handleGameFormatClick("5v5")}
                     className="w-full justify-center bg-green-600 hover:bg-green-700 text-white border-0"
                   >
                     <Flag className="h-4 w-4 text-red-500 mr-2" />
@@ -1770,7 +1879,7 @@ export default function PlayDesigner() {
                     size="sm"
                     variant="secondary"
                     data-testid="button-format-7on7"
-                    onClick={handleLoad7v7}
+                    onClick={() => handleGameFormatClick("7v7")}
                     className="w-full justify-center bg-green-600 hover:bg-green-700 text-white border-0"
                   >
                     <Flag className="h-4 w-4 text-red-500 mr-2" />
@@ -1780,7 +1889,7 @@ export default function PlayDesigner() {
                     size="sm"
                     variant="secondary"
                     data-testid="button-format-9on9"
-                    onClick={handleLoad9v9}
+                    onClick={() => handleGameFormatClick("9v9")}
                     className="w-full justify-center bg-green-600 hover:bg-green-700 text-white border-0"
                   >
                     <Flag className="h-4 w-4 text-red-500 mr-2" />
@@ -1790,7 +1899,7 @@ export default function PlayDesigner() {
                     size="sm"
                     variant="secondary"
                     data-testid="button-format-11on11"
-                    onClick={handleLoad11v11}
+                    onClick={() => handleGameFormatClick("11v11")}
                     className="w-full justify-center bg-green-600 hover:bg-green-700 text-white border-0"
                   >
                     <svg className="h-4 w-4 mr-2" viewBox="0 0 20 40" fill="currentColor">
