@@ -464,6 +464,7 @@ export default function PlayDesigner() {
       y: position.y,
       color,
       label,
+      side: playType === "defense" ? "defense" : "offense",
     };
     setPlayers([...players, newPlayer]);
     
