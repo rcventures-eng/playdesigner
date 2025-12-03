@@ -143,7 +143,7 @@ export default function PlayDesigner() {
   const [isMotion, setIsMotion] = useState(false);
   const [isPlayAction, setIsPlayAction] = useState(false);
   const [showBlocking, setShowBlocking] = useState(true);
-  const [includeOffense, setIncludeOffense] = useState(false);
+  const [includeOffense, setIncludeOffense] = useState(true);
   const [metadata, setMetadata] = useState<PlayMetadata>({
     name: "",
     formation: "",
@@ -154,6 +154,7 @@ export default function PlayDesigner() {
   const [exportWidth, setExportWidth] = useState(String(FIELD.WIDTH));
   const [exportHeight, setExportHeight] = useState(String(FIELD.HEIGHT));
   const [isDragging, setIsDragging] = useState(false);
+  const isDraggingRef = useRef(false);  // Immediate sync ref for dragging state
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isDrawingRoute, setIsDrawingRoute] = useState(false);
   const [currentRoutePoints, setCurrentRoutePoints] = useState<{ x: number; y: number }[]>([]);
@@ -336,6 +337,7 @@ export default function PlayDesigner() {
     setSelectedShape(null);
     setSelectedFootball(null);
     setSelectedElements({ players: [], routes: [] });
+    isDraggingRef.current = false;
     setIsDragging(false);
     setDraggingRoutePoint(null);
   }, [tool]);
@@ -446,6 +448,55 @@ export default function PlayDesigner() {
       ));
     }
   }, [metadata.formation, playType]);
+
+  // Dynamic linking: Keep Man coverage routes synced with target player positions
+  // This effect runs whenever players or routes change and updates route endpoints accordingly
+  useEffect(() => {
+    // Find all Man coverage routes with target players
+    const manRoutes = routes.filter(r => 
+      r.type === "assignment" && r.defensiveAction === "man" && r.targetPlayerId
+    );
+    
+    if (manRoutes.length === 0) return;
+    
+    let hasUpdates = false;
+    const updatedRoutes = routes.map(route => {
+      if (route.type === "assignment" && route.defensiveAction === "man" && route.targetPlayerId) {
+        // Find the target player's current position
+        const targetPlayer = players.find(p => p.id === route.targetPlayerId);
+        // Find the defender player (route owner)
+        const defender = players.find(p => p.id === route.playerId);
+        
+        if (targetPlayer && defender && route.points.length >= 2) {
+          const currentEndpoint = route.points[route.points.length - 1];
+          const currentStart = route.points[0];
+          
+          // Check if endpoint or start needs updating
+          const endpointNeedsUpdate = Math.abs(currentEndpoint.x - targetPlayer.x) > 0.5 || 
+                                      Math.abs(currentEndpoint.y - targetPlayer.y) > 0.5;
+          const startNeedsUpdate = Math.abs(currentStart.x - defender.x) > 0.5 || 
+                                   Math.abs(currentStart.y - defender.y) > 0.5;
+          
+          if (endpointNeedsUpdate || startNeedsUpdate) {
+            hasUpdates = true;
+            const updatedPoints = [...route.points];
+            if (startNeedsUpdate) {
+              updatedPoints[0] = { x: defender.x, y: defender.y };
+            }
+            if (endpointNeedsUpdate) {
+              updatedPoints[updatedPoints.length - 1] = { x: targetPlayer.x, y: targetPlayer.y };
+            }
+            return { ...route, points: updatedPoints };
+          }
+        }
+      }
+      return route;
+    });
+    
+    if (hasUpdates) {
+      setRoutes(updatedRoutes);
+    }
+  }, [players, routes]);
 
   const addPlayer = (color: string) => {
     saveToHistory();
@@ -1001,6 +1052,7 @@ export default function PlayDesigner() {
     }
     // If there was a pending drag intent, activate it now
     if (pendingDragRef.current) {
+      isDraggingRef.current = true;  // Immediately sync for same-event access
       setIsDragging(true);
       setDragOffset(pendingDragRef.current.offset);
       pendingDragRef.current = null;
@@ -1138,7 +1190,8 @@ export default function PlayDesigner() {
     }
     
     const bounds = FIELD.PLAYER_BOUNDS;
-    if (isDragging && selectedPlayer && tool === "select") {
+    // Use ref for immediate access (state may not be updated yet in same event)
+    if ((isDragging || isDraggingRef.current) && selectedPlayer && tool === "select") {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (rect) {
         const newX = Math.max(bounds.minX, Math.min(bounds.maxX, e.clientX - rect.left - dragOffset.x));
@@ -1148,25 +1201,36 @@ export default function PlayDesigner() {
         ));
         
         // Dynamic linking: Update Man coverage routes when target player moves
-        setRoutes(prevRoutes => prevRoutes.map(r => {
-          // Update Man coverage endpoint when target player is moved
-          if (r.type === "assignment" && r.defensiveAction === "man" && r.targetPlayerId === selectedPlayer) {
-            const updatedPoints = [...r.points];
-            if (updatedPoints.length >= 2) {
-              updatedPoints[updatedPoints.length - 1] = { x: newX, y: newY };
+        setRoutes(prevRoutes => {
+          let hasUpdates = false;
+          const updatedRoutes = prevRoutes.map(r => {
+            // Update Man coverage endpoint when target player is moved
+            if (r.type === "assignment" && r.defensiveAction === "man" && r.targetPlayerId === selectedPlayer) {
+              hasUpdates = true;
+              console.log('Updating Man coverage route endpoint:', r.id, 'target:', r.targetPlayerId, 'to:', newX, newY);
+              const updatedPoints = [...r.points];
+              if (updatedPoints.length >= 2) {
+                updatedPoints[updatedPoints.length - 1] = { x: newX, y: newY };
+              }
+              return { ...r, points: updatedPoints };
             }
-            return { ...r, points: updatedPoints };
-          }
-          // Update route start point when the defensive player is moved
-          if (r.type === "assignment" && r.playerId === selectedPlayer) {
-            const updatedPoints = [...r.points];
-            if (updatedPoints.length >= 1) {
-              updatedPoints[0] = { x: newX, y: newY };
+            // Update route start point when the defensive player is moved
+            if (r.type === "assignment" && r.playerId === selectedPlayer) {
+              hasUpdates = true;
+              console.log('Updating assignment route start:', r.id, 'player:', r.playerId, 'to:', newX, newY);
+              const updatedPoints = [...r.points];
+              if (updatedPoints.length >= 1) {
+                updatedPoints[0] = { x: newX, y: newY };
+              }
+              return { ...r, points: updatedPoints };
             }
-            return { ...r, points: updatedPoints };
+            return r;
+          });
+          if (!hasUpdates && prevRoutes.some(r => r.type === "assignment")) {
+            console.log('No route updates. selectedPlayer:', selectedPlayer, 'routes targetIds:', prevRoutes.filter(r => r.targetPlayerId).map(r => ({ id: r.id, target: r.targetPlayerId })));
           }
-          return r;
-        }));
+          return updatedRoutes;
+        });
       }
     }
     
@@ -1280,11 +1344,13 @@ export default function PlayDesigner() {
     if (tool === "route" && isDraggingStraightRoute && isDrawingRoute && currentRoutePointsRef.current.length >= 2) {
       finishRoute();
       setIsDraggingStraightRoute(false);
+      isDraggingRef.current = false;
       setIsDragging(false);
       setDraggingRoutePoint(null);
       return;
     }
     
+    isDraggingRef.current = false;
     setIsDragging(false);
     setDraggingRoutePoint(null);
     
@@ -2593,6 +2659,8 @@ export default function PlayDesigner() {
                         className="cursor-pointer"
                         style={{ pointerEvents: "auto", touchAction: "none" }}
                         data-testid={`route-${route.id}`}
+                        data-target-player={route.type === "assignment" && route.defensiveAction === "man" ? route.targetPlayerId : undefined}
+                        data-route-type={route.type === "assignment" ? route.defensiveAction : route.type}
                       />
                     )}
                     {route.priority && route.points.length > 0 && (
@@ -3043,15 +3111,44 @@ export default function PlayDesigner() {
                             onMouseEnter={() => {
                               if (!menuConfirming) {
                                 setHoveredRouteStyle(style);
-                                if (hoveredDefensiveAction && longPressPlayerId) {
-                                  setPendingRouteSelection({
+                              }
+                            }}
+                            onClick={() => {
+                              if (!hoveredDefensiveAction || !longPressPlayerId) return;
+                              const player = players.find(p => p.id === longPressPlayerId);
+                              if (!player) return;
+                              
+                              // For Blitz and Man, auto-create the assignment immediately
+                              if (hoveredDefensiveAction === "blitz") {
+                                const qbPos = getQBPosition();
+                                const newRoute: Route = {
+                                  id: `route-${Date.now()}`,
+                                  playerId: longPressPlayerId,
+                                  points: [{ x: player.x, y: player.y }, qbPos],
+                                  type: "assignment",
+                                  style: style,
+                                  defensiveAction: "blitz",
+                                  color: "#ef4444",
+                                };
+                                saveToHistory();
+                                setRoutes(prev => [...prev, newRoute]);
+                                closeLongPressMenu();
+                              } else if (hoveredDefensiveAction === "man") {
+                                const targetPlayer = getNearestUnclaimedOffensivePlayer({ x: player.x, y: player.y });
+                                if (targetPlayer) {
+                                  const newRoute: Route = {
+                                    id: `route-${Date.now()}`,
                                     playerId: longPressPlayerId,
+                                    points: [{ x: player.x, y: player.y }, { x: targetPlayer.x, y: targetPlayer.y }],
                                     type: "assignment",
                                     style: style,
-                                    motion: false,
-                                    primary: false,
-                                    defensiveAction: hoveredDefensiveAction,
-                                  });
+                                    defensiveAction: "man",
+                                    targetPlayerId: targetPlayer.id,
+                                    color: "#9ca3af",
+                                  };
+                                  saveToHistory();
+                                  setRoutes(prev => [...prev, newRoute]);
+                                  closeLongPressMenu();
                                 }
                               }
                             }}

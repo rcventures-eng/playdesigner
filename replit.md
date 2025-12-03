@@ -35,7 +35,15 @@ Players have a `side` property (`"offense"` or `"defense"`) that determines thei
 -   Uses SPACING = 60px base unit for broad "W" formation
 -   Row 1 (Linebackers): 3x "LB" at centerX and centerX ± (3.5 * SPACING) = ±210px (wide near hashmarks), Y = LOS - 40, Light Blue (#87CEEB)
 -   Row 2 (Defensive Backs): 2x "DB" at centerX ± (1.8 * SPACING) = ±108px (in gaps), Y = LOS - 100, Purple (#9333ea)
--   "Add Offense?" toggle: When checked, loads BOTH defense5v5 AND offense5v5 players (10 total); when unchecked, loads only defense (5 total)
+-   "Add Offense?" toggle: Defaults to CHECKED. When checked, loads BOTH defense5v5 AND offense5v5 players (10 total); when unchecked, loads only defense (5 total)
+
+**Defensive Assignment System** (long-press menu on defensive players):
+-   **Assignment Column**: Blitz, Man, Zone options
+-   **Style Column**: Linear, Area styles (appears when Assignment is hovered/selected)
+-   **Blitz**: Creates red solid line (#ef4444) from defender to QB position (auto-targeted)
+-   **Man Coverage**: Creates gray dotted line (#9ca3af, strokeDasharray: "5,5") to nearest unclaimed offensive player (auto-targeted with dynamic linking)
+-   **Zone**: Placeholder - shows "Zone shapes coming soon!" toast
+-   **Dynamic Linking**: Man coverage routes automatically update their endpoints when the target offensive player is moved (uses useEffect watching players and routes state)
 
 **Defense Color-Label Mapping** (consistent across manual add and presets):
 -   Pink (#FFB6C1) → "DL" (Defensive Line)
