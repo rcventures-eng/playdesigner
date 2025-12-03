@@ -1141,11 +1141,32 @@ export default function PlayDesigner() {
     if (isDragging && selectedPlayer && tool === "select") {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (rect) {
-        const newX = e.clientX - rect.left - dragOffset.x;
-        const newY = e.clientY - rect.top - dragOffset.y;
+        const newX = Math.max(bounds.minX, Math.min(bounds.maxX, e.clientX - rect.left - dragOffset.x));
+        const newY = Math.max(bounds.minY, Math.min(bounds.maxY, e.clientY - rect.top - dragOffset.y));
         setPlayers(players.map(p =>
-          p.id === selectedPlayer ? { ...p, x: Math.max(bounds.minX, Math.min(bounds.maxX, newX)), y: Math.max(bounds.minY, Math.min(bounds.maxY, newY)) } : p
+          p.id === selectedPlayer ? { ...p, x: newX, y: newY } : p
         ));
+        
+        // Dynamic linking: Update Man coverage routes when target player moves
+        setRoutes(prevRoutes => prevRoutes.map(r => {
+          // Update Man coverage endpoint when target player is moved
+          if (r.type === "assignment" && r.defensiveAction === "man" && r.targetPlayerId === selectedPlayer) {
+            const updatedPoints = [...r.points];
+            if (updatedPoints.length >= 2) {
+              updatedPoints[updatedPoints.length - 1] = { x: newX, y: newY };
+            }
+            return { ...r, points: updatedPoints };
+          }
+          // Update route start point when the defensive player is moved
+          if (r.type === "assignment" && r.playerId === selectedPlayer) {
+            const updatedPoints = [...r.points];
+            if (updatedPoints.length >= 1) {
+              updatedPoints[0] = { x: newX, y: newY };
+            }
+            return { ...r, points: updatedPoints };
+          }
+          return r;
+        }));
       }
     }
     
