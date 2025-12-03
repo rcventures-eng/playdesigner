@@ -450,53 +450,55 @@ export default function PlayDesigner() {
   }, [metadata.formation, playType]);
 
   // Dynamic linking: Keep Man coverage routes synced with target player positions
-  // This effect runs whenever players or routes change and updates route endpoints accordingly
+  // This effect runs whenever players change and updates route endpoints accordingly
+  // We use functional update to access current routes without causing infinite loops
   useEffect(() => {
-    // Find all Man coverage routes with target players
-    const manRoutes = routes.filter(r => 
-      r.type === "assignment" && r.defensiveAction === "man" && r.targetPlayerId
-    );
-    
-    if (manRoutes.length === 0) return;
-    
-    let hasUpdates = false;
-    const updatedRoutes = routes.map(route => {
-      if (route.type === "assignment" && route.defensiveAction === "man" && route.targetPlayerId) {
-        // Find the target player's current position
-        const targetPlayer = players.find(p => p.id === route.targetPlayerId);
-        // Find the defender player (route owner)
-        const defender = players.find(p => p.id === route.playerId);
-        
-        if (targetPlayer && defender && route.points.length >= 2) {
-          const currentEndpoint = route.points[route.points.length - 1];
-          const currentStart = route.points[0];
+    setRoutes(currentRoutes => {
+      // Find all Man coverage routes with target players
+      const manRoutes = currentRoutes.filter(r => 
+        r.type === "assignment" && r.defensiveAction === "man" && r.targetPlayerId
+      );
+      
+      if (manRoutes.length === 0) return currentRoutes;
+      
+      let hasUpdates = false;
+      const updatedRoutes = currentRoutes.map(route => {
+        if (route.type === "assignment" && route.defensiveAction === "man" && route.targetPlayerId) {
+          // Find the target player's current position
+          const targetPlayer = players.find(p => p.id === route.targetPlayerId);
+          // Find the defender player (route owner)
+          const defender = players.find(p => p.id === route.playerId);
           
-          // Check if endpoint or start needs updating
-          const endpointNeedsUpdate = Math.abs(currentEndpoint.x - targetPlayer.x) > 0.5 || 
-                                      Math.abs(currentEndpoint.y - targetPlayer.y) > 0.5;
-          const startNeedsUpdate = Math.abs(currentStart.x - defender.x) > 0.5 || 
-                                   Math.abs(currentStart.y - defender.y) > 0.5;
-          
-          if (endpointNeedsUpdate || startNeedsUpdate) {
-            hasUpdates = true;
-            const updatedPoints = [...route.points];
-            if (startNeedsUpdate) {
-              updatedPoints[0] = { x: defender.x, y: defender.y };
+          if (targetPlayer && defender && route.points.length >= 2) {
+            const currentEndpoint = route.points[route.points.length - 1];
+            const currentStart = route.points[0];
+            
+            // Check if endpoint or start needs updating
+            const endpointNeedsUpdate = Math.abs(currentEndpoint.x - targetPlayer.x) > 0.5 || 
+                                        Math.abs(currentEndpoint.y - targetPlayer.y) > 0.5;
+            const startNeedsUpdate = Math.abs(currentStart.x - defender.x) > 0.5 || 
+                                     Math.abs(currentStart.y - defender.y) > 0.5;
+            
+            if (endpointNeedsUpdate || startNeedsUpdate) {
+              hasUpdates = true;
+              const updatedPoints = [...route.points];
+              if (startNeedsUpdate) {
+                updatedPoints[0] = { x: defender.x, y: defender.y };
+              }
+              if (endpointNeedsUpdate) {
+                updatedPoints[updatedPoints.length - 1] = { x: targetPlayer.x, y: targetPlayer.y };
+              }
+              return { ...route, points: updatedPoints };
             }
-            if (endpointNeedsUpdate) {
-              updatedPoints[updatedPoints.length - 1] = { x: targetPlayer.x, y: targetPlayer.y };
-            }
-            return { ...route, points: updatedPoints };
           }
         }
-      }
-      return route;
+        return route;
+      });
+      
+      // Only return new array if there were actual updates
+      return hasUpdates ? updatedRoutes : currentRoutes;
     });
-    
-    if (hasUpdates) {
-      setRoutes(updatedRoutes);
-    }
-  }, [players, routes]);
+  }, [players]);
 
   const addPlayer = (color: string) => {
     saveToHistory();
