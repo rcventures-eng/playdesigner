@@ -50,11 +50,14 @@ interface Route {
   id: string;
   playerId: string;
   points: { x: number; y: number }[];
-  type: "pass" | "run" | "blocking";
-  style: "straight" | "curved";
+  type: "pass" | "run" | "blocking" | "assignment";
+  style: "straight" | "curved" | "linear" | "area";
   priority?: number;
   isMotion?: boolean;
   color?: string;
+  defensiveAction?: "blitz" | "man" | "zone";
+  targetPlayerId?: string;
+  shapeType?: "circle" | "oval" | "square" | "rectangle";
 }
 
 interface Shape {
