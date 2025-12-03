@@ -137,9 +137,9 @@ export default function PlayDesigner() {
   const [tool, setTool] = useState<"select" | "player" | "route" | "shape" | "label">("select");
   const [shapeType, setShapeType] = useState<"circle" | "oval" | "square" | "rectangle">("circle");
   const [shapeColor, setShapeColor] = useState("#ec4899");
-  const [routeType, setRouteType] = useState<"pass" | "run" | "blocking">("pass");
+  const [routeType, setRouteType] = useState<"pass" | "run" | "blocking" | "assignment">("pass");
   const [makePrimary, setMakePrimary] = useState(false);
-  const [routeStyle, setRouteStyle] = useState<"straight" | "curved">("straight");
+  const [routeStyle, setRouteStyle] = useState<"straight" | "curved" | "linear" | "area">("straight");
   const [isMotion, setIsMotion] = useState(false);
   const [isPlayAction, setIsPlayAction] = useState(false);
   const [showBlocking, setShowBlocking] = useState(true);
@@ -172,8 +172,8 @@ export default function PlayDesigner() {
   const [longPressPlayerRef, setLongPressPlayerRef] = useState<string | null>(null);
   const [isLongPressHolding, setIsLongPressHolding] = useState(false);
   // Hover state controls column VISIBILITY (not styling - that's CSS)
-  const [hoveredRouteType, setHoveredRouteType] = useState<"pass" | "run" | "blocking" | null>(null);
-  const [hoveredRouteStyle, setHoveredRouteStyle] = useState<"straight" | "curved" | null>(null);
+  const [hoveredRouteType, setHoveredRouteType] = useState<"pass" | "run" | "blocking" | "assignment" | null>(null);
+  const [hoveredRouteStyle, setHoveredRouteStyle] = useState<"straight" | "curved" | "linear" | "area" | null>(null);
   // Only checkbox state remains in React (user clicks)
   const [menuMotion, setMenuMotion] = useState(false);
   const [menuMakePrimary, setMenuMakePrimary] = useState(false);
@@ -820,13 +820,89 @@ export default function PlayDesigner() {
     return result;
   };
 
+  // Helper: Find QB position (for Blitz auto-targeting)
+  const getQBPosition = (): { x: number; y: number } => {
+    const qb = players.find(p => p.label === "QB");
+    if (qb) return { x: qb.x, y: qb.y };
+    // Default QB position (center, behind LOS)
+    return { x: centerX, y: FIELD.LOS_Y + 30 };
+  };
+
+  // Helper: Find nearest unclaimed offensive player (for Man coverage)
+  const getNearestUnclaimedOffensivePlayer = (defenderPos: { x: number; y: number }): Player | null => {
+    const offensivePlayers = players.filter(p => p.side === "offense" || !p.side);
+    // Find players already claimed by Man coverage
+    const claimedPlayerIds = routes
+      .filter(r => r.type === "assignment" && r.defensiveAction === "man" && r.targetPlayerId)
+      .map(r => r.targetPlayerId);
+    
+    const unclaimedPlayers = offensivePlayers.filter(p => !claimedPlayerIds.includes(p.id));
+    if (unclaimedPlayers.length === 0) return offensivePlayers[0] || null;
+    
+    // Find nearest unclaimed player
+    let nearest = unclaimedPlayers[0];
+    let minDist = Infinity;
+    for (const p of unclaimedPlayers) {
+      const dist = Math.sqrt(Math.pow(p.x - defenderPos.x, 2) + Math.pow(p.y - defenderPos.y, 2));
+      if (dist < minDist) {
+        minDist = dist;
+        nearest = p;
+      }
+    }
+    return nearest;
+  };
+
   const handlePlayerPointerDown = (e: React.PointerEvent, playerId: string) => {
     // Check if there's a pending route selection waiting for confirmation
     if (pendingRouteSelection && pendingRouteSelection.playerId === playerId) {
       e.stopPropagation();
       const player = players.find(p => p.id === playerId);
       if (player) {
-        // Start the route with the stored selection
+        // Handle defensive assignments (Blitz/Man)
+        if (pendingRouteSelection.type === "assignment" && pendingRouteSelection.defensiveAction) {
+          const action = pendingRouteSelection.defensiveAction;
+          
+          if (action === "blitz") {
+            // Blitz: Auto-draw line to QB position
+            const qbPos = getQBPosition();
+            const newRoute: Route = {
+              id: `route-${Date.now()}`,
+              playerId: playerId,
+              points: [{ x: player.x, y: player.y }, qbPos],
+              type: "assignment",
+              style: pendingRouteSelection.style,
+              defensiveAction: "blitz",
+              color: "#ef4444",
+            };
+            saveToHistory();
+            setRoutes([...routes, newRoute]);
+            setPendingRouteSelection(null);
+            return;
+          }
+          
+          if (action === "man") {
+            // Man: Auto-snap to nearest unclaimed offensive player
+            const targetPlayer = getNearestUnclaimedOffensivePlayer({ x: player.x, y: player.y });
+            if (targetPlayer) {
+              const newRoute: Route = {
+                id: `route-${Date.now()}`,
+                playerId: playerId,
+                points: [{ x: player.x, y: player.y }, { x: targetPlayer.x, y: targetPlayer.y }],
+                type: "assignment",
+                style: pendingRouteSelection.style,
+                defensiveAction: "man",
+                targetPlayerId: targetPlayer.id,
+                color: "#9ca3af",
+              };
+              saveToHistory();
+              setRoutes([...routes, newRoute]);
+              setPendingRouteSelection(null);
+              return;
+            }
+          }
+        }
+        
+        // Standard offensive route handling
         setRouteType(pendingRouteSelection.type);
         setRouteStyle(pendingRouteSelection.style);
         setIsMotion(pendingRouteSelection.motion);
@@ -1463,9 +1539,13 @@ export default function PlayDesigner() {
     }
   };
 
-  const getRouteColor = (route: Route | { type: string; color?: string }) => {
+  const getRouteColor = (route: Route | { type: string; color?: string; defensiveAction?: string }) => {
     if (route.type === "blocking") return "#ffffff";
     if (route.type === "run") return "#000000";
+    if (route.type === "assignment") {
+      if ((route as Route).defensiveAction === "blitz") return "#ef4444"; // Red for Blitz
+      if ((route as Route).defensiveAction === "man") return "#9ca3af"; // Gray for Man Coverage
+    }
     return route.color || "#000000";
   };
 
@@ -2471,6 +2551,7 @@ export default function PlayDesigner() {
                         stroke={getRouteColor(route)}
                         strokeWidth="3.6"
                         fill="none"
+                        strokeDasharray={route.type === "assignment" && route.defensiveAction === "man" ? "5,5" : undefined}
                         markerEnd={(() => {
                           if (route.type === "blocking") {
                             return "url(#arrowhead-blocking)";
