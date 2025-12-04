@@ -25,13 +25,20 @@ const FIELD = {
   get FIELD_WIDTH() { return this.WIDTH - this.SIDE_PADDING * 2; },
   get FIELD_HEIGHT() { return this.HEIGHT - this.HEADER_HEIGHT; },
   get LOS_Y() { return this.HEIGHT - this.BOTTOM_PADDING - 8 * this.PIXELS_PER_YARD; },
-  get PLAYER_BOUNDS() {
+  getPlayerBounds(activeTab: "offense" | "defense" | "special") {
+    const isDefense = activeTab === "defense";
     return {
       minX: this.FIELD_LEFT + 12,
       maxX: this.FIELD_RIGHT - 12,
-      minY: this.FIELD_TOP + 12,
-      maxY: this.HEIGHT - this.BOTTOM_PADDING - 12,
+      minY: isDefense ? 12 : this.FIELD_TOP + 12,
+      maxY: isDefense ? this.HEIGHT - this.HEADER_HEIGHT - 12 : this.HEIGHT - this.BOTTOM_PADDING - 12,
     };
+  },
+  getFieldStartY(activeTab: "offense" | "defense" | "special") {
+    return activeTab === "defense" ? 0 : this.HEADER_HEIGHT;
+  },
+  getHeaderStartY(activeTab: "offense" | "defense" | "special") {
+    return activeTab === "defense" ? (this.HEIGHT - this.HEADER_HEIGHT) : 0;
   },
   get LEFT_HASH_X() { return this.FIELD_LEFT + 160; },
   get RIGHT_HASH_X() { return this.FIELD_RIGHT - 160; },
@@ -1199,7 +1206,7 @@ export default function PlayDesigner() {
       }
     }
     
-    const bounds = FIELD.PLAYER_BOUNDS;
+    const bounds = FIELD.getPlayerBounds(playType);
     // Use ref for immediate access (state may not be updated yet in same event)
     if ((isDragging || isDraggingRef.current) && selectedPlayer && tool === "select") {
       const rect = canvasRef.current?.getBoundingClientRect();
@@ -1316,9 +1323,10 @@ export default function PlayDesigner() {
           newHeight = MIN_SIZE;
         }
         
-        // Keep position within field bounds
+        // Keep position within field bounds (use dynamic bounds for Defense tab)
+        const shapeBounds = FIELD.getPlayerBounds(playType);
         newX = Math.max(FIELD.FIELD_LEFT, newX);
-        newY = Math.max(FIELD.FIELD_TOP, newY);
+        newY = Math.max(shapeBounds.minY - 12, newY);
         
         // Clamp width and height so shape stays within field
         newWidth = Math.min(newWidth, maxRight - newX);
@@ -1347,9 +1355,10 @@ export default function PlayDesigner() {
           
           const newX = e.clientX - rect.left - shapeDragOffset.x;
           const newY = e.clientY - rect.top - shapeDragOffset.y;
-          // Keep shape within field bounds
+          // Keep shape within field bounds (use dynamic bounds for Defense tab)
+          const shapeBounds = FIELD.getPlayerBounds(playType);
           const boundedX = Math.max(FIELD.FIELD_LEFT, Math.min(FIELD.FIELD_RIGHT - shape.width, newX));
-          const boundedY = Math.max(FIELD.FIELD_TOP, Math.min(FIELD.HEIGHT - FIELD.BOTTOM_PADDING - shape.height, newY));
+          const boundedY = Math.max(shapeBounds.minY - 12, Math.min(shapeBounds.maxY + 12 - shape.height, newY));
           
           return prev.map(s =>
             s.id === selectedShape ? { ...s, x: boundedX, y: boundedY } : s
@@ -2600,10 +2609,15 @@ export default function PlayDesigner() {
               onPointerCancel={cancelLongPress}
               data-testid="canvas-field"
             >
-              {/* White header for metadata */}
+              {/* White header for metadata - position flips based on tab */}
               <div 
-                className="absolute top-0 left-0 right-0 flex items-center justify-center"
-                style={{ height: FIELD.HEADER_HEIGHT, backgroundColor: "#ffffff", zIndex: 25 }}
+                className="absolute left-0 right-0 flex items-center justify-center"
+                style={{ 
+                  top: FIELD.getHeaderStartY(playType), 
+                  height: FIELD.HEADER_HEIGHT, 
+                  backgroundColor: "#ffffff", 
+                  zIndex: 25 
+                }}
               >
                 {(metadata.name || metadata.formation || metadata.concept || metadata.defenseConcept || metadata.personnel) && (
                   <div className="flex flex-wrap items-center justify-center gap-2 px-4">
@@ -2656,84 +2670,94 @@ export default function PlayDesigner() {
                 )}
               </div>
               
-              {/* Green field area */}
+              {/* Green field area - position flips based on tab */}
               <div 
                 className="absolute bg-gradient-to-b from-green-600 to-green-700"
                 style={{ 
-                  top: FIELD.HEADER_HEIGHT, 
+                  top: FIELD.getFieldStartY(playType), 
                   left: 0, 
                   right: 0, 
-                  bottom: 0,
+                  height: FIELD.HEIGHT - FIELD.HEADER_HEIGHT,
                   zIndex: 0 
                 }}
               />
               
               <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }}>
-                {/* 5-yard horizontal lines (thicker) - only in field area */}
-                {Array.from({ length: Math.floor(FIELD.FIELD_HEIGHT / 60) + 1 }, (_, i) => {
-                  const y = FIELD.FIELD_TOP + i * 60;
-                  if (y > FIELD.HEIGHT - FIELD.BOTTOM_PADDING) return null;
+                {/* Dynamic field grid - uses fieldStartY based on tab */}
+                {(() => {
+                  const fieldStartY = FIELD.getFieldStartY(playType);
+                  const fieldEndY = fieldStartY + FIELD.FIELD_HEIGHT;
+                  
                   return (
-                    <line
-                      key={`yard-${i}`}
-                      x1={FIELD.FIELD_LEFT}
-                      y1={y}
-                      x2={FIELD.FIELD_RIGHT}
-                      y2={y}
-                      stroke="white"
-                      strokeWidth="4"
-                      opacity="0.3"
-                    />
+                    <>
+                      {/* 5-yard horizontal lines (thicker) */}
+                      {Array.from({ length: Math.floor(FIELD.FIELD_HEIGHT / 60) + 1 }, (_, i) => {
+                        const y = fieldStartY + i * 60;
+                        if (y > fieldEndY - FIELD.BOTTOM_PADDING) return null;
+                        return (
+                          <line
+                            key={`yard-${i}`}
+                            x1={FIELD.FIELD_LEFT}
+                            y1={y}
+                            x2={FIELD.FIELD_RIGHT}
+                            y2={y}
+                            stroke="white"
+                            strokeWidth="4"
+                            opacity="0.3"
+                          />
+                        );
+                      })}
+                      
+                      {/* 1-yard tick marks on LEFT edge */}
+                      {Array.from({ length: Math.floor(FIELD.FIELD_HEIGHT / 12) + 1 }, (_, i) => {
+                        const y = fieldStartY + i * 12;
+                        if (y > fieldEndY - FIELD.BOTTOM_PADDING) return null;
+                        return (
+                          <line
+                            key={`left-tick-${i}`}
+                            x1={FIELD.FIELD_LEFT}
+                            y1={y}
+                            x2={FIELD.FIELD_LEFT + 12}
+                            y2={y}
+                            stroke="white"
+                            strokeWidth="2"
+                            opacity="0.8"
+                          />
+                        );
+                      })}
+                      
+                      {/* 1-yard tick marks on RIGHT edge */}
+                      {Array.from({ length: Math.floor(FIELD.FIELD_HEIGHT / 12) + 1 }, (_, i) => {
+                        const y = fieldStartY + i * 12;
+                        if (y > fieldEndY - FIELD.BOTTOM_PADDING) return null;
+                        return (
+                          <line
+                            key={`right-tick-${i}`}
+                            x1={FIELD.FIELD_RIGHT - 12}
+                            y1={y}
+                            x2={FIELD.FIELD_RIGHT}
+                            y2={y}
+                            stroke="white"
+                            strokeWidth="2"
+                            opacity="0.8"
+                          />
+                        );
+                      })}
+                      
+                      {/* Hash marks in middle (NCAA style) */}
+                      {Array.from({ length: Math.floor(FIELD.FIELD_HEIGHT / 12) + 1 }, (_, i) => {
+                        const y = fieldStartY + i * 12;
+                        if (y > fieldEndY - FIELD.BOTTOM_PADDING) return null;
+                        return (
+                          <g key={`hash-${i}`}>
+                            <line x1={FIELD.LEFT_HASH_X - 6} y1={y} x2={FIELD.LEFT_HASH_X + 6} y2={y} stroke="white" strokeWidth="2" opacity="0.6" />
+                            <line x1={FIELD.RIGHT_HASH_X - 6} y1={y} x2={FIELD.RIGHT_HASH_X + 6} y2={y} stroke="white" strokeWidth="2" opacity="0.6" />
+                          </g>
+                        );
+                      })}
+                    </>
                   );
-                })}
-                
-                {/* 1-yard tick marks on LEFT edge */}
-                {Array.from({ length: Math.floor(FIELD.FIELD_HEIGHT / 12) + 1 }, (_, i) => {
-                  const y = FIELD.FIELD_TOP + i * 12;
-                  if (y > FIELD.HEIGHT - FIELD.BOTTOM_PADDING) return null;
-                  return (
-                    <line
-                      key={`left-tick-${i}`}
-                      x1={FIELD.FIELD_LEFT}
-                      y1={y}
-                      x2={FIELD.FIELD_LEFT + 12}
-                      y2={y}
-                      stroke="white"
-                      strokeWidth="2"
-                      opacity="0.8"
-                    />
-                  );
-                })}
-                
-                {/* 1-yard tick marks on RIGHT edge */}
-                {Array.from({ length: Math.floor(FIELD.FIELD_HEIGHT / 12) + 1 }, (_, i) => {
-                  const y = FIELD.FIELD_TOP + i * 12;
-                  if (y > FIELD.HEIGHT - FIELD.BOTTOM_PADDING) return null;
-                  return (
-                    <line
-                      key={`right-tick-${i}`}
-                      x1={FIELD.FIELD_RIGHT - 12}
-                      y1={y}
-                      x2={FIELD.FIELD_RIGHT}
-                      y2={y}
-                      stroke="white"
-                      strokeWidth="2"
-                      opacity="0.8"
-                    />
-                  );
-                })}
-                
-                {/* Hash marks in middle (NCAA style) */}
-                {Array.from({ length: Math.floor(FIELD.FIELD_HEIGHT / 12) + 1 }, (_, i) => {
-                  const y = FIELD.FIELD_TOP + i * 12;
-                  if (y > FIELD.HEIGHT - FIELD.BOTTOM_PADDING) return null;
-                  return (
-                    <g key={`hash-${i}`}>
-                      <line x1={FIELD.LEFT_HASH_X - 6} y1={y} x2={FIELD.LEFT_HASH_X + 6} y2={y} stroke="white" strokeWidth="2" opacity="0.6" />
-                      <line x1={FIELD.RIGHT_HASH_X - 6} y1={y} x2={FIELD.RIGHT_HASH_X + 6} y2={y} stroke="white" strokeWidth="2" opacity="0.6" />
-                    </g>
-                  );
-                })}
+                })()}
                 
                 {/* Line of scrimmage */}
                 <line x1={FIELD.FIELD_LEFT} y1={FIELD.LOS_Y} x2={FIELD.FIELD_RIGHT} y2={FIELD.LOS_Y} stroke="white" strokeWidth="6" />
