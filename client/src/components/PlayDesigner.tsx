@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Download, Copy, Plus, Trash2, Circle as CircleIcon, MoveHorizontal, PenTool, Square as SquareIcon, Type, Hexagon, RotateCcw, Flag } from "lucide-react";
+import { Download, Copy, Plus, Trash2, Circle as CircleIcon, MoveHorizontal, PenTool, Square as SquareIcon, Type, Hexagon, RotateCcw, Flag, Camera, X, Loader2 } from "lucide-react";
 import { toPng } from "html-to-image";
 import { useToast } from "@/hooks/use-toast";
 import underConstructionImage from "@assets/generated_images/under_construction_warning_banner.png";
@@ -153,6 +153,9 @@ export default function PlayDesigner() {
   const [showBlocking, setShowBlocking] = useState(true);
   const [includeOffense, setIncludeOffense] = useState(true);
   const [specialPrompt, setSpecialPrompt] = useState("");
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [metadata, setMetadata] = useState<PlayMetadata>({
     name: "",
     formation: "",
@@ -1762,6 +1765,37 @@ export default function PlayDesigner() {
     closeLongPressMenu();
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Clear any existing preview before starting new upload
+    if (uploadedImage) {
+      URL.revokeObjectURL(uploadedImage);
+      setUploadedImage(null);
+    }
+    
+    // Start fake upload
+    setIsUploading(true);
+    
+    // Simulate 1.5s network request
+    setTimeout(() => {
+      const previewUrl = URL.createObjectURL(file);
+      setUploadedImage(previewUrl);
+      setIsUploading(false);
+    }, 1500);
+    
+    // Reset file input so same file can be selected again
+    e.target.value = "";
+  };
+
+  const dismissUploadedImage = () => {
+    if (uploadedImage) {
+      URL.revokeObjectURL(uploadedImage);
+      setUploadedImage(null);
+    }
+  };
+
   const handleBackgroundClick = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
       setSelectedPlayer(null);
@@ -2748,23 +2782,68 @@ export default function PlayDesigner() {
                 </h2>
                 
                 {/* Glassmorphic Input Container - Hero Size */}
-                <div className="w-full bg-slate-900/80 backdrop-blur-sm border border-white/20 rounded-xl p-3 flex items-start shadow-xl gap-2">
+                <div className="w-full bg-slate-900/80 backdrop-blur-sm border border-white/20 rounded-xl p-3 flex flex-col shadow-xl gap-2">
                   <textarea
                     placeholder="Explain the play..."
                     value={specialPrompt}
                     onChange={(e) => setSpecialPrompt(e.target.value)}
-                    className="flex-1 h-36 bg-transparent text-white placeholder-white/50 outline-none p-4 resize-none"
+                    className="flex-1 h-28 bg-transparent text-white placeholder-white/50 outline-none p-4 resize-none"
                     data-testid="ai-input"
                   />
-                  <button
-                    className="bg-orange-500 hover:bg-orange-600 text-white p-2 rounded-lg transition-colors self-end"
-                    data-testid="ai-submit-button"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                  </button>
+                  {/* Bottom row with Upload (left) and Submit (right) */}
+                  <div className="flex justify-between items-center">
+                    {/* Hidden file input */}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      ref={fileInputRef}
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      data-testid="file-input-upload"
+                    />
+                    {/* Upload button */}
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploading}
+                      className="bg-orange-500 hover:bg-orange-600 disabled:bg-orange-400 text-white p-2 rounded-lg transition-colors flex items-center justify-center"
+                      data-testid="button-upload-play"
+                    >
+                      {isUploading ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : (
+                        <Camera className="h-5 w-5" />
+                      )}
+                    </button>
+                    {/* Submit button */}
+                    <button
+                      className="bg-orange-500 hover:bg-orange-600 text-white p-2 rounded-lg transition-colors"
+                      data-testid="ai-submit-button"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
+                
+                {/* Thumbnail Preview */}
+                {uploadedImage && (
+                  <div className="relative w-16 h-16" data-testid="upload-thumbnail-container">
+                    <img
+                      src={uploadedImage}
+                      alt="Uploaded play"
+                      className="w-16 h-16 rounded-lg object-cover border border-white/20"
+                      data-testid="upload-thumbnail"
+                    />
+                    <button
+                      onClick={dismissUploadedImage}
+                      className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 shadow-lg"
+                      data-testid="button-dismiss-thumbnail"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
                 
                 {/* Suggestion Chips */}
                 <div className="flex flex-wrap justify-center gap-2">
