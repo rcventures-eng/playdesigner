@@ -606,7 +606,7 @@ export default function PlayDesigner() {
     setSelectedShape(null);
     setSelectedFootball(null);
     setSelectedElements({ players: [], routes: [] });
-    setIncludeOffense(false);
+    // Note: Don't reset includeOffense here - preserve checkbox state across clear
   };
 
   const generate5v5Formation = (): Player[] => {
