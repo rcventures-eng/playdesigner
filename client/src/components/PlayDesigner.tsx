@@ -191,6 +191,7 @@ export default function PlayDesigner() {
   } | null>(null);
   // Defensive assignment menu state
   const [hoveredDefensiveAction, setHoveredDefensiveAction] = useState<"blitz" | "man" | "zone" | null>(null);
+  const [hoveredZoneShape, setHoveredZoneShape] = useState<"circle" | "oval" | "rectangle" | null>(null);
   
   const canvasRef = useRef<HTMLDivElement>(null);
   const currentRoutePointsRef = useRef<{ x: number; y: number }[]>([]);
@@ -1071,6 +1072,7 @@ export default function PlayDesigner() {
     setHoveredRouteType(null);
     setHoveredRouteStyle(null);
     setHoveredDefensiveAction(null);
+    setHoveredZoneShape(null);
     setMenuMotion(false);
     setMenuMakePrimary(false);
     setMenuConfirming(false);
@@ -3041,26 +3043,25 @@ export default function PlayDesigner() {
                           key={action}
                           className="lp-menu-item px-3 py-2 text-sm cursor-pointer flex items-center justify-between text-gray-200"
                           data-testid={`menu-defensive-action-${action}`}
-                          onMouseEnter={() => !menuConfirming && setHoveredDefensiveAction(action)}
-                          onClick={() => {
-                            if (action === "zone") {
-                              toast({
-                                title: "Zone Coverage",
-                                description: "Zone shapes coming soon!",
-                              });
-                              closeLongPressMenu();
+                          onMouseEnter={() => {
+                            if (!menuConfirming) {
+                              setHoveredDefensiveAction(action);
+                              // Auto-switch to "area" when Zone is hovered (Zone cannot be Linear)
+                              if (action === "zone") {
+                                setHoveredRouteStyle("area");
+                              }
                             }
                           }}
                           data-active={hoveredDefensiveAction === action}
                         >
                           <span className="capitalize font-medium">{action === "man" ? "Man" : action === "blitz" ? "Blitz" : "Zone"}</span>
-                          {action !== "zone" && <span className="text-xs opacity-60">▶</span>}
+                          <span className="text-xs opacity-60">▶</span>
                         </div>
                       ))}
                     </div>
                     
-                    {/* Level 2: Style for Blitz/Man (Linear/Area) */}
-                    {hoveredDefensiveAction && hoveredDefensiveAction !== "zone" && (
+                    {/* Level 2: Style for Blitz/Man/Zone */}
+                    {hoveredDefensiveAction && (
                       <div 
                         className="flex flex-col border-l border-gray-600" 
                         style={{ 
@@ -3072,7 +3073,8 @@ export default function PlayDesigner() {
                         <div className="px-3 py-1.5 bg-gray-700/50 border-b border-gray-600">
                           <span className="text-white text-xs font-semibold">Style</span>
                         </div>
-                        {(["linear", "area"] as const).map((style) => (
+                        {/* Zone only shows Area (filter out Linear), Blitz/Man show both */}
+                        {(hoveredDefensiveAction === "zone" ? ["area"] as const : ["linear", "area"] as const).map((style) => (
                           <div
                             key={style}
                             className="lp-menu-item px-3 py-2 text-sm cursor-pointer flex items-center justify-between text-gray-200"
@@ -3120,10 +3122,74 @@ export default function PlayDesigner() {
                                   closeLongPressMenu();
                                 }
                               }
+                              // Zone + Area will show Shape column, so don't close menu here
                             }}
                             data-active={hoveredRouteStyle === style}
                           >
                             <span className="capitalize font-medium">{style}</span>
+                            {/* Zone + Area shows Shape column, so add arrow */}
+                            {hoveredDefensiveAction === "zone" && style === "area" && (
+                              <span className="text-xs opacity-60">▶</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* Level 3: Shape for Zone + Area */}
+                    {hoveredDefensiveAction === "zone" && hoveredRouteStyle === "area" && (
+                      <div 
+                        className="flex flex-col border-l border-gray-600" 
+                        style={{ 
+                          width: 110, 
+                          flexShrink: 0,
+                          animation: "columnSlideIn 100ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards",
+                        }}
+                      >
+                        <div className="px-3 py-1.5 bg-gray-700/50 border-b border-gray-600">
+                          <span className="text-white text-xs font-semibold">Shape</span>
+                        </div>
+                        {(["circle", "oval", "rectangle"] as const).map((shape) => (
+                          <div
+                            key={shape}
+                            className="lp-menu-item px-3 py-2 text-sm cursor-pointer flex items-center justify-between text-gray-200"
+                            data-testid={`menu-zone-shape-${shape}`}
+                            onMouseEnter={() => {
+                              if (!menuConfirming) {
+                                setHoveredZoneShape(shape);
+                              }
+                            }}
+                            onClick={() => {
+                              if (!longPressPlayerId) return;
+                              const player = players.find(p => p.id === longPressPlayerId);
+                              if (!player) return;
+                              
+                              // Create tethered zone shape at player position
+                              const defaultSizes: Record<string, { width: number; height: number }> = {
+                                circle: { width: 50, height: 50 },
+                                oval: { width: 70, height: 45 },
+                                rectangle: { width: 60, height: 45 },
+                              };
+                              const size = defaultSizes[shape];
+                              
+                              const newShape: Shape = {
+                                id: `shape-${Date.now()}`,
+                                playerId: longPressPlayerId,
+                                type: shape,
+                                x: player.x - size.width / 2,
+                                y: player.y - size.height / 2,
+                                width: size.width,
+                                height: size.height,
+                                color: player.color,
+                              };
+                              
+                              saveToHistory();
+                              setShapes(prev => [...prev, newShape]);
+                              closeLongPressMenu();
+                            }}
+                            data-active={hoveredZoneShape === shape}
+                          >
+                            <span className="capitalize font-medium">{shape}</span>
                           </div>
                         ))}
                       </div>
