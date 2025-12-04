@@ -42,8 +42,18 @@ Players have a `side` property (`"offense"` or `"defense"`) that determines thei
 -   **Style Column**: Linear, Area styles (appears when Assignment is hovered/selected)
 -   **Blitz**: Creates red solid line (#ef4444) from defender to QB position (auto-targeted)
 -   **Man Coverage**: Creates gray dotted line (#9ca3af, strokeDasharray: "5,5") to nearest unclaimed offensive player (auto-targeted with dynamic linking)
--   **Zone**: Placeholder - shows "Zone shapes coming soon!" toast
+-   **Zone Coverage**: Creates tethered zone shapes via Zone → Area → Shape selection (Circle, Oval, Rectangle)
 -   **Dynamic Linking**: Man coverage routes automatically update their endpoints when the target offensive player is moved (uses useEffect watching players and routes state)
+
+**Zone Coverage Tethered Shape System**:
+-   **Shape Types**: Circle (50x50), Oval (70x45), Rectangle (60x45) - spawned at player position
+-   **Tethering**: Shapes are connected to their player via a "stem" line (solid line in player's color)
+-   **Stem Visibility**: Stem hides when player overlaps shape (distance threshold ~30px)
+-   **Independent Dragging**: Shapes can be dragged independently; stem updates dynamically
+-   **Resize Handles**: 4 corner handles (nw, ne, sw, se) appear when shape is selected
+-   **Resize Logic**: Min size 20px, shapes stay within field bounds
+-   **Z-Order**: Stems → Shapes → Routes → Players (shapes render behind players)
+-   **Shape State**: Each shape has playerId for tethering, type, x/y/width/height, and color (inherits from player)
 
 **Defense Color-Label Mapping** (consistent across manual add and presets):
 -   Pink (#FFB6C1) → "DL" (Defensive Line)
