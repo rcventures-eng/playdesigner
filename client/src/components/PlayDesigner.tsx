@@ -2805,13 +2805,13 @@ export default function PlayDesigner() {
                     <button
                       onClick={() => fileInputRef.current?.click()}
                       disabled={isUploading}
-                      className="border-2 border-white text-orange-500 hover:bg-white/10 disabled:opacity-50 px-3 py-2 rounded-lg transition-colors flex items-center justify-center gap-2 font-medium"
+                      className="border border-white text-orange-500 hover:bg-white/10 disabled:opacity-50 px-2 py-1 rounded text-xs transition-colors flex items-center justify-center"
                       data-testid="button-upload-play"
                     >
                       {isUploading ? (
-                        <Loader2 className="h-5 w-5 animate-spin" />
+                        <Loader2 className="h-3 w-3 animate-spin" />
                       ) : (
-                        <>Upload Play 📷</>
+                        <>Upload Play</>
                       )}
                     </button>
                     {/* Submit button */}
