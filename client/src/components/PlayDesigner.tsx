@@ -2728,63 +2728,68 @@ export default function PlayDesigner() {
         </div>
 
         <div 
-          className={`flex-1 h-full relative bg-muted/30 p-2 overflow-auto flex flex-col items-center ${playType === "special" ? "justify-start pt-4" : "justify-center"}`} 
+          className="flex-1 h-full relative bg-muted/30 p-2 overflow-auto flex flex-col items-center justify-center"
           onClick={handleBackgroundClick}
         >
-          {/* AI Play Creator Interface - Special Teams Tab */}
+          {/* AI Play Creator Interface - Special Teams Tab - Absolute Overlay */}
           {playType === "special" && (
             <div 
-              className="flex flex-col items-center gap-4 mb-8"
-              style={{ width: FIELD.WIDTH, maxWidth: FIELD.WIDTH }}
-              data-testid="special-ai-creator"
+              className="absolute top-0 left-0 right-0 z-10 flex justify-center mt-6 pointer-events-none"
+              data-testid="special-ai-overlay"
             >
-              {/* Headline */}
-              <h2 className="text-3xl font-bold text-white drop-shadow-md" data-testid="ai-headline">
-                🏈 What's the play call coach?
-              </h2>
-              
-              {/* Glassmorphic Input Container - Hero Size */}
-              <div className="w-full bg-slate-900/80 backdrop-blur-sm border border-white/20 rounded-xl p-3 flex items-start shadow-xl gap-2">
-                <textarea
-                  placeholder="Explain the play..."
-                  value={specialPrompt}
-                  onChange={(e) => setSpecialPrompt(e.target.value)}
-                  className="flex-1 h-36 bg-transparent text-white placeholder-white/50 outline-none p-4 resize-none"
-                  data-testid="ai-input"
-                />
-                <button
-                  className="bg-orange-500 hover:bg-orange-600 text-white p-2 rounded-lg transition-colors self-end"
-                  data-testid="ai-submit-button"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                </button>
-              </div>
-              
-              {/* Suggestion Chips */}
-              <div className="flex flex-wrap justify-center gap-2">
-                <button 
-                  className="bg-slate-800/80 text-white text-xs border border-white/10 hover:bg-slate-700 rounded-full px-3 py-1 transition-colors"
-                  onClick={() => setSpecialPrompt("Pass play to beat Cover 2")}
-                  data-testid="chip-cover2"
-                >
-                  Pass play to beat Cover 2
-                </button>
-                <button 
-                  className="bg-slate-800/80 text-white text-xs border border-white/10 hover:bg-slate-700 rounded-full px-3 py-1 transition-colors"
-                  onClick={() => setSpecialPrompt("Run play to beat man")}
-                  data-testid="chip-man"
-                >
-                  Run play to beat man
-                </button>
-                <button 
-                  className="bg-slate-800/80 text-white text-xs border border-white/10 hover:bg-slate-700 rounded-full px-3 py-1 transition-colors"
-                  onClick={() => setSpecialPrompt("Quick pass to get a first down first blitz on 3rd and medium")}
-                  data-testid="chip-blitz"
-                >
-                  Quick pass to get a first down first blitz on 3rd and medium
-                </button>
+              <div 
+                className="flex flex-col items-center gap-4 pointer-events-auto"
+                style={{ width: FIELD.WIDTH, maxWidth: FIELD.WIDTH }}
+                data-testid="special-ai-creator"
+              >
+                {/* Headline */}
+                <h2 className="text-3xl font-bold text-white drop-shadow-md" data-testid="ai-headline">
+                  🏈 What's the play call coach?
+                </h2>
+                
+                {/* Glassmorphic Input Container - Hero Size */}
+                <div className="w-full bg-slate-900/80 backdrop-blur-sm border border-white/20 rounded-xl p-3 flex items-start shadow-xl gap-2">
+                  <textarea
+                    placeholder="Explain the play..."
+                    value={specialPrompt}
+                    onChange={(e) => setSpecialPrompt(e.target.value)}
+                    className="flex-1 h-36 bg-transparent text-white placeholder-white/50 outline-none p-4 resize-none"
+                    data-testid="ai-input"
+                  />
+                  <button
+                    className="bg-orange-500 hover:bg-orange-600 text-white p-2 rounded-lg transition-colors self-end"
+                    data-testid="ai-submit-button"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
+                
+                {/* Suggestion Chips */}
+                <div className="flex flex-wrap justify-center gap-2">
+                  <button 
+                    className="bg-slate-800/80 text-white text-xs border border-white/10 hover:bg-slate-700 rounded-full px-3 py-1 transition-colors"
+                    onClick={() => setSpecialPrompt("Pass play to beat Cover 2")}
+                    data-testid="chip-cover2"
+                  >
+                    Pass play to beat Cover 2
+                  </button>
+                  <button 
+                    className="bg-slate-800/80 text-white text-xs border border-white/10 hover:bg-slate-700 rounded-full px-3 py-1 transition-colors"
+                    onClick={() => setSpecialPrompt("Run play to beat man")}
+                    data-testid="chip-man"
+                  >
+                    Run play to beat man
+                  </button>
+                  <button 
+                    className="bg-slate-800/80 text-white text-xs border border-white/10 hover:bg-slate-700 rounded-full px-3 py-1 transition-colors"
+                    onClick={() => setSpecialPrompt("Quick pass to get a first down first blitz on 3rd and medium")}
+                    data-testid="chip-blitz"
+                  >
+                    Quick pass to get a first down first blitz on 3rd and medium
+                  </button>
+                </div>
               </div>
             </div>
           )}
