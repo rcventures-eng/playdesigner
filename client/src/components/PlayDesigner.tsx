@@ -2784,10 +2784,10 @@ export default function PlayDesigner() {
                   </button>
                   <button 
                     className="bg-slate-800/80 text-white text-xs border border-white/10 hover:bg-slate-700 rounded-full px-3 py-1 transition-colors"
-                    onClick={() => setSpecialPrompt("Quick pass to get a first down first blitz on 3rd and medium")}
+                    onClick={() => setSpecialPrompt("Quick pass to get a first down vs blitz on 3rd and medium")}
                     data-testid="chip-blitz"
                   >
-                    Quick pass to get a first down first blitz on 3rd and medium
+                    Quick pass to get a first down vs blitz on 3rd and medium
                   </button>
                 </div>
               </div>
