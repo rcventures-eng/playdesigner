@@ -2790,8 +2790,8 @@ export default function PlayDesigner() {
                     className="flex-1 h-28 bg-transparent text-white placeholder-white/50 outline-none p-4 resize-none"
                     data-testid="ai-input"
                   />
-                  {/* Bottom row with Upload (left) and Submit (right) */}
-                  <div className="flex justify-between items-center">
+                  {/* Bottom row with Upload and Submit buttons on the right */}
+                  <div className="flex justify-end items-center gap-2">
                     {/* Hidden file input */}
                     <input
                       type="file"
