@@ -157,6 +157,8 @@ export default function PlayDesigner() {
   const [isDragging, setIsDragging] = useState(false);
   const isDraggingRef = useRef(false);  // Immediate sync ref for dragging state
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [isDraggingShape, setIsDraggingShape] = useState(false);
+  const [shapeDragOffset, setShapeDragOffset] = useState({ x: 0, y: 0 });
   const [isDrawingRoute, setIsDrawingRoute] = useState(false);
   const [currentRoutePoints, setCurrentRoutePoints] = useState<{ x: number; y: number }[]>([]);
   const [isDrawingShape, setIsDrawingShape] = useState(false);
@@ -1255,6 +1257,24 @@ export default function PlayDesigner() {
       }
     }
     
+    // Handle zone shape dragging
+    if (isDraggingShape && selectedShape && tool === "select") {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (rect) {
+        const shape = shapes.find(s => s.id === selectedShape);
+        if (shape) {
+          const newX = e.clientX - rect.left - shapeDragOffset.x;
+          const newY = e.clientY - rect.top - shapeDragOffset.y;
+          // Keep shape within field bounds
+          const boundedX = Math.max(FIELD.FIELD_LEFT, Math.min(FIELD.FIELD_RIGHT - shape.width, newX));
+          const boundedY = Math.max(FIELD.FIELD_TOP, Math.min(FIELD.HEIGHT - FIELD.BOTTOM_PADDING - shape.height, newY));
+          setShapes(shapes.map(s =>
+            s.id === selectedShape ? { ...s, x: boundedX, y: boundedY } : s
+          ));
+        }
+      }
+    }
+    
     if (tool === "route" && isDraggingStraightRoute && isDrawingRoute && currentRoutePointsRef.current.length >= 1) {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (rect) {
@@ -1352,12 +1372,14 @@ export default function PlayDesigner() {
       isDraggingRef.current = false;
       setIsDragging(false);
       setDraggingRoutePoint(null);
+      setIsDraggingShape(false);
       return;
     }
     
     isDraggingRef.current = false;
     setIsDragging(false);
     setDraggingRoutePoint(null);
+    setIsDraggingShape(false);
     
     if (tool === "select" && lassoStart) {
       if (lassoEnd) {
@@ -1754,6 +1776,30 @@ export default function PlayDesigner() {
     );
   };
 
+  // Handle shape pointer down for dragging
+  const handleShapePointerDown = (e: React.PointerEvent, shape: Shape) => {
+    e.stopPropagation();
+    if (tool !== "select") return;
+    
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+    
+    // Calculate offset from shape top-left corner
+    setShapeDragOffset({
+      x: clickX - shape.x,
+      y: clickY - shape.y,
+    });
+    
+    setSelectedShape(shape.id);
+    setSelectedPlayer(null);
+    setSelectedRoute(null);
+    setSelectedElements({ players: [], routes: [] });
+    setIsDraggingShape(true);
+  };
+
   const renderShape = (shape: Shape) => {
     const isSelected = selectedShape === shape.id;
     // Show subtle border normally, highlight border when selected
@@ -1774,17 +1820,9 @@ export default function PlayDesigner() {
           stroke={strokeColor}
           strokeWidth={isSelected ? 3 : 2}
           strokeOpacity={strokeOpacity}
-          className="cursor-pointer"
-          onMouseDown={(e) => {
-            e.stopPropagation();
-          }}
-          onClick={(e) => {
-            e.stopPropagation();
-            setSelectedShape(shape.id);
-            setSelectedPlayer(null);
-            setSelectedRoute(null);
-            setSelectedElements({ players: [], routes: [] });
-          }}
+          className="cursor-move"
+          style={{ pointerEvents: "auto" }}
+          onPointerDown={(e) => handleShapePointerDown(e, shape)}
           data-testid={`shape-${shape.id}`}
         />
       );
@@ -1801,17 +1839,9 @@ export default function PlayDesigner() {
           stroke={strokeColor}
           strokeWidth={isSelected ? 3 : 2}
           strokeOpacity={strokeOpacity}
-          className="cursor-pointer"
-          onMouseDown={(e) => {
-            e.stopPropagation();
-          }}
-          onClick={(e) => {
-            e.stopPropagation();
-            setSelectedShape(shape.id);
-            setSelectedPlayer(null);
-            setSelectedRoute(null);
-            setSelectedElements({ players: [], routes: [] });
-          }}
+          className="cursor-move"
+          style={{ pointerEvents: "auto" }}
+          onPointerDown={(e) => handleShapePointerDown(e, shape)}
           data-testid={`shape-${shape.id}`}
         />
       );
@@ -1830,17 +1860,9 @@ export default function PlayDesigner() {
           stroke={strokeColor}
           strokeWidth={isSelected ? 3 : 2}
           strokeOpacity={strokeOpacity}
-          className="cursor-pointer"
-          onMouseDown={(e) => {
-            e.stopPropagation();
-          }}
-          onClick={(e) => {
-            e.stopPropagation();
-            setSelectedShape(shape.id);
-            setSelectedPlayer(null);
-            setSelectedRoute(null);
-            setSelectedElements({ players: [], routes: [] });
-          }}
+          className="cursor-move"
+          style={{ pointerEvents: "auto" }}
+          onPointerDown={(e) => handleShapePointerDown(e, shape)}
           data-testid={`shape-${shape.id}`}
         />
       );
