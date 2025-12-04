@@ -14,7 +14,7 @@ import underConstructionImage from "@assets/generated_images/under_construction_
 
 const FIELD = {
   WIDTH: 694,
-  HEIGHT: 392,
+  HEIGHT: 512,  // Extended by 10 yards (120px) at top for deep defensive zones
   HEADER_HEIGHT: 60,
   SIDE_PADDING: 27,
   BOTTOM_PADDING: 12,
