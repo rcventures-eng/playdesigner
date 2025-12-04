@@ -152,6 +152,7 @@ export default function PlayDesigner() {
   const [isPlayAction, setIsPlayAction] = useState(false);
   const [showBlocking, setShowBlocking] = useState(true);
   const [includeOffense, setIncludeOffense] = useState(true);
+  const [specialPrompt, setSpecialPrompt] = useState("");
   const [metadata, setMetadata] = useState<PlayMetadata>({
     name: "",
     formation: "",
@@ -2726,12 +2727,15 @@ export default function PlayDesigner() {
           </div>
         </div>
 
-        <div className="flex-1 h-full relative bg-muted/30 p-2 overflow-auto flex flex-col items-center justify-center" onClick={handleBackgroundClick}>
+        <div 
+          className={`flex-1 h-full relative bg-muted/30 p-2 overflow-auto flex flex-col items-center ${playType === "special" ? "justify-start pt-4" : "justify-center"}`} 
+          onClick={handleBackgroundClick}
+        >
           {/* AI Play Creator Interface - Special Teams Tab */}
           {playType === "special" && (
             <div 
-              className="flex flex-col items-center gap-4 mb-4"
-              style={{ width: FIELD.WIDTH }}
+              className="flex flex-col items-center gap-4 mb-8"
+              style={{ width: FIELD.WIDTH, maxWidth: FIELD.WIDTH }}
               data-testid="special-ai-creator"
             >
               {/* Headline */}
@@ -2743,8 +2747,9 @@ export default function PlayDesigner() {
               <div className="w-full bg-slate-900/80 backdrop-blur-sm border border-white/20 rounded-xl p-3 flex items-start shadow-xl gap-2">
                 <textarea
                   placeholder="Explain the play..."
-                  className="flex-1 h-36 bg-transparent text-white placeholder-white/50 outline-none px-2 resize-none flex items-center justify-center"
-                  style={{ paddingTop: '3.5rem' }}
+                  value={specialPrompt}
+                  onChange={(e) => setSpecialPrompt(e.target.value)}
+                  className="flex-1 h-36 bg-transparent text-white placeholder-white/50 outline-none p-4 resize-none"
                   data-testid="ai-input"
                 />
                 <button
@@ -2761,18 +2766,21 @@ export default function PlayDesigner() {
               <div className="flex flex-wrap justify-center gap-2">
                 <button 
                   className="bg-slate-800/80 text-white text-xs border border-white/10 hover:bg-slate-700 rounded-full px-3 py-1 transition-colors"
+                  onClick={() => setSpecialPrompt("Pass play to beat Cover 2")}
                   data-testid="chip-cover2"
                 >
                   Pass play to beat Cover 2
                 </button>
                 <button 
                   className="bg-slate-800/80 text-white text-xs border border-white/10 hover:bg-slate-700 rounded-full px-3 py-1 transition-colors"
+                  onClick={() => setSpecialPrompt("Run play to beat man")}
                   data-testid="chip-man"
                 >
                   Run play to beat man
                 </button>
                 <button 
                   className="bg-slate-800/80 text-white text-xs border border-white/10 hover:bg-slate-700 rounded-full px-3 py-1 transition-colors"
+                  onClick={() => setSpecialPrompt("Quick pass to get a first down first blitz on 3rd and medium")}
                   data-testid="chip-blitz"
                 >
                   Quick pass to get a first down first blitz on 3rd and medium
