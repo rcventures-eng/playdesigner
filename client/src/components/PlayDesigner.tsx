@@ -2805,7 +2805,7 @@ export default function PlayDesigner() {
                     <button
                       onClick={() => fileInputRef.current?.click()}
                       disabled={isUploading}
-                      className="bg-white text-orange-500 hover:bg-white/90 disabled:opacity-50 px-2 py-1 rounded text-xs font-medium transition-colors flex items-center justify-center"
+                      className="bg-orange-500 hover:bg-orange-600 text-white disabled:opacity-50 px-2 py-1 rounded text-xs font-medium transition-colors flex items-center justify-center"
                       data-testid="button-upload-play"
                     >
                       {isUploading ? (
