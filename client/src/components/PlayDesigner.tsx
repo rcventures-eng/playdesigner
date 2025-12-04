@@ -2734,7 +2734,7 @@ export default function PlayDesigner() {
           {/* AI Play Creator Interface - Special Teams Tab - Absolute Overlay */}
           {playType === "special" && (
             <div 
-              className="absolute top-0 left-0 right-0 z-10 flex justify-center mt-20 pointer-events-none"
+              className="absolute top-0 left-0 right-0 z-10 flex justify-center mt-12 pointer-events-none"
               data-testid="special-ai-overlay"
             >
               <div 
