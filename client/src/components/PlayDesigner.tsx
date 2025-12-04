@@ -767,6 +767,16 @@ export default function PlayDesigner() {
     ];
   };
 
+  // Helper to clamp player positions to current tab bounds
+  const clampPlayersToCurrentBounds = (playerList: Player[], activeTab: "offense" | "defense" | "special"): Player[] => {
+    const bounds = FIELD.getPlayerBounds(activeTab);
+    return playerList.map(p => ({
+      ...p,
+      x: Math.max(bounds.minX, Math.min(bounds.maxX, p.x)),
+      y: Math.max(bounds.minY, Math.min(bounds.maxY, p.y)),
+    }));
+  };
+
   const loadDefensePreset = (format: string, withOffense: boolean) => {
     if (players.length > 0 || routes.length > 0 || shapes.length > 0 || footballs.length > 0) {
       saveToHistory();
@@ -784,7 +794,9 @@ export default function PlayDesigner() {
         defensePlayers = [];
     }
     
-    const newPlayers = withOffense ? [...defensePlayers, ...offensePlayers] : defensePlayers;
+    // Clamp all players to defense tab bounds (ensures offensive players fit in smaller field area)
+    const allPlayers = withOffense ? [...defensePlayers, ...offensePlayers] : defensePlayers;
+    const newPlayers = clampPlayersToCurrentBounds(allPlayers, "defense");
     const newRoutes: Route[] = [];
     const newShapes: Shape[] = [];
     const newFootballs: Football[] = [];

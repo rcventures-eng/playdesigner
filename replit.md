@@ -77,6 +77,31 @@ The backend uses **Express.js** with **TypeScript** on Node.js. It's designed to
 
 The application features three play type tabs (Offense, Defense, Special Teams), each maintaining completely independent state (players, routes, shapes, footballs, metadata, undo history). Tab switching saves the current state and loads the target tab's state, clearing selections. The Defense tab includes a "Add Offense?" checkbox to load offensive formations for defensive play design. QB positioning logic is specific to the "Offense" tab to avoid unintended movement of defensive players.
 
+### Dynamic Header Layout (Defense Tab Optimization)
+
+To maximize field space for deep defensive zones, the layout dynamically flips based on the active tab:
+
+**Offense/Special Teams Layout:**
+- White header at TOP (y = 0 to 60)
+- Green field BELOW (y = 60 to 392)
+- Player bounds: minY = 72, maxY = 368
+
+**Defense Layout:**
+- Green field at TOP (y = 0 to 332)
+- White header at BOTTOM (y = 332 to 392)
+- Player bounds: minY = 12, maxY = 320
+
+**Key Constants (unchanged):**
+- Canvas dimensions: 694×392 (export size unchanged)
+- LOS_Y: 284 (absolute position unchanged)
+- FIELD_HEIGHT: 332 (playable area)
+
+**Implementation:**
+- `FIELD.getFieldStartY(activeTab)`: Returns 0 for defense, 60 for offense
+- `FIELD.getHeaderStartY(activeTab)`: Returns 332 for defense, 0 for offense
+- `FIELD.getPlayerBounds(activeTab)`: Returns dynamic minY/maxY based on tab
+- Formation loading clamps players to current tab bounds via `clampPlayersToCurrentBounds()`
+
 ## External Dependencies
 
 ### Third-Party UI Libraries
