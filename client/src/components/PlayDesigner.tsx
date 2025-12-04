@@ -1717,9 +1717,48 @@ export default function PlayDesigner() {
     }
   };
 
+  // Render the stem line connecting a player to their tethered zone shape
+  const renderStem = (shape: Shape) => {
+    if (!shape.playerId) return null;
+    
+    const player = players.find(p => p.id === shape.playerId);
+    if (!player) return null;
+    
+    const shapeCenter = {
+      x: shape.x + shape.width / 2,
+      y: shape.y + shape.height / 2,
+    };
+    
+    // Calculate distance from player to shape center
+    const distance = Math.sqrt(
+      Math.pow(player.x - shapeCenter.x, 2) + 
+      Math.pow(player.y - shapeCenter.y, 2)
+    );
+    
+    // Hide stem if player is inside/overlapping the zone (within a threshold)
+    const overlapThreshold = Math.min(shape.width, shape.height) / 2;
+    if (distance < overlapThreshold) return null;
+    
+    return (
+      <line
+        key={`stem-${shape.id}`}
+        x1={player.x}
+        y1={player.y}
+        x2={shapeCenter.x}
+        y2={shapeCenter.y}
+        stroke={shape.color}
+        strokeWidth="2"
+        strokeOpacity="0.8"
+        data-testid={`stem-${shape.id}`}
+      />
+    );
+  };
+
   const renderShape = (shape: Shape) => {
     const isSelected = selectedShape === shape.id;
-    const strokeColor = isSelected ? "#06b6d4" : "transparent";
+    // Show subtle border normally, highlight border when selected
+    const strokeColor = isSelected ? "#06b6d4" : shape.color;
+    const strokeOpacity = isSelected ? 1 : 0.6;
     
     if (shape.type === "circle") {
       const radius = Math.min(shape.width, shape.height) / 2;
@@ -1731,9 +1770,10 @@ export default function PlayDesigner() {
           rx={radius}
           ry={radius}
           fill={shape.color}
-          fillOpacity="0.3"
+          fillOpacity="0.25"
           stroke={strokeColor}
-          strokeWidth="3"
+          strokeWidth={isSelected ? 3 : 2}
+          strokeOpacity={strokeOpacity}
           className="cursor-pointer"
           onMouseDown={(e) => {
             e.stopPropagation();
@@ -1757,9 +1797,10 @@ export default function PlayDesigner() {
           rx={shape.width / 2}
           ry={shape.height / 2}
           fill={shape.color}
-          fillOpacity="0.3"
+          fillOpacity="0.25"
           stroke={strokeColor}
-          strokeWidth="3"
+          strokeWidth={isSelected ? 3 : 2}
+          strokeOpacity={strokeOpacity}
           className="cursor-pointer"
           onMouseDown={(e) => {
             e.stopPropagation();
@@ -1782,10 +1823,13 @@ export default function PlayDesigner() {
           y={shape.y}
           width={shape.width}
           height={shape.height}
+          rx="4"
+          ry="4"
           fill={shape.color}
-          fillOpacity="0.3"
+          fillOpacity="0.25"
           stroke={strokeColor}
-          strokeWidth="3"
+          strokeWidth={isSelected ? 3 : 2}
+          strokeOpacity={strokeOpacity}
           className="cursor-pointer"
           onMouseDown={(e) => {
             e.stopPropagation();
@@ -2527,6 +2571,10 @@ export default function PlayDesigner() {
                   ))}
                 </defs>
                 
+                {/* Render stems first (behind shapes) */}
+                {shapes.map(shape => renderStem(shape))}
+                
+                {/* Render zone shapes (behind routes and players) */}
                 {shapes.map(shape => renderShape(shape))}
 
                 {routes.filter(r => showBlocking || r.type !== "blocking").map((route) => (
