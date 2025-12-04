@@ -2739,16 +2739,16 @@ export default function PlayDesigner() {
                 🏈 What's the play call coach?
               </h2>
               
-              {/* Glassmorphic Input Container */}
-              <div className="w-full bg-slate-900/80 backdrop-blur-sm border border-white/20 rounded-xl p-2 flex items-center shadow-xl gap-2">
-                <input
-                  type="text"
+              {/* Glassmorphic Input Container - Hero Size */}
+              <div className="w-full bg-slate-900/80 backdrop-blur-sm border border-white/20 rounded-xl p-3 flex items-start shadow-xl gap-2">
+                <textarea
                   placeholder="Explain the play..."
-                  className="flex-1 bg-transparent text-white placeholder-white/50 outline-none px-2"
+                  className="flex-1 h-36 bg-transparent text-white placeholder-white/50 outline-none px-2 resize-none flex items-center justify-center"
+                  style={{ paddingTop: '3.5rem' }}
                   data-testid="ai-input"
                 />
                 <button
-                  className="bg-orange-500 hover:bg-orange-600 text-white p-2 rounded-lg transition-colors"
+                  className="bg-orange-500 hover:bg-orange-600 text-white p-2 rounded-lg transition-colors self-end"
                   data-testid="ai-submit-button"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -2778,14 +2778,6 @@ export default function PlayDesigner() {
                   Quick pass to get a first down first blitz on 3rd and medium
                 </button>
               </div>
-              
-              {/* Under Construction Image */}
-              <img 
-                src={underConstructionImage} 
-                alt="Under Construction" 
-                className="w-48 opacity-90"
-                data-testid="under-construction-image"
-              />
             </div>
           )}
           <div className="bg-background rounded-lg shadow-lg p-2">
@@ -2880,6 +2872,21 @@ export default function PlayDesigner() {
                   zIndex: 0 
                 }}
               />
+              
+              {/* Under Construction Overlay - Special Teams Tab Only */}
+              {playType === "special" && (
+                <div 
+                  className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                  style={{ zIndex: 50 }}
+                >
+                  <img 
+                    src={underConstructionImage} 
+                    alt="Under Construction" 
+                    className="w-48 opacity-90"
+                    data-testid="under-construction-image"
+                  />
+                </div>
+              )}
               
               <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }}>
                 {/* Dynamic field grid - uses fieldStartY based on tab */}
