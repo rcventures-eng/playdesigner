@@ -159,6 +159,9 @@ export default function PlayDesigner() {
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isDraggingShape, setIsDraggingShape] = useState(false);
   const [shapeDragOffset, setShapeDragOffset] = useState({ x: 0, y: 0 });
+  const [isResizingShape, setIsResizingShape] = useState(false);
+  const [resizeHandle, setResizeHandle] = useState<"nw" | "ne" | "sw" | "se" | null>(null);
+  const [resizeStartData, setResizeStartData] = useState<{ x: number; y: number; width: number; height: number; startX: number; startY: number } | null>(null);
   const [isDrawingRoute, setIsDrawingRoute] = useState(false);
   const [currentRoutePoints, setCurrentRoutePoints] = useState<{ x: number; y: number }[]>([]);
   const [isDrawingShape, setIsDrawingShape] = useState(false);
@@ -1257,21 +1260,101 @@ export default function PlayDesigner() {
       }
     }
     
-    // Handle zone shape dragging
+    // Handle zone shape resizing (check before dragging to prevent conflicts)
+    if (isResizingShape && selectedShape && resizeHandle && resizeStartData && tool === "select") {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (rect) {
+        const currentX = e.clientX - rect.left;
+        const currentY = e.clientY - rect.top;
+        const deltaX = currentX - resizeStartData.startX;
+        const deltaY = currentY - resizeStartData.startY;
+        
+        let newX = resizeStartData.x;
+        let newY = resizeStartData.y;
+        let newWidth = resizeStartData.width;
+        let newHeight = resizeStartData.height;
+        
+        const MIN_SIZE = 20;
+        const maxRight = FIELD.FIELD_RIGHT;
+        const maxBottom = FIELD.HEIGHT - FIELD.BOTTOM_PADDING;
+        
+        // Apply delta based on which handle is being dragged
+        switch (resizeHandle) {
+          case "nw":
+            newX = resizeStartData.x + deltaX;
+            newY = resizeStartData.y + deltaY;
+            newWidth = resizeStartData.width - deltaX;
+            newHeight = resizeStartData.height - deltaY;
+            break;
+          case "ne":
+            newY = resizeStartData.y + deltaY;
+            newWidth = resizeStartData.width + deltaX;
+            newHeight = resizeStartData.height - deltaY;
+            break;
+          case "sw":
+            newX = resizeStartData.x + deltaX;
+            newWidth = resizeStartData.width - deltaX;
+            newHeight = resizeStartData.height + deltaY;
+            break;
+          case "se":
+            newWidth = resizeStartData.width + deltaX;
+            newHeight = resizeStartData.height + deltaY;
+            break;
+        }
+        
+        // Enforce minimum size
+        if (newWidth < MIN_SIZE) {
+          if (resizeHandle === "nw" || resizeHandle === "sw") {
+            newX = resizeStartData.x + resizeStartData.width - MIN_SIZE;
+          }
+          newWidth = MIN_SIZE;
+        }
+        if (newHeight < MIN_SIZE) {
+          if (resizeHandle === "nw" || resizeHandle === "ne") {
+            newY = resizeStartData.y + resizeStartData.height - MIN_SIZE;
+          }
+          newHeight = MIN_SIZE;
+        }
+        
+        // Keep position within field bounds
+        newX = Math.max(FIELD.FIELD_LEFT, newX);
+        newY = Math.max(FIELD.FIELD_TOP, newY);
+        
+        // Clamp width and height so shape stays within field
+        newWidth = Math.min(newWidth, maxRight - newX);
+        newHeight = Math.min(newHeight, maxBottom - newY);
+        
+        // Re-enforce minimum size after clamping
+        newWidth = Math.max(MIN_SIZE, newWidth);
+        newHeight = Math.max(MIN_SIZE, newHeight);
+        
+        // Use functional update to avoid stale closure
+        setShapes(prev => prev.map(s =>
+          s.id === selectedShape ? { ...s, x: newX, y: newY, width: newWidth, height: newHeight } : s
+        ));
+      }
+      return; // Early return to prevent drag logic from running
+    }
+    
+    // Handle zone shape dragging (only if not resizing)
     if (isDraggingShape && selectedShape && tool === "select") {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (rect) {
-        const shape = shapes.find(s => s.id === selectedShape);
-        if (shape) {
+        // Use functional update to get current shape state
+        setShapes(prev => {
+          const shape = prev.find(s => s.id === selectedShape);
+          if (!shape) return prev;
+          
           const newX = e.clientX - rect.left - shapeDragOffset.x;
           const newY = e.clientY - rect.top - shapeDragOffset.y;
           // Keep shape within field bounds
           const boundedX = Math.max(FIELD.FIELD_LEFT, Math.min(FIELD.FIELD_RIGHT - shape.width, newX));
           const boundedY = Math.max(FIELD.FIELD_TOP, Math.min(FIELD.HEIGHT - FIELD.BOTTOM_PADDING - shape.height, newY));
-          setShapes(shapes.map(s =>
+          
+          return prev.map(s =>
             s.id === selectedShape ? { ...s, x: boundedX, y: boundedY } : s
-          ));
-        }
+          );
+        });
       }
     }
     
@@ -1373,6 +1456,9 @@ export default function PlayDesigner() {
       setIsDragging(false);
       setDraggingRoutePoint(null);
       setIsDraggingShape(false);
+      setIsResizingShape(false);
+      setResizeHandle(null);
+      setResizeStartData(null);
       return;
     }
     
@@ -1380,6 +1466,9 @@ export default function PlayDesigner() {
     setIsDragging(false);
     setDraggingRoutePoint(null);
     setIsDraggingShape(false);
+    setIsResizingShape(false);
+    setResizeHandle(null);
+    setResizeStartData(null);
     
     if (tool === "select" && lassoStart) {
       if (lassoEnd) {
@@ -1797,7 +1886,15 @@ export default function PlayDesigner() {
     setSelectedPlayer(null);
     setSelectedRoute(null);
     setSelectedElements({ players: [], routes: [] });
+    
+    // Clear resize state to prevent conflicts
+    setIsResizingShape(false);
+    setResizeHandle(null);
+    setResizeStartData(null);
     setIsDraggingShape(true);
+    
+    // Save to history at start of drag for undo support
+    saveToHistory();
   };
 
   const renderShape = (shape: Shape) => {
@@ -1867,6 +1964,67 @@ export default function PlayDesigner() {
         />
       );
     }
+  };
+
+  // Handle resize handle pointer down
+  const handleResizeHandlePointerDown = (e: React.PointerEvent, shape: Shape, handle: "nw" | "ne" | "sw" | "se") => {
+    e.stopPropagation();
+    if (tool !== "select") return;
+    
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    
+    // Clear dragging state to prevent conflicts
+    setIsDraggingShape(false);
+    setIsResizingShape(true);
+    setResizeHandle(handle);
+    setResizeStartData({
+      x: shape.x,
+      y: shape.y,
+      width: shape.width,
+      height: shape.height,
+      startX: e.clientX - rect.left,
+      startY: e.clientY - rect.top,
+    });
+    
+    // Save to history at start of resize for undo support
+    saveToHistory();
+  };
+
+  // Render resize handles for selected shape
+  const renderResizeHandles = (shape: Shape) => {
+    if (selectedShape !== shape.id || tool !== "select") return null;
+    
+    const handleSize = 8;
+    const halfSize = handleSize / 2;
+    
+    // Calculate handle positions at corners
+    const handles = [
+      { id: "nw", x: shape.x - halfSize, y: shape.y - halfSize, cursor: "nwse-resize" },
+      { id: "ne", x: shape.x + shape.width - halfSize, y: shape.y - halfSize, cursor: "nesw-resize" },
+      { id: "sw", x: shape.x - halfSize, y: shape.y + shape.height - halfSize, cursor: "nesw-resize" },
+      { id: "se", x: shape.x + shape.width - halfSize, y: shape.y + shape.height - halfSize, cursor: "nwse-resize" },
+    ] as const;
+    
+    return (
+      <g key={`handles-${shape.id}`}>
+        {handles.map((handle) => (
+          <rect
+            key={handle.id}
+            x={handle.x}
+            y={handle.y}
+            width={handleSize}
+            height={handleSize}
+            fill="#ffffff"
+            stroke="#06b6d4"
+            strokeWidth={2}
+            style={{ cursor: handle.cursor, pointerEvents: "auto" }}
+            onPointerDown={(e) => handleResizeHandlePointerDown(e, shape, handle.id as "nw" | "ne" | "sw" | "se")}
+            data-testid={`resize-handle-${handle.id}-${shape.id}`}
+          />
+        ))}
+      </g>
+    );
   };
 
   return (
@@ -2598,6 +2756,9 @@ export default function PlayDesigner() {
                 
                 {/* Render zone shapes (behind routes and players) */}
                 {shapes.map(shape => renderShape(shape))}
+                
+                {/* Render resize handles for selected shape (on top of shapes) */}
+                {shapes.map(shape => renderResizeHandles(shape))}
 
                 {routes.filter(r => showBlocking || r.type !== "blocking").map((route) => (
                   <g key={route.id}>
