@@ -2726,13 +2726,64 @@ export default function PlayDesigner() {
           </div>
         </div>
 
-        <div className="flex-1 h-full relative bg-muted/30 p-2 overflow-auto flex items-center justify-center" onClick={handleBackgroundClick}>
+        <div className="flex-1 h-full relative bg-muted/30 p-2 overflow-auto flex flex-col items-center justify-center" onClick={handleBackgroundClick}>
+          {/* AI Play Creator Interface - Special Teams Tab */}
           {playType === "special" && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
+            <div 
+              className="flex flex-col items-center gap-4 mb-4"
+              style={{ width: FIELD.WIDTH }}
+              data-testid="special-ai-creator"
+            >
+              {/* Headline */}
+              <h2 className="text-3xl font-bold text-white drop-shadow-md" data-testid="ai-headline">
+                🏈 What's the play call coach?
+              </h2>
+              
+              {/* Glassmorphic Input Container */}
+              <div className="w-full bg-slate-900/80 backdrop-blur-sm border border-white/20 rounded-xl p-2 flex items-center shadow-xl gap-2">
+                <input
+                  type="text"
+                  placeholder="Explain the play..."
+                  className="flex-1 bg-transparent text-white placeholder-white/50 outline-none px-2"
+                  data-testid="ai-input"
+                />
+                <button
+                  className="bg-orange-500 hover:bg-orange-600 text-white p-2 rounded-lg transition-colors"
+                  data-testid="ai-submit-button"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+              
+              {/* Suggestion Chips */}
+              <div className="flex flex-wrap justify-center gap-2">
+                <button 
+                  className="bg-slate-800/80 text-white text-xs border border-white/10 hover:bg-slate-700 rounded-full px-3 py-1 transition-colors"
+                  data-testid="chip-cover2"
+                >
+                  Pass play to beat Cover 2
+                </button>
+                <button 
+                  className="bg-slate-800/80 text-white text-xs border border-white/10 hover:bg-slate-700 rounded-full px-3 py-1 transition-colors"
+                  data-testid="chip-man"
+                >
+                  Run play to beat man
+                </button>
+                <button 
+                  className="bg-slate-800/80 text-white text-xs border border-white/10 hover:bg-slate-700 rounded-full px-3 py-1 transition-colors"
+                  data-testid="chip-blitz"
+                >
+                  Quick pass to get a first down first blitz on 3rd and medium
+                </button>
+              </div>
+              
+              {/* Under Construction Image */}
               <img 
                 src={underConstructionImage} 
                 alt="Under Construction" 
-                className="max-w-lg max-h-96 object-contain"
+                className="w-48 opacity-90"
                 data-testid="under-construction-image"
               />
             </div>
