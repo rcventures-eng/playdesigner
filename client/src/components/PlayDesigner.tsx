@@ -62,7 +62,8 @@ interface Route {
 
 interface Shape {
   id: string;
-  type: "circle" | "oval" | "square" | "rectangle";
+  playerId: string;
+  type: "circle" | "oval" | "rectangle";
   x: number;
   y: number;
   width: number;
@@ -135,7 +136,7 @@ export default function PlayDesigner() {
   const [editingPlayer, setEditingPlayer] = useState<string | null>(null);
   const [editingLabel, setEditingLabel] = useState("");
   const [tool, setTool] = useState<"select" | "player" | "route" | "shape" | "label">("select");
-  const [shapeType, setShapeType] = useState<"circle" | "oval" | "square" | "rectangle">("circle");
+  const [shapeType, setShapeType] = useState<"circle" | "oval" | "rectangle">("circle");
   const [shapeColor, setShapeColor] = useState("#ec4899");
   const [routeType, setRouteType] = useState<"pass" | "run" | "blocking" | "assignment">("pass");
   const [makePrimary, setMakePrimary] = useState(false);
@@ -1437,6 +1438,7 @@ export default function PlayDesigner() {
           saveToHistory();
           const newShape: Shape = {
             id: `shape-${Date.now()}`,
+            playerId: selectedPlayer || "",
             type: shapeType,
             x: Math.min(shapeStart.x, x),
             y: Math.min(shapeStart.y, y),
@@ -1752,33 +1754,6 @@ export default function PlayDesigner() {
           cy={shape.y + shape.height / 2}
           rx={shape.width / 2}
           ry={shape.height / 2}
-          fill={shape.color}
-          fillOpacity="0.3"
-          stroke={strokeColor}
-          strokeWidth="3"
-          className="cursor-pointer"
-          onMouseDown={(e) => {
-            e.stopPropagation();
-          }}
-          onClick={(e) => {
-            e.stopPropagation();
-            setSelectedShape(shape.id);
-            setSelectedPlayer(null);
-            setSelectedRoute(null);
-            setSelectedElements({ players: [], routes: [] });
-          }}
-          data-testid={`shape-${shape.id}`}
-        />
-      );
-    } else if (shape.type === "square") {
-      const size = Math.min(shape.width, shape.height);
-      return (
-        <rect
-          key={shape.id}
-          x={shape.x}
-          y={shape.y}
-          width={size}
-          height={size}
           fill={shape.color}
           fillOpacity="0.3"
           stroke={strokeColor}
@@ -2159,7 +2134,7 @@ export default function PlayDesigner() {
                   <Separator />
                   <div className="space-y-2">
                     <Label className="text-xs">Shape Type</Label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                       <Button
                         size="sm"
                         variant={shapeType === "circle" ? "default" : "outline"}
@@ -2175,14 +2150,6 @@ export default function PlayDesigner() {
                         data-testid="button-shape-oval"
                       >
                         Oval
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant={shapeType === "square" ? "default" : "outline"}
-                        onClick={() => setShapeType("square")}
-                        data-testid="button-shape-square"
-                      >
-                        Square
                       </Button>
                       <Button
                         size="sm"
