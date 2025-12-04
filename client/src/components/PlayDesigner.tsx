@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Download, Copy, Plus, Trash2, Circle as CircleIcon, MoveHorizontal, PenTool, Square as SquareIcon, Type, Hexagon, RotateCcw, Flag, ArrowRight } from "lucide-react";
+import { Download, Copy, Plus, Trash2, Circle as CircleIcon, MoveHorizontal, PenTool, Square as SquareIcon, Type, Hexagon, RotateCcw, Flag } from "lucide-react";
 import { toPng } from "html-to-image";
 import { useToast } from "@/hooks/use-toast";
 import underConstructionImage from "@assets/generated_images/under_construction_warning_banner.png";
@@ -178,9 +178,6 @@ export default function PlayDesigner() {
   const [lassoEnd, setLassoEnd] = useState<{ x: number; y: number } | null>(null);
   const [selectedElements, setSelectedElements] = useState<{ players: string[]; routes: string[] }>({ players: [], routes: [] });
   const [isDraggingStraightRoute, setIsDraggingStraightRoute] = useState(false);
-  
-  // AI Play Creator state (Special Teams tab preview)
-  const [aiPrompt, setAiPrompt] = useState("");
   
   // Long-press menu state (optimized - minimal state, CSS handles hover visuals)
   const [longPressMenuOpen, setLongPressMenuOpen] = useState(false);
@@ -2731,71 +2728,13 @@ export default function PlayDesigner() {
 
         <div className="flex-1 h-full relative bg-muted/30 p-2 overflow-auto flex items-center justify-center" onClick={handleBackgroundClick}>
           {playType === "special" && (
-            <div 
-              className="absolute inset-0 flex flex-col justify-center items-center gap-8 z-50 p-4"
-              style={{ width: FIELD.WIDTH, margin: '0 auto', left: 0, right: 0 }}
-            >
-              {/* Section A: AI Play Creator (Preview) */}
-              <div className="w-full flex flex-col items-center" data-testid="ai-play-creator-section">
-                <h2 className="text-3xl font-bold text-white mb-6 text-center">
-                  🏈 What's the play call coach?
-                </h2>
-                
-                {/* Input Container */}
-                <div className="w-full bg-white/5 rounded-xl border border-white/10 p-3 flex items-center gap-3">
-                  <input
-                    type="text"
-                    value={aiPrompt}
-                    onChange={(e) => setAiPrompt(e.target.value)}
-                    placeholder="Explain the play that you are looking to design..."
-                    className="flex-1 bg-transparent border-none outline-none text-white placeholder-white/50 text-base"
-                    data-testid="input-ai-prompt"
-                  />
-                  <Button
-                    size="icon"
-                    disabled
-                    className="bg-orange-500 hover:bg-orange-600 text-white rounded-lg opacity-50 cursor-not-allowed"
-                    data-testid="button-ai-submit"
-                  >
-                    <ArrowRight className="h-5 w-5" />
-                  </Button>
-                </div>
-                
-                {/* Quick Chips */}
-                <div className="flex flex-wrap justify-center gap-2 mt-4">
-                  <Badge 
-                    variant="outline" 
-                    className="bg-white/5 text-white/70 border-white/20 cursor-not-allowed px-3 py-1"
-                    data-testid="chip-cover2"
-                  >
-                    Pass play to beat Cover 2
-                  </Badge>
-                  <Badge 
-                    variant="outline" 
-                    className="bg-white/5 text-white/70 border-white/20 cursor-not-allowed px-3 py-1"
-                    data-testid="chip-redzone"
-                  >
-                    Red zone fade routes
-                  </Badge>
-                  <Badge 
-                    variant="outline" 
-                    className="bg-white/5 text-white/70 border-white/20 cursor-not-allowed px-3 py-1"
-                    data-testid="chip-screen"
-                  >
-                    Screen play with misdirection
-                  </Badge>
-                </div>
-              </div>
-              
-              {/* Section B: Under Construction Image */}
-              <div className="mt-4 pointer-events-none">
-                <img 
-                  src={underConstructionImage} 
-                  alt="Under Construction" 
-                  className="max-w-md max-h-48 object-contain"
-                  data-testid="under-construction-image"
-                />
-              </div>
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
+              <img 
+                src={underConstructionImage} 
+                alt="Under Construction" 
+                className="max-w-lg max-h-96 object-contain"
+                data-testid="under-construction-image"
+              />
             </div>
           )}
           <div className="bg-background rounded-lg shadow-lg p-2">
