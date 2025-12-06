@@ -3068,20 +3068,6 @@ export default function PlayDesigner() {
                 }}
               />
               
-              {/* Under Construction Overlay - Special Teams Tab Only */}
-              {playType === "special" && (
-                <div 
-                  className="absolute inset-0 flex items-center justify-center pointer-events-none"
-                  style={{ zIndex: 50 }}
-                >
-                  <img 
-                    src={underConstructionImage} 
-                    alt="Under Construction" 
-                    className="w-48 opacity-90"
-                    data-testid="under-construction-image"
-                  />
-                </div>
-              )}
               
               <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }}>
                 {/* Dynamic field grid - uses fieldStartY based on tab */}
@@ -3590,6 +3576,21 @@ export default function PlayDesigner() {
 
             </div>
           </div>
+          
+          {/* Under Construction Sign - Special Teams Tab Only - Centered in bottom fourth of screen */}
+          {playType === "special" && (
+            <div 
+              className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none"
+              style={{ top: "87.5%", zIndex: 50 }}
+            >
+              <img 
+                src={underConstructionImage} 
+                alt="Under Construction" 
+                className="w-48 opacity-90"
+                data-testid="under-construction-image"
+              />
+            </div>
+          )}
         </div>
 
         <div className="w-96 border-l border-border bg-card p-4 overflow-y-auto">
