@@ -34,6 +34,146 @@ const getFormationsForAI = () => {
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
+// Vision-specific prompt for processing uploaded play images
+const generateVisionSystemPrompt = () => {
+  const { field, colors } = FOOTBALL_CONFIG;
+  const formationsData = getFormationsForAI();
+  
+  return `You are an expert Football Play digitizer. You will receive an image of a hand-drawn football play diagram. Your job is to convert this visual diagram into a specific JSON structure that matches the FOOTBALL_CONFIG coordinate system.
+
+CRITICAL "SNAP-TO-GRID" RULE:
+1. First, analyze the image to identify the formation type by counting players:
+   - 5 players = 5v5 formation
+   - 7 players = 7v7 formation  
+   - 9 players = 9v9 formation
+   - 11 players = 11v11 formation
+
+2. Once you identify the formation size, you MUST use the EXACT player starting coordinates from the formations below. DO NOT use pixel positions from the image for player starting points - use these config values:
+
+${JSON.stringify(formationsData, null, 2)}
+
+3. PLAYER IDENTIFICATION (use these rules in order):
+   a) If the drawing has labels (QB, RB, X, Y, Z, TE, C, LG, RG, LT, RT), use the label directly.
+   b) If no labels, use SPATIAL POSITION to identify players:
+      - Center-bottom player (behind where ball would be) = QB
+      - Player directly behind QB = RB
+      - Far left receiver at the line = Z
+      - Far right receiver at the line = X  
+      - Inside left receiver/slot = Y
+      - Inside right receiver/slot = TE
+      - Players at the very center of the line = C (center) and guards/tackles
+   c) Count from left to right for receivers: leftmost = Z, next inside = Y, rightmost = X
+   d) If player count doesn't match exactly, use the closest formation size and fill positions left-to-right
+
+4. Once identified, use the EXACT x, y coordinates from the matching formation player above.
+
+ROUTE INTERPRETER RULES:
+Analyze the lines drawn from each player:
+- Straight Line → type: "straight" (linear path)
+- Curved/Wavy Line → type: "curved" (arc or bend in the path)
+- Dotted/Dashed Line → Set isMotion: true on that route (pre-snap motion)
+- Arrow Head at End → Use the arrow endpoint direction to calculate the route target. Scale the direction to create realistic route depths.
+
+ROUTE DEPTH SCALING:
+- Short routes (slant, quick out): 3-5 yards = 36-60 pixels above player start
+- Medium routes (dig, curl, comeback): 8-12 yards = 96-144 pixels
+- Deep routes (go, post, corner): 15-25 yards = 180-300 pixels
+- Use the visual length proportions from the drawing to determine route depth category
+
+PRIMARY TARGET DETECTION:
+- If you see "Primary", "1", "#1", a star, or any similar marking near a player or route endpoint, set isPrimary: true on that player's route.
+- The primary receiver is the QB's first read.
+
+MOTION DETECTION (OFFENSE ONLY):
+- Set isMotion: true if ANY of these conditions are met:
+  1. The word "Motion", "M", or "Mot" appears near the player or route
+  2. The route has a HORIZONTAL segment BEFORE going vertical (pre-snap lateral movement)
+  3. An arrow points horizontally at the line of scrimmage before the main route
+- Motion routes show a player moving sideways before the snap, then running their actual route
+- IMPORTANT: Dotted lines on OFFENSE indicate motion; dotted lines on DEFENSE indicate man coverage (different meaning)
+- isMotion should ONLY be true for offensive players, never defensive
+
+REQUIRED OUTPUT FOR EVERY ROUTE:
+You MUST explicitly set both isPrimary and isMotion for every route in your response:
+- isPrimary: true if this is the primary target, false otherwise
+- isMotion: true if this player has pre-snap motion, false otherwise
+
+PLAYER ROLE COLORING (use these EXACT hex values based on player label):
+OFFENSE:
+- QB (Quarterback): ${colors.offense.qb}
+- RB (Running Back): ${colors.offense.rb}
+- Y (Slot receiver): ${colors.offense.slotY}
+- TE (Tight End): ${colors.offense.te}
+- Z (Split End): ${colors.offense.receiverZ}
+- X (Flanker): ${colors.offense.receiverX}
+- C, LG, RG, LT, RT (Linemen): ${colors.offense.default}
+
+DEFENSE:
+- DL, DE, DT (Defensive Line): ${colors.defense.lineman}
+- LB (Linebacker): ${colors.defense.linebacker}
+- DB, CB, SS, FS (Defensive Backs): ${colors.defense.secondary}
+
+ROUTE COLOR MATCHING:
+- Routes inherit the player's color by default
+- Mark primary routes with: isPrimary: true
+
+COORDINATE SYSTEM:
+- Field dimensions: ${field.width} x ${field.height} pixels
+- Line of Scrimmage (LOS): Y = ${field.losY} pixels
+- Offense moves UP (lower Y values, toward 0)
+- Center X: ${field.centerX} pixels
+- Pixels per yard: ${field.pixelsPerYard}
+
+OUTPUT FORMAT - Return valid JSON with this exact structure:
+{
+  "players": [
+    {
+      "id": "player-1",
+      "label": "QB",
+      "color": "#000000",
+      "x": 347,
+      "y": 300,
+      "side": "offense"
+    }
+  ],
+  "routes": [
+    {
+      "id": "route-1",
+      "playerId": "player-1",
+      "type": "straight" | "curved",
+      "style": "solid",
+      "color": "#000000",
+      "points": [{"x": 347, "y": 300}, {"x": 347, "y": 200}, {"x": 400, "y": 150}],
+      "isPrimary": false,
+      "isMotion": false
+    }
+  ],
+  "footballs": [
+    {
+      "id": "football-1",
+      "x": ${field.centerX},
+      "y": ${field.losY}
+    }
+  ],
+  "playType": "offense",
+  "mechanics": {
+    "hasPlayAction": false,
+    "preSnapMotion": false,
+    "hasRPO": false,
+    "hasJetSweep": false
+  },
+  "detectedFormation": "5v5" | "7v7" | "9v9" | "11v11"
+}
+
+IMPORTANT RULES:
+1. ALWAYS snap players to formation coordinates - never use image pixel positions
+2. Routes must start from the player's snapped position
+3. Route points should create smooth paths matching the drawn route shape
+4. Include at least 2 points per route (start and end)
+5. If the drawing is unclear, default to the closest standard route pattern
+6. Only return the JSON object, no markdown or explanation`;
+};
+
 const generateSystemPrompt = () => {
   const { field, colors, labels, positions, logicRules, routeTypes, formationTemplates } = FOOTBALL_CONFIG;
   
@@ -224,25 +364,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
       });
 
-      const systemPrompt = generateSystemPrompt();
       let result;
 
       if (image) {
+        // Use vision-specific prompt for image analysis
+        const visionPrompt = generateVisionSystemPrompt();
+        
+        // Detect MIME type from base64 header
+        let mimeType = "image/png";
+        if (image.includes("image/jpeg")) {
+          mimeType = "image/jpeg";
+        } else if (image.includes("image/webp")) {
+          mimeType = "image/webp";
+        } else if (image.includes("image/gif")) {
+          mimeType = "image/gif";
+        }
+        
         const imageData = {
           inlineData: {
             data: image.replace(/^data:image\/\w+;base64,/, ""),
-            mimeType: "image/png",
+            mimeType,
           },
         };
 
-        const textPrompt = prompt || "Analyze this football play diagram and generate a play with players and routes based on what you see.";
+        // Build text prompt with any user-specified format
+        let textPrompt = "Analyze this hand-drawn football play diagram. ";
+        if (prompt) {
+          // Check if user specified a format
+          const formatMatch = prompt.match(/(\d+)v(\d+)|(\d+)-on-(\d+)|flag|tackle/i);
+          if (formatMatch) {
+            textPrompt += `The user specified this should be a ${prompt} play. Use the corresponding formation from the config. `;
+          } else {
+            textPrompt += prompt + " ";
+          }
+        } else {
+          textPrompt += "Auto-detect the formation size by counting the number of players drawn. ";
+        }
+        textPrompt += "Convert the drawing to the exact JSON format specified, snapping all players to formation coordinates and interpreting the drawn routes.";
         
         result = await model.generateContent([
-          { text: systemPrompt },
+          { text: visionPrompt },
           { text: textPrompt },
           imageData,
         ]);
       } else {
+        // Use standard prompt for text-only generation
+        const systemPrompt = generateSystemPrompt();
         result = await model.generateContent([
           { text: systemPrompt },
           { text: prompt },
@@ -284,11 +451,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
       
-      playData.routes = playData.routes.map((r: any, i: number) => ({
-        ...r,
-        id: `route-${ts}-${i}`,
-        playerId: playerIdMap[r.playerId] || r.playerId,
-      }));
+      // Get player side lookup for motion validation (using NEW player IDs after remap)
+      const playerSideLookup: Record<string, string> = {};
+      playData.players.forEach((p: any) => {
+        playerSideLookup[p.id] = p.side || "offense";
+      });
+      
+      // Also create lookup with original IDs for route mapping
+      const originalPlayerSideLookup: Record<string, string> = {};
+      Object.entries(playerIdMap).forEach(([oldId, newId]) => {
+        const player = playData.players.find((p: any) => p.id === newId);
+        if (player) {
+          originalPlayerSideLookup[oldId] = player.side || "offense";
+        }
+      });
+      
+      playData.routes = playData.routes.map((r: any, i: number) => {
+        const newPlayerId = playerIdMap[r.playerId] || r.playerId;
+        const playerSide = playerSideLookup[newPlayerId];
+        
+        // Infer motion from route geometry if not explicitly set (offense only)
+        let inferredMotion = r.isMotion || false;
+        if (!inferredMotion && playerSide === "offense" && r.points && r.points.length >= 2) {
+          // Check if route starts with a horizontal segment (motion indicator)
+          const firstPoint = r.points[0];
+          const secondPoint = r.points[1];
+          if (firstPoint && secondPoint) {
+            const dx = Math.abs(secondPoint.x - firstPoint.x);
+            const dy = Math.abs(secondPoint.y - firstPoint.y);
+            // If horizontal movement is significantly greater than vertical at start, it's likely motion
+            if (dx > 40 && dy < 20) {
+              inferredMotion = true;
+            }
+          }
+        }
+        
+        // Ensure motion is only for offense
+        if (playerSide === "defense") {
+          inferredMotion = false;
+        }
+        
+        return {
+          ...r,
+          id: `route-${ts}-${i}`,
+          playerId: newPlayerId,
+          isPrimary: r.isPrimary || false,
+          isMotion: inferredMotion,
+        };
+      });
+      
+      // If any route has isMotion, set the preSnapMotion mechanic
+      const hasMotionRoutes = playData.routes.some((r: any) => r.isMotion);
+      if (hasMotionRoutes) {
+        playData.mechanics = playData.mechanics || {};
+        playData.mechanics.preSnapMotion = true;
+      }
 
       res.json(playData);
     } catch (error: any) {

@@ -1,0 +1,31 @@
+I need to implement the backend logic for the 'Upload Play' feature. This will process a user-uploaded image (Base64) and convert it into a structured play JSON that matches my app's strict presets.
+
+The Goal: When I upload a hand-drawn diagram, the AI must not just 'guess' where players go. It must snap the drawing to my existing FOOTBALL_CONFIG.formations and applying the correct colors/routes.
+
+Step 1: Update the Backend Route (/api/generate-play) Modify the existing endpoint to handle the image property in the POST request body.
+
+Step 2: The Vision System Prompt Construct a specific System Instruction for the Vision Model (Gemini 1.5 Flash).
+
+Context: 'You are an expert Football Play digitizer. You will receive an image of a football play. Your job is to convert this visual diagram into a specific JSON structure defined by FOOTBALL_CONFIG.'
+
+The "Snap-to-Grid" Rule (CRITICAL): 'Analyze the image to identify the formation type (e.g., 5v5, 7v7, Trips, Bunch). Once identified, you MUST use the exact player starting coordinates from FOOTBALL_CONFIG.formations as the base. Do not use the pixel positions from the image for the starting points; use the config values.'
+
+The "Route Interpreter" Rule: 'Analyze the lines drawn in the image:
+
+Straight Line: Set style: "linear".
+
+Curved/Wavy Line: Set style: "curved".
+
+Dotted Line: Set style: "dotted" (Man Coverage).
+
+Arrow Head: Use the end point of the line as the target coordinate.'
+
+The "Role Coloring" Rule: 'Identify the player roles based on position (e.g., Center, QB, Wide Receiver). You MUST apply the hex codes from FOOTBALL_CONFIG.colors.
+
+Example: If you see a Center, color: "${FOOTBALL_CONFIG.colors.offense.lineman}", shape: "square".
+
+Example: If you see a Receiver, color: "${FOOTBALL_CONFIG.colors.offense.receivers}", shape: "circle".'
+
+Step 3: Execution Call the Gemini API with the text prompt ("Analyze this play diagram...") and the inlineData (the Base64 image). Return the parsed JSON.
+
+Please write the updated backend code to handle this image-to-JSON transformation.
