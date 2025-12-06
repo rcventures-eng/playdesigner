@@ -23,6 +23,7 @@ The core play design functionality uses HTML5 Canvas and SVG for rendering. A `F
 -   **Export Functionality**: Generates downloadable PNGs using `html-to-image`, optimized for quality at various sizes.
 -   **Interaction Model**: Drag-and-drop for players, click-to-draw for routes, and a long-press cascading menu for comprehensive player interactions.
 -   **Long-press vs Drag Detection**: Uses 8px movement threshold and timer fallback check to reliably distinguish between long-press (menu) and drag (move player) gestures.
+-   **Advanced Route Editing**: Double-click on any route to enter edit mode with blue control handles at every route point. The first point remains locked to the player position while other points can be freely dragged to adjust the route shape. Each drag operation creates an undo checkpoint. Curved routes auto-recalculate their curves when endpoints change. Click on the canvas background to exit edit mode.
 
 ### Player Rendering and Defensive Assignments
 
