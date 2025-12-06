@@ -1845,6 +1845,10 @@ export default function PlayDesigner() {
       }
 
       const playData = await response.json();
+      
+      // Debug: Log AI response to verify mechanics flags
+      console.log("AI Play Response:", playData);
+      console.log("Mechanics flags:", playData.mechanics);
 
       // Validate and apply the generated players
       if (playData.players && Array.isArray(playData.players)) {
@@ -1877,6 +1881,55 @@ export default function PlayDesigner() {
       // Clear shapes for fresh AI-generated play
       setShapes([]);
       
+      // Handle footballs from AI response (or create default at LOS)
+      if (playData.footballs && Array.isArray(playData.footballs) && playData.footballs.length > 0) {
+        const validFootballs = playData.footballs.map((f: any) => ({
+          id: f.id || `football-${Date.now()}-${Math.random()}`,
+          x: f.x || Math.floor(FIELD.WIDTH / 2),
+          y: f.y || FIELD.LOS_Y,
+        }));
+        setFootballs(validFootballs);
+      } else {
+        // Create a default football at LOS center if AI didn't provide one
+        setFootballs([{
+          id: `football-${Date.now()}`,
+          x: Math.floor(FIELD.WIDTH / 2),
+          y: FIELD.LOS_Y,
+        }]);
+      }
+      
+      // Handle AI mechanics flags (play action, motion, etc.)
+      if (playData.mechanics) {
+        // Toggle play action marker if AI detected play action in prompt
+        if (playData.mechanics.hasPlayAction === true) {
+          setIsPlayAction(true);
+        } else {
+          setIsPlayAction(false);
+        }
+        
+        // Handle pre-snap motion - mark relevant routes as motion routes
+        if (playData.mechanics.preSnapMotion === true && playData.routes) {
+          // Find any routes that should be motion routes and update them
+          const updatedRoutes = playData.routes.map((r: any) => ({
+            ...r,
+            isMotion: r.isMotion || false,
+          }));
+          setRoutes(updatedRoutes.map((r: any) => ({
+            id: r.id || `route-${Date.now()}-${Math.random()}`,
+            playerId: r.playerId,
+            type: r.type || "curved",
+            style: r.style || "solid",
+            color: r.color || CONFIG_COLORS.offense.rb,
+            points: Array.isArray(r.points) ? r.points : [],
+            isPrimary: r.isPrimary || false,
+            isMotion: r.isMotion || false,
+          })));
+        }
+      } else {
+        // No mechanics in response - reset play action
+        setIsPlayAction(false);
+      }
+      
       // Clear the prompt after successful generation
       setSpecialPrompt("");
       
@@ -1887,7 +1940,7 @@ export default function PlayDesigner() {
 
       toast({
         title: "Play generated!",
-        description: "The AI has created your play on the field",
+        description: playData.mechanics?.hasPlayAction ? "Play created with play-action!" : "The AI has created your play on the field",
       });
     } catch (error: any) {
       console.error("Generate play error:", error);

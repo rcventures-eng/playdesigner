@@ -1,0 +1,82 @@
+I need to implement the 'Football Logic Engine' to power the AI features (/api/generate-play), ensuring it understands Flag Football concepts and specific color rules.
+
+Important Constraint:
+
+Do NOT touch the existing manual preset functions (like handleLoad5v5, handleLoad7v7). Those must remain exactly as they are.
+
+ONLY apply this logic to the AI Generation backend and the handleGenerate frontend function.
+
+Step 1: Create the 'Brain' Files Please create two new files in the shared/ folder:
+
+A. shared/football-config.ts (The Single Source of Truth for Data)
+
+TypeScript
+export const FOOTBALL_CONFIG = {
+  field: { width: 694, height: 392, losY: 284, pixelsPerYard: 12 },
+  colors: {
+    offense: {
+      qb_rb: "#000000",      // Black
+      receivers: "#39ff14",  // Neon Green
+      tightEnd: "#f97316",   // Orange
+      motion: "#eab308",     // Yellow
+      lineman: "#1d4ed8"     // Blue/Gray
+    },
+    defense: {
+      lineman: "#87CEEB",    // Sky Blue (X)
+      linebacker: "#FFB6C1", // Pink (X)
+      secondary: "#9333ea"   // Purple (X)
+    },
+    routes: {
+      primary: "#ef4444",    // Red
+      blitz: "#ef4444",      // Red Arrow
+      man: "#9ca3af"         // Gray Dotted
+    }
+  }
+};
+B. shared/logic-dictionary.ts (The Strategy Translator) Please create this file exporting const LOGIC_DICTIONARY containing the Flag-Specific definitions provided below:
+
+TypeScript
+export const LOGIC_DICTIONARY = {
+  offense: {
+    formations: {
+      "5v5 Spread": { rule: "Center at LOS. QB at LOS+28. RB at LOS+75. 2 Receivers split wide (X left, Z right)." },
+      "Trips": { rule: "Three receivers on one side. Stack Z, Y, H strong side." },
+      "Bunch": { rule: "Triangle cluster of 3 receivers (spacing < 15px)." }
+    },
+    routeTree: {
+      "Flat": { style: "linear", rule: "Quick out to sideline (3 yds)." },
+      "Slant": { style: "linear", rule: "3 steps vertical, 45-degree cut in." },
+      "Corner": { style: "linear", rule: "Deep stem, 45-degree cut to back pylon." },
+      "Go": { style: "linear", rule: "Vertical sprint deep." },
+      "Wheel": { style: "curved", rule: "Out to sideline, curve up field." }
+    }
+  },
+  defense: {
+    formations: {
+      "5v5 Base": { rule: "1 Rusher (Blue) at LOS-40. 2 Blitzers (Blue) wide. 2 Safeties (Purple) deep." },
+      "Cover 2": { rule: "2 Safeties deep splitting hashes. Corners squat shallow." },
+      "Blitz": { rule: "Red linear line from defender to QB." }
+    }
+  },
+  mechanics: {
+    "Play Action": { flag: "hasPlayAction" },
+    "Motion": { flag: "preSnapMotion" }
+  }
+};
+Step 2: Update the Backend (server/routes.ts)
+
+Import FOOTBALL_CONFIG and LOGIC_DICTIONARY.
+
+Update the Gemini System Instruction to inject these objects.
+
+Prompt logic: "You are the AI Play Designer. Use the LOGIC_DICTIONARY to interpret terms like 'Corner Route' or 'Cover 2'. Use FOOTBALL_CONFIG for all coordinate geometry and hex codes."
+
+Step 3: Update the Frontend AI Handler (PlayDesigner.tsx)
+
+Import FOOTBALL_CONFIG to access the color palette dynamically (optional, but good for consistency).
+
+Update ONLY the handleGenerate function (triggered by the AI text box or image upload).
+
+Ensure it parses the AI's JSON response and applies the logic (e.g., if AI returns hasPlayAction: true, render the PA icon).
+
+Please implement these changes to power the AI features without altering the existing manual presets.

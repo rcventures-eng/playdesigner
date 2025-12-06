@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { FOOTBALL_CONFIG } from "../shared/football-config";
+import { LOGIC_DICTIONARY } from "../shared/logic-dictionary";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
@@ -62,6 +63,44 @@ ${Object.entries(logicRules).map(([key, rule]) =>
   `- ${key.toUpperCase()}: triggers=${JSON.stringify(rule.triggers)}, ${rule.description}`
 ).join('\n')}
 
+FOOTBALL STRATEGY DICTIONARY (Use this to interpret user prompts):
+
+OFFENSIVE FORMATIONS:
+${Object.entries(LOGIC_DICTIONARY.offense.formations).map(([name, data]) => 
+  `- "${name}": ${data.rule}`
+).join('\n')}
+
+ROUTE TREE (how to draw specific route patterns):
+${Object.entries(LOGIC_DICTIONARY.offense.routeTree).map(([name, data]) => 
+  `- "${name}" (${data.style}, ${data.depth}): ${data.rule}`
+).join('\n')}
+
+OFFENSIVE CONCEPTS:
+${Object.entries(LOGIC_DICTIONARY.offense.concepts).map(([name, data]) => 
+  `- "${name}": ${data.rule} Routes: ${data.routes.join(', ')}`
+).join('\n')}
+
+DEFENSIVE FORMATIONS:
+${Object.entries(LOGIC_DICTIONARY.defense.formations).map(([name, data]) => 
+  `- "${name}": ${data.rule}`
+).join('\n')}
+
+DEFENSIVE ASSIGNMENTS:
+${Object.entries(LOGIC_DICTIONARY.defense.assignments).map(([name, data]) => 
+  `- "${name}" (${data.style}): ${data.rule}`
+).join('\n')}
+
+GAME MECHANICS (set these flags in your response when detected):
+${Object.entries(LOGIC_DICTIONARY.mechanics).map(([name, data]) => 
+  `- "${name}": flag="${data.flag}" - ${data.rule}`
+).join('\n')}
+
+KEYWORD TRIGGERS TO RECOGNIZE:
+- Formation keywords: ${LOGIC_DICTIONARY.keywords.formationTriggers.join(', ')}
+- Route keywords: ${LOGIC_DICTIONARY.keywords.routeTriggers.join(', ')}
+- Defense keywords: ${LOGIC_DICTIONARY.keywords.defenseTriggers.join(', ')}
+- Mechanic keywords: ${LOGIC_DICTIONARY.keywords.mechanicTriggers.join(', ')}
+
 OUTPUT FORMAT - You MUST return valid JSON with this exact structure:
 {
   "players": [
@@ -91,8 +130,20 @@ OUTPUT FORMAT - You MUST return valid JSON with this exact structure:
       "y": ${field.losY}
     }
   ],
-  "playType": "offense"
+  "playType": "offense",
+  "mechanics": {
+    "hasPlayAction": false,
+    "preSnapMotion": false,
+    "hasRPO": false,
+    "hasJetSweep": false
+  }
 }
+
+MECHANICS FLAGS (include in response when user prompt contains these concepts):
+- Set "hasPlayAction": true when prompt mentions "play action", "play-action", "PA", or "fake handoff"
+- Set "preSnapMotion": true when prompt mentions "motion", "jet motion", or player moving before snap
+- Set "hasRPO": true when prompt mentions "RPO" or "run-pass option"
+- Set "hasJetSweep": true when prompt mentions "jet sweep" or "jet" with motion
 
 IMPORTANT RULES:
 1. Always include at least 5 offensive players for a valid formation
