@@ -1,0 +1,43 @@
+I need to integrate Google's Gemini 1.5 Flash model to power the 'AI Play Creator' and 'Upload Play' features.
+
+1. Install Dependencies Please install the Google AI SDK: npm install @google/generative-ai
+
+2. Create the Backend Endpoint (/api/generate-play) Create a new route in server/routes.ts that accepts POST requests with { prompt: string, image?: string } (where image is base64).
+
+The Gemini System Instruction (Crucial): Configure the model (gemini-1.5-flash) with responseMimeType: "application/json". You must provide a system prompt that teaches Gemini our app's coordinate system so it outputs valid JSON:
+
+Field: 694x392 pixels.
+
+LOS: Y = 284.
+
+Offense: Moving Up (Lower Y values).
+
+Defense: Moving Down (Higher Y values) or waiting above.
+
+Output Schema: It must return a JSON object: { "players": [...], "routes": [...] }.
+
+players: { id, label, color, x, y, shape }
+
+routes: { id, playerId, type, style, points: [{x, y}] }
+
+Color Coding: Tell it to use our specific hex codes (Black=#000000 for QB, Green=#39ff14 for receivers, etc.).
+
+3. Wire Up the Frontend (Text Input) In PlayDesigner.tsx, locate the 'Special' tab's <textarea> and Orange Arrow Button.
+
+Action: On click, send the text prompt to /api/generate-play.
+
+Loading State: Show a loading spinner on the button while waiting.
+
+Result: When the JSON comes back, strictly type it and call setPlayers() and setRoutes() to instantly render the generated play on the field.
+
+4. Wire Up the Frontend (Image Upload) In PlayDesigner.tsx, locate the UploadAction component (the top-left orange button).
+
+Action: When a file is selected, convert it to a Base64 string.
+
+API Call: Send the Base64 string + a prompt ("Generate a play based on this diagram") to the same /api/generate-play endpoint.
+
+Result: The backend passes the image to Gemini's multimodal vision capabilities, parses the layout, and returns the same JSON structure to render the play.
+
+5. Refinement Ensure error handling is in place (e.g., if the AI returns invalid JSON, show a toast error).
+
+Please write the code for the Server Route and the Frontend Integration.
