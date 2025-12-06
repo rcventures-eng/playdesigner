@@ -1,0 +1,41 @@
+I need to fix a discrepancy between the AI-generated formations and my hardcoded presets. The AI is guessing player positions instead of using my exact game formats.
+
+The Strategy: Formations as Data Currently, my player coordinates are locked inside functions like handleLoad5v5. I need to extract them into a shared config so the AI can 'read' the exact starting positions.
+
+Step 1: Update shared/football-config.ts Add a formations object to the config. Please extract the Exact X/Y Coordinates from my current handleLoad5v5 and handleLoad7v7 functions and define them here.
+
+Example Structure (Use my actual values):
+
+TypeScript
+export const FOOTBALL_CONFIG = {
+  // ... existing colors and field config ...
+  formations: {
+    "5v5": {
+      offense: [
+        { label: "C", x: 347, y: 284, color: "blue", shape: "square" }, // Center
+        { label: "QB", x: 347, y: 324, color: "black", shape: "circle" }, // QB Shotgun
+        { label: "X", x: 100, y: 284, color: "green", shape: "circle" }, // Wide Left
+        // ... copy exact coordinates for all 5 players
+      ],
+      defense: [ /* ... copy exact defensive preset ... */ ]
+    },
+    "7v7": {
+      // ... copy exact 7v7 coordinates
+    }
+  }
+};
+Step 2: Update the AI System Prompt (server/routes.ts)
+
+Inject this new FOOTBALL_CONFIG.formations object into the Gemini System Instruction.
+
+Crucial Instruction: Add this specific rule to the prompt:
+
+"If the user specifies a Game Format (e.g., '5-on-5', '7-on-7'), you MUST start with the exact player coordinates defined in FOOTBALL_CONFIG.formations. Do not invent new player positions. Your job is to generate the routes array for these specific players."
+
+Step 3: Refactor the Manual Buttons (PlayDesigner.tsx)
+
+Update the manual '5-on-5 Flag' buttons to load data directly from FOOTBALL_CONFIG.formations["5v5"] instead of using hardcoded numbers inside the component.
+
+Why? This ensures that if I tweak a player's starting position in the config, both the Manual Button and the AI Generator update instantly.
+
+Please implement this refactor to sync the AI's starting positions with my manual presets.

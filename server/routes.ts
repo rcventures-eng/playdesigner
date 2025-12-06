@@ -2,8 +2,35 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { FOOTBALL_CONFIG } from "../shared/football-config";
+import { FOOTBALL_CONFIG, FORMATIONS, resolveColorKey } from "../shared/football-config";
 import { LOGIC_DICTIONARY } from "../shared/logic-dictionary";
+
+// Convert FORMATIONS to a format with resolved colors for AI consumption
+const getFormationsForAI = () => {
+  const result: Record<string, any> = {};
+  for (const [size, sizeData] of Object.entries(FORMATIONS)) {
+    result[size] = {
+      offense: {} as Record<string, any>,
+      defense: {} as Record<string, any>,
+    };
+    for (const [side, sideData] of Object.entries(sizeData)) {
+      for (const [variation, formationData] of Object.entries(sideData as Record<string, any>)) {
+        result[size][side][variation] = {
+          name: formationData.name,
+          description: formationData.description,
+          players: formationData.players.map((p: any) => ({
+            label: p.label,
+            x: p.x,
+            y: p.y,
+            color: resolveColorKey(p.colorKey),
+            side: p.side,
+          })),
+        };
+      }
+    }
+  }
+  return result;
+};
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
@@ -57,6 +84,25 @@ ROUTE STYLES:
 FORMATION KNOWLEDGE:
 - Offense: ${JSON.stringify(formationTemplates.offense)}
 - Defense: ${JSON.stringify(formationTemplates.defense)}
+
+EXACT FORMATION COORDINATES (CRITICAL - YOU MUST USE THESE EXACT POSITIONS):
+When the user specifies a game format (5v5, 5-on-5, 7v7, 7-on-7, 9v9, 9-on-9, 11v11, 11-on-11, or any variation),
+you MUST use the EXACT player coordinates from this configuration. DO NOT invent new player positions.
+Your job is to generate ROUTES for these specific players, not to reposition them.
+
+${JSON.stringify(getFormationsForAI(), null, 2)}
+
+FORMATION SIZE ALIASES (map these to the formations above):
+- "5v5", "5-on-5", "flag", "flag football", "5 man" → Use formations["5v5"]
+- "7v7", "7-on-7", "7 man" → Use formations["7v7"]
+- "9v9", "9-on-9", "9 man" → Use formations["9v9"]
+- "11v11", "11-on-11", "full team", "varsity", "11 man" → Use formations["11v11"]
+
+When a formation size is specified:
+1. Copy the EXACT players array from the appropriate formation above
+2. Use the EXACT x, y, color, and label values - do NOT modify positions
+3. Generate routes that start from each player's exact position
+4. Add routes based on the play concept requested (slants, corners, etc.)
 
 LOGIC RULES (recognize these triggers in prompts):
 ${Object.entries(logicRules).map(([key, rule]) => 
