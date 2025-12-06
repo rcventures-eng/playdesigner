@@ -1718,6 +1718,10 @@ export default function PlayDesigner() {
       return;
     }
 
+    // Save current state to history so user can undo the AI generation
+    // Always save, even if canvas is empty, so users can undo back to empty state
+    saveToHistory();
+
     setIsGenerating(true);
 
     try {
