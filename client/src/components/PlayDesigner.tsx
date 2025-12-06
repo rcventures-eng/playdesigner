@@ -11,6 +11,7 @@ import { Download, Copy, Plus, Trash2, Circle as CircleIcon, MoveHorizontal, Pen
 import { toPng } from "html-to-image";
 import { useToast } from "@/hooks/use-toast";
 import underConstructionImage from "@assets/generated_images/under_construction_warning_banner.png";
+import { FOOTBALL_CONFIG } from "../../../shared/football-config";
 
 const FIELD = {
   WIDTH: 694,
@@ -220,9 +221,26 @@ export default function PlayDesigner() {
   const suppressNextClickRef = useRef(false);
   const { toast } = useToast();
 
-  const offenseColors = ["#39ff14", "#1d4ed8", "#ef4444", "#eab308", "#000000", "#f97316", "#6b7280"];
-  const defenseColors = ["#87CEEB", "#FFB6C1", "#9333ea"];
-  const shapeColors = ["#ec4899", "#1d4ed8", "#86efac"];
+  const { colors: CONFIG_COLORS, labels: CONFIG_LABELS } = FOOTBALL_CONFIG;
+  const offenseColors = [
+    CONFIG_COLORS.offense.rb,
+    CONFIG_COLORS.offense.receiverZ,
+    CONFIG_COLORS.offense.receiverX,
+    CONFIG_COLORS.offense.slotY,
+    CONFIG_COLORS.offense.qb,
+    CONFIG_COLORS.offense.te,
+    CONFIG_COLORS.offense.default,
+  ];
+  const defenseColors = [
+    CONFIG_COLORS.defense.linebacker,
+    CONFIG_COLORS.defense.lineman,
+    CONFIG_COLORS.defense.secondary,
+  ];
+  const shapeColors = [
+    CONFIG_COLORS.shapes.pink,
+    CONFIG_COLORS.shapes.blue,
+    CONFIG_COLORS.shapes.green,
+  ];
   const colors = playType === "offense" ? offenseColors : defenseColors;
   
   const conceptLabels: Record<string, string> = {
@@ -253,13 +271,13 @@ export default function PlayDesigner() {
   // Preset positions for offensive players based on standard formation
   // Uses FIELD config and spacing constants for positioning relative to LOS
   const offensePositions: Record<string, { x: number; y: number }> = {
-    "#39ff14": { x: centerX, y: FIELD.LOS_Y + 6 * FIELD.PIXELS_PER_YARD },  // Green - Running back (center, 6 yards back)
-    "#1d4ed8": { x: FIELD.FIELD_LEFT + 50, y: FIELD.LOS_Y },   // Blue (Z) - Split end (far left on line)
-    "#ef4444": { x: FIELD.FIELD_RIGHT - 50, y: FIELD.LOS_Y },  // Red (X) - Right receiver (far right on line)
-    "#eab308": { x: centerX - (3 * (PLAYER_SIZE + GAP_SIZE)), y: FIELD.LOS_Y },  // Yellow (Y) - Slot -3 (left of LT)
-    "#000000": { x: centerX, y: FIELD.LOS_Y + PLAYER_SIZE + 5 },  // Black (QB) - Behind Center with 5px gap
-    "#f97316": { x: centerX + (3 * (PLAYER_SIZE + GAP_SIZE)), y: FIELD.LOS_Y },  // Orange (TE) - Slot +3 (right of RT)
-    "#6b7280": { x: centerX, y: FIELD.LOS_Y },  // Gray - default (will be overridden by sequence)
+    [CONFIG_COLORS.offense.rb]: { x: centerX, y: FIELD.LOS_Y + 6 * FIELD.PIXELS_PER_YARD },  // Green - Running back (center, 6 yards back)
+    [CONFIG_COLORS.offense.receiverZ]: { x: FIELD.FIELD_LEFT + 50, y: FIELD.LOS_Y },   // Blue (Z) - Split end (far left on line)
+    [CONFIG_COLORS.offense.receiverX]: { x: FIELD.FIELD_RIGHT - 50, y: FIELD.LOS_Y },  // Red (X) - Right receiver (far right on line)
+    [CONFIG_COLORS.offense.slotY]: { x: centerX - (3 * (PLAYER_SIZE + GAP_SIZE)), y: FIELD.LOS_Y },  // Yellow (Y) - Slot -3 (left of LT)
+    [CONFIG_COLORS.offense.qb]: { x: centerX, y: FIELD.LOS_Y + PLAYER_SIZE + 5 },  // Black (QB) - Behind Center with 5px gap
+    [CONFIG_COLORS.offense.te]: { x: centerX + (3 * (PLAYER_SIZE + GAP_SIZE)), y: FIELD.LOS_Y },  // Orange (TE) - Slot +3 (right of RT)
+    [CONFIG_COLORS.offense.default]: { x: centerX, y: FIELD.LOS_Y },  // Gray - default (will be overridden by sequence)
   };
   
   // Generate gray positions using the center-out formula
@@ -269,22 +287,8 @@ export default function PlayDesigner() {
     y: FIELD.LOS_Y
   }));
 
-  // Auto-labels for each color when players are added
-  const colorLabels: Record<string, string> = {
-    "#000000": "QB",   // Black - Quarterback
-    "#39ff14": "RB",   // Green - Running back
-    "#1d4ed8": "Z",    // Blue - Z receiver (split end)
-    "#eab308": "Y",    // Yellow - Y receiver (slot/tight)
-    "#ef4444": "X",    // Red - X receiver (flanker)
-    "#f97316": "TE",   // Orange - Tight end
-  };
-
-  // Auto-labels for defense colors
-  const defenseColorLabels: Record<string, string> = {
-    "#FFB6C1": "DL",   // Pink - Defensive Line
-    "#87CEEB": "LB",   // Light Blue - Linebacker
-    "#9333ea": "DB",   // Purple - Defensive Back
-  };
+  const colorLabels: Record<string, string> = CONFIG_LABELS.offense;
+  const defenseColorLabels: Record<string, string> = CONFIG_LABELS.defense;
 
   // Sequential labels for gray offensive linemen (C, LG, RG, LT, RT, then OL for extras)
   const grayLabels = ["C", "LG", "RG", "LT", "RT"];
@@ -616,11 +620,11 @@ export default function PlayDesigner() {
 
   const generate5v5Formation = (): Player[] => {
     return [
-      { id: `player-${Date.now()}-1`, x: centerX, y: FIELD.LOS_Y + PLAYER_SIZE + 4, color: "#000000", label: "QB" },
-      { id: `player-${Date.now()}-2`, x: centerX, y: FIELD.LOS_Y + 75, color: "#39ff14", label: "RB" },
-      { id: `player-${Date.now()}-3`, x: centerX - (2 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#eab308", label: "Y" },
-      { id: `player-${Date.now()}-4`, x: centerX - (6 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#1d4ed8", label: "Z" },
-      { id: `player-${Date.now()}-5`, x: centerX + (6 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#ef4444", label: "X" },
+      { id: `player-${Date.now()}-1`, x: centerX, y: FIELD.LOS_Y + PLAYER_SIZE + 4, color: CONFIG_COLORS.offense.qb, label: "QB" },
+      { id: `player-${Date.now()}-2`, x: centerX, y: FIELD.LOS_Y + 75, color: CONFIG_COLORS.offense.rb, label: "RB" },
+      { id: `player-${Date.now()}-3`, x: centerX - (2 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.slotY, label: "Y" },
+      { id: `player-${Date.now()}-4`, x: centerX - (6 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.receiverZ, label: "Z" },
+      { id: `player-${Date.now()}-5`, x: centerX + (6 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.receiverX, label: "X" },
     ];
   };
 
@@ -644,12 +648,12 @@ export default function PlayDesigner() {
   const generate7v7Formation = (): Player[] => {
     return [
       { id: `player-${Date.now()}-1`, x: centerX, y: FIELD.LOS_Y, color: "#6b7280", label: "C" },
-      { id: `player-${Date.now()}-2`, x: centerX, y: FIELD.LOS_Y + PLAYER_SIZE + 4, color: "#000000", label: "QB" },
-      { id: `player-${Date.now()}-3`, x: centerX, y: FIELD.LOS_Y + 75, color: "#39ff14", label: "RB" },
-      { id: `player-${Date.now()}-4`, x: centerX - (2.5 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#eab308", label: "Y" },
-      { id: `player-${Date.now()}-5`, x: centerX + (2.5 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#f97316", label: "TE" },
-      { id: `player-${Date.now()}-6`, x: centerX - (6.5 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#1d4ed8", label: "Z" },
-      { id: `player-${Date.now()}-7`, x: centerX + (6.5 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#ef4444", label: "X" },
+      { id: `player-${Date.now()}-2`, x: centerX, y: FIELD.LOS_Y + PLAYER_SIZE + 4, color: CONFIG_COLORS.offense.qb, label: "QB" },
+      { id: `player-${Date.now()}-3`, x: centerX, y: FIELD.LOS_Y + 75, color: CONFIG_COLORS.offense.rb, label: "RB" },
+      { id: `player-${Date.now()}-4`, x: centerX - (2.5 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.slotY, label: "Y" },
+      { id: `player-${Date.now()}-5`, x: centerX + (2.5 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.te, label: "TE" },
+      { id: `player-${Date.now()}-6`, x: centerX - (6.5 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.receiverZ, label: "Z" },
+      { id: `player-${Date.now()}-7`, x: centerX + (6.5 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.receiverX, label: "X" },
     ];
   };
 
@@ -677,14 +681,14 @@ export default function PlayDesigner() {
       { id: `player-${Date.now()}-2`, x: centerX - (1 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#6b7280", label: "LG" },
       { id: `player-${Date.now()}-3`, x: centerX + (1 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#6b7280", label: "RG" },
       // Ends (Circles) - slots -3, +3 (preserving gap where tackles would be)
-      { id: `player-${Date.now()}-4`, x: centerX - (3 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#eab308", label: "Y" },
-      { id: `player-${Date.now()}-5`, x: centerX + (3 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#f97316", label: "TE" },
+      { id: `player-${Date.now()}-4`, x: centerX - (3 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.slotY, label: "Y" },
+      { id: `player-${Date.now()}-5`, x: centerX + (3 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.te, label: "TE" },
       // Wideouts (Circles) - slots -7, +7
-      { id: `player-${Date.now()}-6`, x: centerX - (7 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#1d4ed8", label: "Z" },
-      { id: `player-${Date.now()}-7`, x: centerX + (7 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#ef4444", label: "X" },
+      { id: `player-${Date.now()}-6`, x: centerX - (7 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.receiverZ, label: "Z" },
+      { id: `player-${Date.now()}-7`, x: centerX + (7 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.receiverX, label: "X" },
       // Backfield (Circles) - stacked center
-      { id: `player-${Date.now()}-8`, x: centerX, y: FIELD.LOS_Y + PLAYER_SIZE + 4, color: "#000000", label: "QB" },
-      { id: `player-${Date.now()}-9`, x: centerX, y: FIELD.LOS_Y + 75, color: "#39ff14", label: "RB" },
+      { id: `player-${Date.now()}-8`, x: centerX, y: FIELD.LOS_Y + PLAYER_SIZE + 4, color: CONFIG_COLORS.offense.qb, label: "QB" },
+      { id: `player-${Date.now()}-9`, x: centerX, y: FIELD.LOS_Y + 75, color: CONFIG_COLORS.offense.rb, label: "RB" },
     ];
   };
 
@@ -714,14 +718,14 @@ export default function PlayDesigner() {
       { id: `player-${Date.now()}-4`, x: centerX - (2 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#6b7280", label: "LT" },
       { id: `player-${Date.now()}-5`, x: centerX + (2 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#6b7280", label: "RT" },
       // Tight Ends / Slots (Circles) - slots -3, +3
-      { id: `player-${Date.now()}-6`, x: centerX - (3 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#eab308", label: "Y" },
-      { id: `player-${Date.now()}-7`, x: centerX + (3 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#f97316", label: "TE" },
+      { id: `player-${Date.now()}-6`, x: centerX - (3 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.slotY, label: "Y" },
+      { id: `player-${Date.now()}-7`, x: centerX + (3 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.te, label: "TE" },
       // Wideouts (Circles) - slots -7, +7
-      { id: `player-${Date.now()}-8`, x: centerX - (7 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#1d4ed8", label: "Z" },
-      { id: `player-${Date.now()}-9`, x: centerX + (7 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#ef4444", label: "X" },
+      { id: `player-${Date.now()}-8`, x: centerX - (7 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.receiverZ, label: "Z" },
+      { id: `player-${Date.now()}-9`, x: centerX + (7 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.receiverX, label: "X" },
       // Backfield (Circles) - stacked center
-      { id: `player-${Date.now()}-10`, x: centerX, y: FIELD.LOS_Y + PLAYER_SIZE + 4, color: "#000000", label: "QB" },
-      { id: `player-${Date.now()}-11`, x: centerX, y: FIELD.LOS_Y + 75, color: "#39ff14", label: "RB" },
+      { id: `player-${Date.now()}-10`, x: centerX, y: FIELD.LOS_Y + PLAYER_SIZE + 4, color: CONFIG_COLORS.offense.qb, label: "QB" },
+      { id: `player-${Date.now()}-11`, x: centerX, y: FIELD.LOS_Y + 75, color: CONFIG_COLORS.offense.rb, label: "RB" },
     ];
   };
 
@@ -743,8 +747,8 @@ export default function PlayDesigner() {
   };
 
   const generateDefense5v5Formation = (): Player[] => {
-    const LIGHT_BLUE = "#87CEEB";
-    const PURPLE = "#9333ea";
+    const LIGHT_BLUE = CONFIG_COLORS.defense.linebacker;
+    const PURPLE = CONFIG_COLORS.defense.secondary;
     const SPACING = 60; // Base spacing unit in pixels
     const ts = Date.now();
     
@@ -765,18 +769,18 @@ export default function PlayDesigner() {
   const generateOffense5v5ForDefenseTab = (): Player[] => {
     const ts = Date.now();
     return [
-      { id: `player-${ts}-o1`, x: centerX, y: FIELD.LOS_Y + PLAYER_SIZE + 4, color: "#000000", label: "QB", side: "offense" as const },
-      { id: `player-${ts}-o2`, x: centerX + (2 * SPACING_UNIT), y: FIELD.LOS_Y + PLAYER_SIZE + 4, color: "#39ff14", label: "RB", side: "offense" as const },
-      { id: `player-${ts}-o3`, x: centerX - (2 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#eab308", label: "Y", side: "offense" as const },
-      { id: `player-${ts}-o4`, x: centerX - (6 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#1d4ed8", label: "Z", side: "offense" as const },
-      { id: `player-${ts}-o5`, x: centerX + (6 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#ef4444", label: "X", side: "offense" as const },
+      { id: `player-${ts}-o1`, x: centerX, y: FIELD.LOS_Y + PLAYER_SIZE + 4, color: CONFIG_COLORS.offense.qb, label: "QB", side: "offense" as const },
+      { id: `player-${ts}-o2`, x: centerX + (2 * SPACING_UNIT), y: FIELD.LOS_Y + PLAYER_SIZE + 4, color: CONFIG_COLORS.offense.rb, label: "RB", side: "offense" as const },
+      { id: `player-${ts}-o3`, x: centerX - (2 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.slotY, label: "Y", side: "offense" as const },
+      { id: `player-${ts}-o4`, x: centerX - (6 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.receiverZ, label: "Z", side: "offense" as const },
+      { id: `player-${ts}-o5`, x: centerX + (6 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.receiverX, label: "X", side: "offense" as const },
     ];
   };
 
   const generateDefense7v7Formation = (): Player[] => {
-    const PINK = "#FFB6C1";
-    const LIGHT_BLUE = "#87CEEB";
-    const PURPLE = "#9333ea";
+    const PINK = CONFIG_COLORS.defense.lineman;
+    const LIGHT_BLUE = CONFIG_COLORS.defense.linebacker;
+    const PURPLE = CONFIG_COLORS.defense.secondary;
     const SPACING = 60;
     const ts = Date.now();
     
@@ -798,19 +802,19 @@ export default function PlayDesigner() {
     const ts = Date.now();
     return [
       { id: `player-${ts}-o1`, x: centerX, y: FIELD.LOS_Y, color: "#6b7280", label: "C", side: "offense" as const },
-      { id: `player-${ts}-o2`, x: centerX, y: FIELD.LOS_Y + PLAYER_SIZE + 4, color: "#000000", label: "QB", side: "offense" as const },
-      { id: `player-${ts}-o3`, x: centerX + (2 * SPACING_UNIT), y: FIELD.LOS_Y + PLAYER_SIZE + 4, color: "#39ff14", label: "RB", side: "offense" as const },
-      { id: `player-${ts}-o4`, x: centerX - (2.5 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#eab308", label: "Y", side: "offense" as const },
-      { id: `player-${ts}-o5`, x: centerX + (2.5 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#f97316", label: "TE", side: "offense" as const },
-      { id: `player-${ts}-o6`, x: centerX - (6.5 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#1d4ed8", label: "Z", side: "offense" as const },
-      { id: `player-${ts}-o7`, x: centerX + (6.5 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#ef4444", label: "X", side: "offense" as const },
+      { id: `player-${ts}-o2`, x: centerX, y: FIELD.LOS_Y + PLAYER_SIZE + 4, color: CONFIG_COLORS.offense.qb, label: "QB", side: "offense" as const },
+      { id: `player-${ts}-o3`, x: centerX + (2 * SPACING_UNIT), y: FIELD.LOS_Y + PLAYER_SIZE + 4, color: CONFIG_COLORS.offense.rb, label: "RB", side: "offense" as const },
+      { id: `player-${ts}-o4`, x: centerX - (2.5 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.slotY, label: "Y", side: "offense" as const },
+      { id: `player-${ts}-o5`, x: centerX + (2.5 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.te, label: "TE", side: "offense" as const },
+      { id: `player-${ts}-o6`, x: centerX - (6.5 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.receiverZ, label: "Z", side: "offense" as const },
+      { id: `player-${ts}-o7`, x: centerX + (6.5 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.receiverX, label: "X", side: "offense" as const },
     ];
   };
 
   const generateDefense9v9Formation = (): Player[] => {
-    const PINK = "#FFB6C1";
-    const LIGHT_BLUE = "#87CEEB";
-    const PURPLE = "#9333ea";
+    const PINK = CONFIG_COLORS.defense.lineman;
+    const LIGHT_BLUE = CONFIG_COLORS.defense.linebacker;
+    const PURPLE = CONFIG_COLORS.defense.secondary;
     const SPACING = 60;
     const ts = Date.now();
     
@@ -838,21 +842,21 @@ export default function PlayDesigner() {
       { id: `player-${ts}-o2`, x: centerX - (1 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#6b7280", label: "LG", side: "offense" as const },
       { id: `player-${ts}-o3`, x: centerX + (1 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#6b7280", label: "RG", side: "offense" as const },
       // Ends
-      { id: `player-${ts}-o4`, x: centerX - (3 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#eab308", label: "Y", side: "offense" as const },
-      { id: `player-${ts}-o5`, x: centerX + (3 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#f97316", label: "TE", side: "offense" as const },
+      { id: `player-${ts}-o4`, x: centerX - (3 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.slotY, label: "Y", side: "offense" as const },
+      { id: `player-${ts}-o5`, x: centerX + (3 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.te, label: "TE", side: "offense" as const },
       // Wideouts
-      { id: `player-${ts}-o6`, x: centerX - (7 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#1d4ed8", label: "Z", side: "offense" as const },
-      { id: `player-${ts}-o7`, x: centerX + (7 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#ef4444", label: "X", side: "offense" as const },
+      { id: `player-${ts}-o6`, x: centerX - (7 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.receiverZ, label: "Z", side: "offense" as const },
+      { id: `player-${ts}-o7`, x: centerX + (7 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.receiverX, label: "X", side: "offense" as const },
       // Backfield - RB beside QB on right
-      { id: `player-${ts}-o8`, x: centerX, y: FIELD.LOS_Y + PLAYER_SIZE + 4, color: "#000000", label: "QB", side: "offense" as const },
-      { id: `player-${ts}-o9`, x: centerX + (2 * SPACING_UNIT), y: FIELD.LOS_Y + PLAYER_SIZE + 4, color: "#39ff14", label: "RB", side: "offense" as const },
+      { id: `player-${ts}-o8`, x: centerX, y: FIELD.LOS_Y + PLAYER_SIZE + 4, color: CONFIG_COLORS.offense.qb, label: "QB", side: "offense" as const },
+      { id: `player-${ts}-o9`, x: centerX + (2 * SPACING_UNIT), y: FIELD.LOS_Y + PLAYER_SIZE + 4, color: CONFIG_COLORS.offense.rb, label: "RB", side: "offense" as const },
     ];
   };
 
   const generateDefense11v11Formation = (): Player[] => {
-    const PINK = "#FFB6C1";
-    const LIGHT_BLUE = "#87CEEB";
-    const PURPLE = "#9333ea";
+    const PINK = CONFIG_COLORS.defense.lineman;
+    const LIGHT_BLUE = CONFIG_COLORS.defense.linebacker;
+    const PURPLE = CONFIG_COLORS.defense.secondary;
     const SPACING = 60;
     const ts = Date.now();
     
@@ -885,14 +889,14 @@ export default function PlayDesigner() {
       { id: `player-${ts}-o4`, x: centerX - (2 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#6b7280", label: "LT", side: "offense" as const },
       { id: `player-${ts}-o5`, x: centerX + (2 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#6b7280", label: "RT", side: "offense" as const },
       // Tight Ends / Slots
-      { id: `player-${ts}-o6`, x: centerX - (3 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#eab308", label: "Y", side: "offense" as const },
-      { id: `player-${ts}-o7`, x: centerX + (3 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#f97316", label: "TE", side: "offense" as const },
+      { id: `player-${ts}-o6`, x: centerX - (3 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.slotY, label: "Y", side: "offense" as const },
+      { id: `player-${ts}-o7`, x: centerX + (3 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.te, label: "TE", side: "offense" as const },
       // Wideouts
-      { id: `player-${ts}-o8`, x: centerX - (7 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#1d4ed8", label: "Z", side: "offense" as const },
-      { id: `player-${ts}-o9`, x: centerX + (7 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#ef4444", label: "X", side: "offense" as const },
+      { id: `player-${ts}-o8`, x: centerX - (7 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.receiverZ, label: "Z", side: "offense" as const },
+      { id: `player-${ts}-o9`, x: centerX + (7 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.receiverX, label: "X", side: "offense" as const },
       // Backfield - RB beside QB on right
-      { id: `player-${ts}-o10`, x: centerX, y: FIELD.LOS_Y + PLAYER_SIZE + 4, color: "#000000", label: "QB", side: "offense" as const },
-      { id: `player-${ts}-o11`, x: centerX + (2 * SPACING_UNIT), y: FIELD.LOS_Y + PLAYER_SIZE + 4, color: "#39ff14", label: "RB", side: "offense" as const },
+      { id: `player-${ts}-o10`, x: centerX, y: FIELD.LOS_Y + PLAYER_SIZE + 4, color: CONFIG_COLORS.offense.qb, label: "QB", side: "offense" as const },
+      { id: `player-${ts}-o11`, x: centerX + (2 * SPACING_UNIT), y: FIELD.LOS_Y + PLAYER_SIZE + 4, color: CONFIG_COLORS.offense.rb, label: "RB", side: "offense" as const },
     ];
   };
 
@@ -1092,7 +1096,7 @@ export default function PlayDesigner() {
               type: "assignment",
               style: pendingRouteSelection.style,
               defensiveAction: "blitz",
-              color: "#ef4444",
+              color: CONFIG_COLORS.offense.receiverX,
             };
             saveToHistory();
             setRoutes([...routes, newRoute]);
@@ -3756,7 +3760,7 @@ export default function PlayDesigner() {
                                   type: "assignment",
                                   style: style,
                                   defensiveAction: "blitz",
-                                  color: "#ef4444",
+                                  color: CONFIG_COLORS.offense.receiverX,
                                 };
                                 saveToHistory();
                                 setRoutes(prev => [...prev, newRoute]);
