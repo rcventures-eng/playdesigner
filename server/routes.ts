@@ -2,40 +2,65 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { FOOTBALL_CONFIG } from "../shared/football-config";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
-const SYSTEM_PROMPT = `You are an expert football play designer AI. You generate football plays in a specific JSON format for a web-based play designer application.
+const generateSystemPrompt = () => {
+  const { field, colors, labels, positions, logicRules, routeTypes, formationTemplates } = FOOTBALL_CONFIG;
+  
+  return `You are an expert football play designer AI. You generate football plays in a specific JSON format for a web-based play designer application.
+
+STRICT APPLICATION CONFIGURATION (You MUST use these exact values):
+${JSON.stringify(FOOTBALL_CONFIG, null, 2)}
 
 COORDINATE SYSTEM:
-- Field dimensions: 694 x 392 pixels
-- Line of Scrimmage (LOS): Y = 284 pixels
+- Field dimensions: ${field.width} x ${field.height} pixels
+- Line of Scrimmage (LOS): Y = ${field.losY} pixels
+- Pixels per yard: ${field.pixelsPerYard}
 - Offense moves UP (lower Y values toward 0)
 - Defense moves DOWN (higher Y values) or waits above LOS
-- Field center X: 347 pixels
-- Valid X range: 27 to 667 pixels (with side padding)
+- Field center X: ${Math.floor(field.width / 2)} pixels
+- Valid X range: ${field.fieldLeft} to ${field.fieldRight} pixels
 - Valid Y range for offense: 72 to 368 pixels
 - Valid Y range for defense: 12 to 320 pixels
 
-PLAYER COLOR CODES (use exact hex values):
-- QB (Quarterback): #000000 (black)
-- RB (Running Back): #39ff14 (neon green)
-- WR (Wide Receiver): #39ff14 (neon green)
-- TE (Tight End): #eab308 (yellow)
-- OL (Offensive Line): #f97316 (orange)
-- C (Center): #f97316 (orange)
-- LB (Linebacker): #87CEEB (light blue)
-- DB (Defensive Back): #9333ea (purple)
-- DL (Defensive Line): #FFB6C1 (pink)
+PLAYER COLOR CODES (use these EXACT hex values):
+OFFENSE:
+- QB (Quarterback): ${colors.offense.qb} (black)
+- RB (Running Back): ${colors.offense.rb} (neon green)
+- WR/Slot Y: ${colors.offense.slotY} (yellow)
+- TE (Tight End): ${colors.offense.te} (orange)
+- WR Z (Split End): ${colors.offense.receiverZ} (blue)
+- WR X (Flanker): ${colors.offense.receiverX} (red)
 
-ROUTE TYPES:
-- "straight": Direct line route
-- "curved": Smooth curved route
-- "zigzag": Sharp angle cuts
+DEFENSE:
+- DL (Defensive Line): ${colors.defense.lineman} (pink)
+- LB (Linebacker): ${colors.defense.linebacker} (light blue)
+- DB (Defensive Back): ${colors.defense.secondary} (purple)
+
+ROUTE COLORS:
+- Primary/Blitz routes: ${colors.routes.primary} (red)
+- Man coverage: ${colors.routes.man} (gray)
+
+LABEL MAPPINGS:
+- Offense colors to labels: ${JSON.stringify(labels.offense)}
+- Defense colors to labels: ${JSON.stringify(labels.defense)}
+
+ROUTE TYPES: ${JSON.stringify(routeTypes)}
 
 ROUTE STYLES:
 - "solid": Standard route
 - "dashed": Optional/check-down route
+
+FORMATION KNOWLEDGE:
+- Offense: ${JSON.stringify(formationTemplates.offense)}
+- Defense: ${JSON.stringify(formationTemplates.defense)}
+
+LOGIC RULES (recognize these triggers in prompts):
+${Object.entries(logicRules).map(([key, rule]) => 
+  `- ${key.toUpperCase()}: triggers=${JSON.stringify(rule.triggers)}, ${rule.description}`
+).join('\n')}
 
 OUTPUT FORMAT - You MUST return valid JSON with this exact structure:
 {
@@ -43,9 +68,9 @@ OUTPUT FORMAT - You MUST return valid JSON with this exact structure:
     {
       "id": "player-1",
       "label": "QB",
-      "color": "#000000",
-      "x": 347,
-      "y": 312,
+      "color": "${colors.offense.qb}",
+      "x": ${Math.floor(field.width / 2)},
+      "y": ${field.losY + field.pixelsPerYard},
       "side": "offense"
     }
   ],
@@ -55,24 +80,34 @@ OUTPUT FORMAT - You MUST return valid JSON with this exact structure:
       "playerId": "player-1",
       "type": "curved",
       "style": "solid",
-      "color": "#000000",
+      "color": "${colors.offense.qb}",
       "points": [{"x": 347, "y": 312}, {"x": 347, "y": 200}, {"x": 400, "y": 150}]
     }
-  ]
+  ],
+  "footballs": [
+    {
+      "id": "football-1",
+      "x": ${Math.floor(field.width / 2)},
+      "y": ${field.losY}
+    }
+  ],
+  "playType": "offense"
 }
 
 IMPORTANT RULES:
 1. Always include at least 5 offensive players for a valid formation
-2. QB should be near center X (around 347) and below LOS (Y > 284)
+2. QB should be near center X (around ${Math.floor(field.width / 2)}) and below LOS (Y > ${field.losY})
 3. Routes should start from the player's position
 4. Routes should have at least 2 points (start and end)
 5. Use realistic football formations and route concepts
 6. Player IDs should be unique (player-1, player-2, etc.)
 7. Route IDs should be unique and reference valid playerIds
-8. Only return the JSON object, no markdown or explanation`;
+8. Only return the JSON object, no markdown or explanation
+9. Use the EXACT color hex codes from the configuration above
+10. Match player labels to their colors as defined in LABEL MAPPINGS`;
+};
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Generate play endpoint using Gemini AI
   app.post("/api/generate-play", async (req, res) => {
     try {
       const { prompt, image } = req.body;
@@ -92,10 +127,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
       });
 
+      const systemPrompt = generateSystemPrompt();
       let result;
 
       if (image) {
-        // Multimodal request with image
         const imageData = {
           inlineData: {
             data: image.replace(/^data:image\/\w+;base64,/, ""),
@@ -106,14 +141,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const textPrompt = prompt || "Analyze this football play diagram and generate a play with players and routes based on what you see.";
         
         result = await model.generateContent([
-          { text: SYSTEM_PROMPT },
+          { text: systemPrompt },
           { text: textPrompt },
           imageData,
         ]);
       } else {
-        // Text-only request
         result = await model.generateContent([
-          { text: SYSTEM_PROMPT },
+          { text: systemPrompt },
           { text: prompt },
         ]);
       }
@@ -121,12 +155,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const response = result.response;
       const text = response.text();
 
-      // Parse the JSON response
       let playData;
       try {
         playData = JSON.parse(text);
       } catch (parseError) {
-        // Try to extract JSON from the response if it contains extra text
         const jsonMatch = text.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           playData = JSON.parse(jsonMatch[0]);
@@ -135,18 +167,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Validate the response structure
       if (!playData.players || !Array.isArray(playData.players)) {
         throw new Error("Response missing players array");
       }
       if (!playData.routes || !Array.isArray(playData.routes)) {
-        playData.routes = []; // Routes are optional
+        playData.routes = [];
       }
 
-      // Add timestamps to IDs to ensure uniqueness
       const ts = Date.now();
       
-      // Create a mapping from old player IDs to new player IDs
       const playerIdMap: Record<string, string> = {};
       playData.players = playData.players.map((p: any, i: number) => {
         const newId = `player-${ts}-${i}`;
@@ -158,7 +187,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
       
-      // Remap route playerIds using the mapping
       playData.routes = playData.routes.map((r: any, i: number) => ({
         ...r,
         id: `route-${ts}-${i}`,
