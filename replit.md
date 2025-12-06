@@ -113,6 +113,32 @@ The application uses a centralized configuration file at `shared/football-config
 - `server/routes.ts` imports `FOOTBALL_CONFIG` to dynamically generate the Gemini system prompt
 - Changes to colors or rules in one place automatically propagate to both frontend and AI
 
+### Football Logic Dictionary (AI-Only)
+
+The `shared/logic-dictionary.ts` file contains `LOGIC_DICTIONARY`, a comprehensive strategy reference used exclusively by the AI Play Creator. This does NOT affect manual preset functions.
+
+**LOGIC_DICTIONARY exports**:
+- `offense.formations`: 5v5/7v7 formations with positioning rules (Spread, Bunch, Trips, Empty, Shotgun)
+- `offense.routeTree`: 13+ route patterns with style (straight/curved) and depth (short/medium/deep)
+  - Short: Flat, Slant, Drag
+  - Medium: Out, In, Curl, Comeback, Crosser
+  - Deep: Corner, Post, Go, Wheel, Seam
+- `offense.concepts`: Common play concepts (Mesh, Smash, Four Verticals, Flood, Screen)
+- `defense.formations`: Coverage schemes (5v5 Base, Cover 1-4, Man, Zone, Blitz)
+- `defense.assignments`: Assignment types (Blitz=red solid, Man=gray dotted, Zone=area shapes)
+- `mechanics`: Game mechanic flags with triggers and visual rules
+  - `hasPlayAction`: Toggles PA indicator on canvas when AI detects play-action in prompt
+  - `preSnapMotion`: Marks routes as motion routes
+  - `hasRPO`: Run-Pass Option indicator
+  - `hasJetSweep`: Jet sweep motion pattern
+- `keywords`: Trigger word arrays for formations, routes, defense, and mechanics
+
+**AI Response Handling** (handleGeneratePlay in PlayDesigner.tsx):
+- Parses `mechanics` object from AI response
+- Sets `isPlayAction` state when `hasPlayAction: true`
+- Creates default football at LOS if AI doesn't return one (required for PA marker)
+- Logs AI response and mechanics flags to console for debugging
+
 ### Backend Architecture
 
 The backend uses **Express.js** with **TypeScript** on Node.js. It's designed to be lightweight, primarily serving static assets, with most application logic handled client-side. Separate entry points (`index-dev.ts`, `index-prod.ts`) manage development with Vite integration and production serving. API routes are prefixed with `/api`.
