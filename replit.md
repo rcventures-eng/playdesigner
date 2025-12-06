@@ -19,8 +19,10 @@ The frontend is a React and TypeScript application built with Vite, utilizing sh
 The core play design functionality uses HTML5 Canvas and SVG for rendering. A `FIELD` configuration object defines field geometry and scaling. Key features include:
 -   **Field Elements**: Line of scrimmage, yard lines, hash marks, draggable football, and a play-action marker.
 -   **Motion Routes**: Differentiated visual display before and after the Line of Scrimmage.
+-   **Route Shifting**: When dragging a player, all their routes shift with them maintaining shape (non-assignment routes only). Delta is calculated between new and old position and applied to all route points.
 -   **Export Functionality**: Generates downloadable PNGs using `html-to-image`, optimized for quality at various sizes.
 -   **Interaction Model**: Drag-and-drop for players, click-to-draw for routes, and a long-press cascading menu for comprehensive player interactions.
+-   **Long-press vs Drag Detection**: Uses 8px movement threshold and timer fallback check to reliably distinguish between long-press (menu) and drag (move player) gestures.
 
 ### Player Rendering and Defensive Assignments
 

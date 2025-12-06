@@ -244,6 +244,7 @@ export default function PlayDesigner() {
   const currentRoutePointsRef = useRef<{ x: number; y: number }[]>([]);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const longPressStartPos = useRef<{ x: number; y: number } | null>(null);
+  const currentPointerPos = useRef<{ x: number; y: number } | null>(null);
   // Pending drag intent - drag only starts after long-press is cancelled
   const pendingDragRef = useRef<{ playerId: string; offset: { x: number; y: number } } | null>(null);
   // Suppress the click event that follows a long-press menu opening
@@ -1069,10 +1070,30 @@ export default function PlayDesigner() {
         // Start long-press with IMMEDIATE visual feedback (80ms ring appears)
         setLongPressPlayerRef(playerId);
         longPressStartPos.current = { x: e.clientX, y: e.clientY };
+        currentPointerPos.current = { x: e.clientX, y: e.clientY };
         // Show holding state immediately for instant feedback
         requestAnimationFrame(() => setIsLongPressHolding(true));
         
         longPressTimerRef.current = setTimeout(() => {
+          // Before opening menu, check if user has started dragging
+          // If pendingDragRef has been used to activate dragging, don't open menu
+          if (isDraggingRef.current) {
+            return; // Drag already started, don't open menu
+          }
+          
+          // Also check if pointer has moved significantly since pointerdown
+          // This catches cases where pointermove hasn't fired cancelLongPress yet
+          if (longPressStartPos.current && currentPointerPos.current) {
+            const dx = currentPointerPos.current.x - longPressStartPos.current.x;
+            const dy = currentPointerPos.current.y - longPressStartPos.current.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance > 8) {
+              // User moved - treat as drag, not long-press
+              cancelLongPress();
+              return;
+            }
+          }
+          
           // Long press detected - open menu anchored under player center
           setIsLongPressHolding(false);
           setLongPressPlayerId(playerId);
@@ -1128,6 +1149,7 @@ export default function PlayDesigner() {
     setLongPressPlayerRef(null);
     setIsLongPressHolding(false);
     longPressStartPos.current = null;
+    currentPointerPos.current = null;
   };
   
   const closeLongPressMenu = () => {
@@ -1248,12 +1270,15 @@ export default function PlayDesigner() {
   };
 
   const handleCanvasPointerMove = (e: React.PointerEvent) => {
+    // Always track current pointer position for long-press timer check
+    currentPointerPos.current = { x: e.clientX, y: e.clientY };
+    
     // Cancel long-press if mouse moves more than 8 pixels (prevents menu opening during drag)
     if (longPressStartPos.current && longPressTimerRef.current) {
       const dx = e.clientX - longPressStartPos.current.x;
       const dy = e.clientY - longPressStartPos.current.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
-      if (distance > 20) {
+      if (distance > 8) {
         cancelLongPress();
       }
     }
@@ -1263,20 +1288,37 @@ export default function PlayDesigner() {
     if ((isDragging || isDraggingRef.current) && selectedPlayer && tool === "select") {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (rect) {
+        // Get current player position before updating
+        const currentPlayer = players.find(p => p.id === selectedPlayer);
         const newX = Math.max(bounds.minX, Math.min(bounds.maxX, e.clientX - rect.left - dragOffset.x));
         const newY = Math.max(bounds.minY, Math.min(bounds.maxY, e.clientY - rect.top - dragOffset.y));
+        
+        // Calculate movement delta for route shifting
+        const deltaX = currentPlayer ? newX - currentPlayer.x : 0;
+        const deltaY = currentPlayer ? newY - currentPlayer.y : 0;
+        
         setPlayers(players.map(p =>
           p.id === selectedPlayer ? { ...p, x: newX, y: newY } : p
         ));
         
-        // Dynamic linking: Update Man coverage routes when target player moves
+        // Update routes when player moves
         setRoutes(prevRoutes => {
           let hasUpdates = false;
           const updatedRoutes = prevRoutes.map(r => {
+            // Shift entire route when the route's owner player is moved (non-assignment routes)
+            if (r.playerId === selectedPlayer && r.type !== "assignment") {
+              if (deltaX !== 0 || deltaY !== 0) {
+                hasUpdates = true;
+                const shiftedPoints = r.points.map(p => ({
+                  x: p.x + deltaX,
+                  y: p.y + deltaY
+                }));
+                return { ...r, points: shiftedPoints };
+              }
+            }
             // Update Man coverage endpoint when target player is moved
             if (r.type === "assignment" && r.defensiveAction === "man" && r.targetPlayerId === selectedPlayer) {
               hasUpdates = true;
-              console.log('Updating Man coverage route endpoint:', r.id, 'target:', r.targetPlayerId, 'to:', newX, newY);
               const updatedPoints = [...r.points];
               if (updatedPoints.length >= 2) {
                 updatedPoints[updatedPoints.length - 1] = { x: newX, y: newY };
@@ -1286,7 +1328,6 @@ export default function PlayDesigner() {
             // Update route start point when the defensive player is moved
             if (r.type === "assignment" && r.playerId === selectedPlayer) {
               hasUpdates = true;
-              console.log('Updating assignment route start:', r.id, 'player:', r.playerId, 'to:', newX, newY);
               const updatedPoints = [...r.points];
               if (updatedPoints.length >= 1) {
                 updatedPoints[0] = { x: newX, y: newY };
@@ -1295,10 +1336,7 @@ export default function PlayDesigner() {
             }
             return r;
           });
-          if (!hasUpdates && prevRoutes.some(r => r.type === "assignment")) {
-            console.log('No route updates. selectedPlayer:', selectedPlayer, 'routes targetIds:', prevRoutes.filter(r => r.targetPlayerId).map(r => ({ id: r.id, target: r.targetPlayerId })));
-          }
-          return updatedRoutes;
+          return hasUpdates ? updatedRoutes : prevRoutes;
         });
       }
     }
