@@ -155,6 +155,7 @@ export default function PlayDesigner() {
   const [specialPrompt, setSpecialPrompt] = useState("");
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [metadata, setMetadata] = useState<PlayMetadata>({
     name: "",
@@ -1771,28 +1772,124 @@ export default function PlayDesigner() {
     
     // Clear any existing preview before starting new upload
     if (uploadedImage) {
-      URL.revokeObjectURL(uploadedImage);
       setUploadedImage(null);
     }
     
-    // Start fake upload
+    // Show upload state
     setIsUploading(true);
     
-    // Simulate 1.5s network request
-    setTimeout(() => {
-      const previewUrl = URL.createObjectURL(file);
-      setUploadedImage(previewUrl);
+    // Convert file to base64 for preview and API
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result as string;
+      // Store base64 for later use with API
+      setUploadedImage(base64);
       setIsUploading(false);
-    }, 1500);
+    };
+    reader.onerror = () => {
+      toast({
+        title: "Upload failed",
+        description: "Could not read the image file",
+        variant: "destructive",
+      });
+      setIsUploading(false);
+    };
+    reader.readAsDataURL(file);
     
     // Reset file input so same file can be selected again
     e.target.value = "";
   };
+  
+  const handleImageGenerate = () => {
+    if (!uploadedImage) return;
+    handleGeneratePlay(uploadedImage);
+  };
 
   const dismissUploadedImage = () => {
-    if (uploadedImage) {
-      URL.revokeObjectURL(uploadedImage);
-      setUploadedImage(null);
+    setUploadedImage(null);
+  };
+
+  const handleGeneratePlay = async (imageBase64?: string) => {
+    if (!specialPrompt.trim() && !imageBase64) {
+      toast({
+        title: "Missing input",
+        description: "Please enter a play description or upload an image",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGenerating(true);
+
+    try {
+      const response = await fetch("/api/generate-play", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: specialPrompt.trim() || undefined,
+          image: imageBase64 || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to generate play");
+      }
+
+      const playData = await response.json();
+
+      // Validate and apply the generated players
+      if (playData.players && Array.isArray(playData.players)) {
+        const validPlayers = playData.players.map((p: any) => ({
+          id: p.id || `player-${Date.now()}-${Math.random()}`,
+          x: Math.max(FIELD.SIDE_PADDING, Math.min(FIELD.WIDTH - FIELD.SIDE_PADDING, p.x || 347)),
+          y: Math.max(72, Math.min(368, p.y || 300)),
+          color: p.color || "#39ff14",
+          label: p.label || "WR",
+          side: p.side || "offense",
+        }));
+        setPlayers(validPlayers);
+      }
+
+      // Validate and apply the generated routes
+      if (playData.routes && Array.isArray(playData.routes)) {
+        const validRoutes = playData.routes.map((r: any) => ({
+          id: r.id || `route-${Date.now()}-${Math.random()}`,
+          playerId: r.playerId,
+          type: r.type || "curved",
+          style: r.style || "solid",
+          color: r.color || "#39ff14",
+          points: Array.isArray(r.points) ? r.points : [],
+          isPrimary: r.isPrimary || false,
+          isMotion: r.isMotion || false,
+        }));
+        setRoutes(validRoutes);
+      }
+
+      // Clear shapes for fresh AI-generated play
+      setShapes([]);
+      
+      // Clear the prompt after successful generation
+      setSpecialPrompt("");
+      
+      // Clear uploaded image if used
+      if (imageBase64) {
+        dismissUploadedImage();
+      }
+
+      toast({
+        title: "Play generated!",
+        description: "The AI has created your play on the field",
+      });
+    } catch (error: any) {
+      console.error("Generate play error:", error);
+      toast({
+        title: "Generation failed",
+        description: error.message || "Could not generate the play. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -2816,12 +2913,18 @@ export default function PlayDesigner() {
                     </button>
                     {/* Submit button */}
                     <button
-                      className="bg-orange-500 hover:bg-orange-600 text-white p-2 rounded-lg transition-colors"
+                      onClick={() => handleGeneratePlay(uploadedImage || undefined)}
+                      disabled={isGenerating || (!specialPrompt.trim() && !uploadedImage)}
+                      className="bg-orange-500 hover:bg-orange-600 disabled:bg-orange-400 disabled:cursor-not-allowed text-white p-2 rounded-lg transition-colors"
                       data-testid="ai-submit-button"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                      </svg>
+                      {isGenerating ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      )}
                     </button>
                   </div>
                 </div>

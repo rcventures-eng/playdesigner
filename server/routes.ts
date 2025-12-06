@@ -86,7 +86,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const model = genAI.getGenerativeModel({ 
-        model: "gemini-1.5-flash",
+        model: "gemini-2.0-flash",
         generationConfig: {
           responseMimeType: "application/json",
         },
@@ -145,15 +145,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Add timestamps to IDs to ensure uniqueness
       const ts = Date.now();
-      playData.players = playData.players.map((p: any, i: number) => ({
-        ...p,
-        id: `player-${ts}-${i}`,
-        side: p.side || "offense",
-      }));
+      
+      // Create a mapping from old player IDs to new player IDs
+      const playerIdMap: Record<string, string> = {};
+      playData.players = playData.players.map((p: any, i: number) => {
+        const newId = `player-${ts}-${i}`;
+        playerIdMap[p.id] = newId;
+        return {
+          ...p,
+          id: newId,
+          side: p.side || "offense",
+        };
+      });
+      
+      // Remap route playerIds using the mapping
       playData.routes = playData.routes.map((r: any, i: number) => ({
         ...r,
         id: `route-${ts}-${i}`,
-        playerId: playData.players[parseInt(r.playerId?.split("-").pop() || "0")]?.id || r.playerId,
+        playerId: playerIdMap[r.playerId] || r.playerId,
       }));
 
       res.json(playData);
