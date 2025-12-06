@@ -65,6 +65,32 @@ Players have a `side` property (`"offense"` or `"defense"`) that determines thei
 -   Font: `text-[9px] font-bold text-black`
 -   Positioned just above the X shape
 
+### AI Play Creator (Special Tab)
+
+The Special Teams tab features an **AI Play Creator** powered by **Google Gemini 2.0 Flash**. Users can describe a play in natural language or upload an image of a play diagram, and the AI generates players and routes on the canvas.
+
+**Backend Endpoint**: `POST /api/generate-play`
+- Accepts `{ prompt: string, image?: string }` (image is base64)
+- Uses Gemini with a detailed system prompt teaching the coordinate system
+- Returns `{ players: Player[], routes: Route[] }` in validated JSON format
+
+**System Prompt Configuration**:
+- Field dimensions: 694×392 pixels
+- LOS at Y = 284
+- Player color codes for QB (#000000), RB/WR (#39ff14), TE (#eab308), OL (#f97316), etc.
+- Route types: straight, curved, zigzag
+- Route styles: solid, dashed
+
+**Frontend Integration**:
+- Glassmorphic input container with textarea and suggestion chips
+- Upload Play button converts images to base64 for multimodal vision analysis
+- Submit button shows loading spinner during generation
+- Success: players and routes render on canvas, toast notification
+- Error: descriptive toast with error message
+
+**Environment Variables**:
+- `GEMINI_API_KEY`: Required secret for Gemini API access
+
 ### Backend Architecture
 
 The backend uses **Express.js** with **TypeScript** on Node.js. It's designed to be lightweight, primarily serving static assets, with most application logic handled client-side. Separate entry points (`index-dev.ts`, `index-prod.ts`) manage development with Vite integration and production serving. API routes are prefixed with `/api`.
