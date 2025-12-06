@@ -63,7 +63,13 @@ Drizzle ORM with PostgreSQL (Neon Database) is configured for type-safe database
 
 ### Play Type Tabs
 
-The application features independent tabs for Offense, Defense, and Special Teams, each maintaining separate state and undo history. The Defense tab includes a dynamic header layout optimization to maximize field space.
+The application features a 4-tab navigation with uniform styling (text-[11px] font-semibold px-1):
+-   **Offense**: Standard offensive play design with formation presets and player colors.
+-   **Defense**: Defensive play design with dynamic header layout optimization to maximize field space. Includes shape tools for zone coverage visualization.
+-   **Special**: Currently disabled (opacity-50, pointer-events-none). Reserved for future special teams plays.
+-   **AI Beta**: Features an orange Sparkles icon. Clones all Special tab functionality including the AI Play Creator, formation presets, and manual editing. Provides a dedicated canvas for AI-assisted play creation.
+
+Each tab maintains independent state (players, routes, shapes, footballs, history) for complete isolation between play types.
 
 ## External Dependencies
 
