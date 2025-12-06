@@ -2398,7 +2398,7 @@ export default function PlayDesigner() {
                 </div>
                 <div>
                   <Label htmlFor="formation" className="text-xs">{playType === "defense" ? "Concept" : "Formation"}</Label>
-                  {playType === "offense" && (
+                  {(playType === "offense" || playType === "ai-beta") && (
                     <Input
                       id="formation"
                       data-testid="input-formation"
@@ -2422,7 +2422,7 @@ export default function PlayDesigner() {
                       </SelectContent>
                     </Select>
                   )}
-                  {(playType === "special" || playType === "ai-beta") && (
+                  {playType === "special" && (
                     <Select value={metadata.formation} onValueChange={(v) => setMetadata({ ...metadata, formation: v })}>
                       <SelectTrigger id="formation" data-testid="select-formation" className="h-8 text-sm">
                         <SelectValue placeholder="Select formation" />
@@ -2437,7 +2437,7 @@ export default function PlayDesigner() {
                     </Select>
                   )}
                 </div>
-                {playType === "offense" && (
+                {(playType === "offense" || playType === "ai-beta") && (
                   <>
                     <div>
                       <Label htmlFor="concept" className="text-xs">Concept</Label>
@@ -2485,7 +2485,7 @@ export default function PlayDesigner() {
                     />
                   </div>
                 )}
-                {(playType === "special" || playType === "ai-beta") && (
+                {playType === "special" && (
                   <div>
                     <Label htmlFor="personnel" className="text-xs">Personnel</Label>
                     <Input
