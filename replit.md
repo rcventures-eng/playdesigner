@@ -91,6 +91,28 @@ The Special Teams tab features an **AI Play Creator** powered by **Google Gemini
 **Environment Variables**:
 - `GEMINI_API_KEY`: Required secret for Gemini API access
 
+### Shared Configuration Architecture
+
+The application uses a centralized configuration file at `shared/football-config.ts` as the single source of truth for colors, field dimensions, and game logic rules. This ensures consistency between the frontend rendering and backend AI system prompts.
+
+**FOOTBALL_CONFIG exports**:
+- `field`: Canvas dimensions (694×392), LOS position (284), pixels per yard (12)
+- `colors.offense`: QB (#000000), RB/WR (#39ff14), TE (#f97316), Slot Y (#eab308), Receiver Z (#1d4ed8), Receiver X (#ef4444), OL default (#6b7280)
+- `colors.defense`: DL/lineman (#FFB6C1), LB/linebacker (#87CEEB), DB/secondary (#9333ea)
+- `colors.routes`: primary (#ef4444), blitz (#ef4444), man coverage (#9ca3af), zone (#06b6d4), blocking (#ffffff), run (#000000)
+- `colors.ui`: selection highlight (#06b6d4)
+- `colors.shapes`: zone shape colors (pink #ec4899, blue #1d4ed8, green #86efac)
+- `labels`: Color-to-label mappings for offense and defense
+- `positions`: Slot/offset positioning rules for each player type
+- `logicRules`: Trigger keywords for play-action, motion, blitz, screen, deep patterns
+- `routeTypes`: Valid route types for pass, run, and blocking categories
+- `formationTemplates`: Descriptions of common offensive and defensive formations
+
+**Usage Pattern**:
+- `PlayDesigner.tsx` imports `FOOTBALL_CONFIG` and destructures `CONFIG_COLORS`, `CONFIG_ROUTES`, `CONFIG_UI` for all player/route rendering
+- `server/routes.ts` imports `FOOTBALL_CONFIG` to dynamically generate the Gemini system prompt
+- Changes to colors or rules in one place automatically propagate to both frontend and AI
+
 ### Backend Architecture
 
 The backend uses **Express.js** with **TypeScript** on Node.js. It's designed to be lightweight, primarily serving static assets, with most application logic handled client-side. Separate entry points (`index-dev.ts`, `index-prod.ts`) manage development with Vite integration and production serving. API routes are prefixed with `/api`.

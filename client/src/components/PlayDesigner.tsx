@@ -13,19 +13,20 @@ import { useToast } from "@/hooks/use-toast";
 import underConstructionImage from "@assets/generated_images/under_construction_warning_banner.png";
 import { FOOTBALL_CONFIG } from "../../../shared/football-config";
 
+const CONFIG_FIELD = FOOTBALL_CONFIG.field;
 const FIELD = {
-  WIDTH: 694,
-  HEIGHT: 392,
-  HEADER_HEIGHT: 60,
-  SIDE_PADDING: 27,
-  BOTTOM_PADDING: 12,
-  PIXELS_PER_YARD: 12,
+  WIDTH: CONFIG_FIELD.width,
+  HEIGHT: CONFIG_FIELD.height,
+  HEADER_HEIGHT: CONFIG_FIELD.headerHeight,
+  SIDE_PADDING: CONFIG_FIELD.sidePadding,
+  BOTTOM_PADDING: CONFIG_FIELD.bottomPadding,
+  PIXELS_PER_YARD: CONFIG_FIELD.pixelsPerYard,
+  LOS_Y: CONFIG_FIELD.losY,
   get FIELD_TOP() { return this.HEADER_HEIGHT; },
   get FIELD_LEFT() { return this.SIDE_PADDING; },
   get FIELD_RIGHT() { return this.WIDTH - this.SIDE_PADDING; },
   get FIELD_WIDTH() { return this.WIDTH - this.SIDE_PADDING * 2; },
   get FIELD_HEIGHT() { return this.HEIGHT - this.HEADER_HEIGHT; },
-  get LOS_Y() { return this.HEIGHT - this.BOTTOM_PADDING - 8 * this.PIXELS_PER_YARD; },
   getPlayerBounds(activeTab: "offense" | "defense" | "special") {
     const isDefense = activeTab === "defense";
     return {
@@ -145,7 +146,7 @@ export default function PlayDesigner() {
   const [editingLabel, setEditingLabel] = useState("");
   const [tool, setTool] = useState<"select" | "player" | "route" | "shape" | "label">("select");
   const [shapeType, setShapeType] = useState<"circle" | "oval" | "rectangle">("circle");
-  const [shapeColor, setShapeColor] = useState("#ec4899");
+  const [shapeColor, setShapeColor] = useState(FOOTBALL_CONFIG.colors.shapes.pink);
   const [routeType, setRouteType] = useState<"pass" | "run" | "blocking" | "assignment">("pass");
   const [makePrimary, setMakePrimary] = useState(false);
   const [routeStyle, setRouteStyle] = useState<"straight" | "curved" | "linear" | "area">("straight");
@@ -222,6 +223,9 @@ export default function PlayDesigner() {
   const { toast } = useToast();
 
   const { colors: CONFIG_COLORS, labels: CONFIG_LABELS } = FOOTBALL_CONFIG;
+  const CONFIG_ROUTES = CONFIG_COLORS.routes;
+  const CONFIG_UI = CONFIG_COLORS.ui;
+  const CONFIG_SHAPES = CONFIG_COLORS.shapes;
   const offenseColors = [
     CONFIG_COLORS.offense.rb,
     CONFIG_COLORS.offense.receiverZ,
@@ -530,8 +534,8 @@ export default function PlayDesigner() {
     let label: string | undefined;
     
     // For gray players on offense, use sequential positions and labels based on how many exist
-    if (playType === "offense" && color === "#6b7280") {
-      const existingGrayCount = players.filter(p => p.color === "#6b7280").length;
+    if (playType === "offense" && color === CONFIG_COLORS.offense.default) {
+      const existingGrayCount = players.filter(p => p.color === CONFIG_COLORS.offense.default).length;
       const positionIndex = existingGrayCount % grayPositions.length;
       position = grayPositions[positionIndex];
       // Assign sequential label: C, LG, RG, LT, RT, then OL for any extras
@@ -647,7 +651,7 @@ export default function PlayDesigner() {
 
   const generate7v7Formation = (): Player[] => {
     return [
-      { id: `player-${Date.now()}-1`, x: centerX, y: FIELD.LOS_Y, color: "#6b7280", label: "C" },
+      { id: `player-${Date.now()}-1`, x: centerX, y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.default, label: "C" },
       { id: `player-${Date.now()}-2`, x: centerX, y: FIELD.LOS_Y + PLAYER_SIZE + 4, color: CONFIG_COLORS.offense.qb, label: "QB" },
       { id: `player-${Date.now()}-3`, x: centerX, y: FIELD.LOS_Y + 75, color: CONFIG_COLORS.offense.rb, label: "RB" },
       { id: `player-${Date.now()}-4`, x: centerX - (2.5 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.slotY, label: "Y" },
@@ -677,9 +681,9 @@ export default function PlayDesigner() {
   const generate9v9Formation = (): Player[] => {
     return [
       // Interior Line (3 Gray Squares) - slots 0, -1, +1 (NO tackles at ±2)
-      { id: `player-${Date.now()}-1`, x: centerX, y: FIELD.LOS_Y, color: "#6b7280", label: "C" },
-      { id: `player-${Date.now()}-2`, x: centerX - (1 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#6b7280", label: "LG" },
-      { id: `player-${Date.now()}-3`, x: centerX + (1 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#6b7280", label: "RG" },
+      { id: `player-${Date.now()}-1`, x: centerX, y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.default, label: "C" },
+      { id: `player-${Date.now()}-2`, x: centerX - (1 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.default, label: "LG" },
+      { id: `player-${Date.now()}-3`, x: centerX + (1 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.default, label: "RG" },
       // Ends (Circles) - slots -3, +3 (preserving gap where tackles would be)
       { id: `player-${Date.now()}-4`, x: centerX - (3 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.slotY, label: "Y" },
       { id: `player-${Date.now()}-5`, x: centerX + (3 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.te, label: "TE" },
@@ -712,11 +716,11 @@ export default function PlayDesigner() {
   const generate11v11Formation = (): Player[] => {
     return [
       // Offensive Line (5 Gray Squares) - slots 0, -1, +1, -2, +2
-      { id: `player-${Date.now()}-1`, x: centerX, y: FIELD.LOS_Y, color: "#6b7280", label: "C" },
-      { id: `player-${Date.now()}-2`, x: centerX - (1 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#6b7280", label: "LG" },
-      { id: `player-${Date.now()}-3`, x: centerX + (1 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#6b7280", label: "RG" },
-      { id: `player-${Date.now()}-4`, x: centerX - (2 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#6b7280", label: "LT" },
-      { id: `player-${Date.now()}-5`, x: centerX + (2 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#6b7280", label: "RT" },
+      { id: `player-${Date.now()}-1`, x: centerX, y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.default, label: "C" },
+      { id: `player-${Date.now()}-2`, x: centerX - (1 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.default, label: "LG" },
+      { id: `player-${Date.now()}-3`, x: centerX + (1 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.default, label: "RG" },
+      { id: `player-${Date.now()}-4`, x: centerX - (2 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.default, label: "LT" },
+      { id: `player-${Date.now()}-5`, x: centerX + (2 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.default, label: "RT" },
       // Tight Ends / Slots (Circles) - slots -3, +3
       { id: `player-${Date.now()}-6`, x: centerX - (3 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.slotY, label: "Y" },
       { id: `player-${Date.now()}-7`, x: centerX + (3 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.te, label: "TE" },
@@ -801,7 +805,7 @@ export default function PlayDesigner() {
   const generateOffense7v7ForDefenseTab = (): Player[] => {
     const ts = Date.now();
     return [
-      { id: `player-${ts}-o1`, x: centerX, y: FIELD.LOS_Y, color: "#6b7280", label: "C", side: "offense" as const },
+      { id: `player-${ts}-o1`, x: centerX, y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.default, label: "C", side: "offense" as const },
       { id: `player-${ts}-o2`, x: centerX, y: FIELD.LOS_Y + PLAYER_SIZE + 4, color: CONFIG_COLORS.offense.qb, label: "QB", side: "offense" as const },
       { id: `player-${ts}-o3`, x: centerX + (2 * SPACING_UNIT), y: FIELD.LOS_Y + PLAYER_SIZE + 4, color: CONFIG_COLORS.offense.rb, label: "RB", side: "offense" as const },
       { id: `player-${ts}-o4`, x: centerX - (2.5 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.slotY, label: "Y", side: "offense" as const },
@@ -838,9 +842,9 @@ export default function PlayDesigner() {
     const ts = Date.now();
     return [
       // Interior Line (3 Gray)
-      { id: `player-${ts}-o1`, x: centerX, y: FIELD.LOS_Y, color: "#6b7280", label: "C", side: "offense" as const },
-      { id: `player-${ts}-o2`, x: centerX - (1 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#6b7280", label: "LG", side: "offense" as const },
-      { id: `player-${ts}-o3`, x: centerX + (1 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#6b7280", label: "RG", side: "offense" as const },
+      { id: `player-${ts}-o1`, x: centerX, y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.default, label: "C", side: "offense" as const },
+      { id: `player-${ts}-o2`, x: centerX - (1 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.default, label: "LG", side: "offense" as const },
+      { id: `player-${ts}-o3`, x: centerX + (1 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.default, label: "RG", side: "offense" as const },
       // Ends
       { id: `player-${ts}-o4`, x: centerX - (3 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.slotY, label: "Y", side: "offense" as const },
       { id: `player-${ts}-o5`, x: centerX + (3 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.te, label: "TE", side: "offense" as const },
@@ -883,11 +887,11 @@ export default function PlayDesigner() {
     const ts = Date.now();
     return [
       // Offensive Line (5 Gray)
-      { id: `player-${ts}-o1`, x: centerX, y: FIELD.LOS_Y, color: "#6b7280", label: "C", side: "offense" as const },
-      { id: `player-${ts}-o2`, x: centerX - (1 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#6b7280", label: "LG", side: "offense" as const },
-      { id: `player-${ts}-o3`, x: centerX + (1 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#6b7280", label: "RG", side: "offense" as const },
-      { id: `player-${ts}-o4`, x: centerX - (2 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#6b7280", label: "LT", side: "offense" as const },
-      { id: `player-${ts}-o5`, x: centerX + (2 * SPACING_UNIT), y: FIELD.LOS_Y, color: "#6b7280", label: "RT", side: "offense" as const },
+      { id: `player-${ts}-o1`, x: centerX, y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.default, label: "C", side: "offense" as const },
+      { id: `player-${ts}-o2`, x: centerX - (1 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.default, label: "LG", side: "offense" as const },
+      { id: `player-${ts}-o3`, x: centerX + (1 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.default, label: "RG", side: "offense" as const },
+      { id: `player-${ts}-o4`, x: centerX - (2 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.default, label: "LT", side: "offense" as const },
+      { id: `player-${ts}-o5`, x: centerX + (2 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.default, label: "RT", side: "offense" as const },
       // Tight Ends / Slots
       { id: `player-${ts}-o6`, x: centerX - (3 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.slotY, label: "Y", side: "offense" as const },
       { id: `player-${ts}-o7`, x: centerX + (3 * SPACING_UNIT), y: FIELD.LOS_Y, color: CONFIG_COLORS.offense.te, label: "TE", side: "offense" as const },
@@ -1116,7 +1120,7 @@ export default function PlayDesigner() {
                 style: pendingRouteSelection.style,
                 defensiveAction: "man",
                 targetPlayerId: targetPlayer.id,
-                color: "#9ca3af",
+                color: CONFIG_ROUTES.man,
               };
               saveToHistory();
               setRoutes([...routes, newRoute]);
@@ -1743,7 +1747,7 @@ export default function PlayDesigner() {
       }
       
       const player = players.find(p => p.id === selectedPlayer);
-      const playerColor = player?.color || "#000000";
+      const playerColor = player?.color || CONFIG_ROUTES.run;
       
       const newRoute: Route = {
         id: `route-${Date.now()}`,
@@ -1848,7 +1852,7 @@ export default function PlayDesigner() {
           id: p.id || `player-${Date.now()}-${Math.random()}`,
           x: Math.max(FIELD.SIDE_PADDING, Math.min(FIELD.WIDTH - FIELD.SIDE_PADDING, p.x || 347)),
           y: Math.max(72, Math.min(368, p.y || 300)),
-          color: p.color || "#39ff14",
+          color: p.color || CONFIG_COLORS.offense.rb,
           label: p.label || "WR",
           side: p.side || "offense",
         }));
@@ -1862,7 +1866,7 @@ export default function PlayDesigner() {
           playerId: r.playerId,
           type: r.type || "curved",
           style: r.style || "solid",
-          color: r.color || "#39ff14",
+          color: r.color || CONFIG_COLORS.offense.rb,
           points: Array.isArray(r.points) ? r.points : [],
           isPrimary: r.isPrimary || false,
           isMotion: r.isMotion || false,
@@ -2037,13 +2041,13 @@ export default function PlayDesigner() {
   };
 
   const getRouteColor = (route: Route | { type: string; color?: string; defensiveAction?: string }) => {
-    if (route.type === "blocking") return "#ffffff";
-    if (route.type === "run") return "#000000";
+    if (route.type === "blocking") return CONFIG_ROUTES.blocking;
+    if (route.type === "run") return CONFIG_ROUTES.run;
     if (route.type === "assignment") {
-      if ((route as Route).defensiveAction === "blitz") return "#ef4444"; // Red for Blitz
-      if ((route as Route).defensiveAction === "man") return "#9ca3af"; // Gray for Man Coverage
+      if ((route as Route).defensiveAction === "blitz") return CONFIG_ROUTES.blitz; // Red for Blitz
+      if ((route as Route).defensiveAction === "man") return CONFIG_ROUTES.man; // Gray for Man Coverage
     }
-    return route.color || "#000000";
+    return route.color || CONFIG_ROUTES.run;
   };
 
   // Split motion route at LOS - returns { belowLOS: points[], aboveLOS: points[] }
@@ -2193,7 +2197,7 @@ export default function PlayDesigner() {
   const renderShape = (shape: Shape) => {
     const isSelected = selectedShape === shape.id;
     // Show subtle border normally, highlight border when selected
-    const strokeColor = isSelected ? "#06b6d4" : shape.color;
+    const strokeColor = isSelected ? CONFIG_UI.selection : shape.color;
     const strokeOpacity = isSelected ? 1 : 0.6;
     
     if (shape.type === "circle") {
@@ -2309,7 +2313,7 @@ export default function PlayDesigner() {
             width={handleSize}
             height={handleSize}
             fill="#ffffff"
-            stroke="#06b6d4"
+            stroke={CONFIG_UI.selection}
             strokeWidth={2}
             style={{ cursor: handle.cursor, pointerEvents: "auto" }}
             onPointerDown={(e) => handleResizeHandlePointerDown(e, shape, handle.id as "nw" | "ne" | "sw" | "se")}
@@ -3180,7 +3184,7 @@ export default function PlayDesigner() {
                     {selectedElements.routes.includes(route.id) && (
                       <path
                         d={getRoutePath(route)}
-                        stroke="#06b6d4"
+                        stroke={CONFIG_UI.selection}
                         strokeWidth="6"
                         fill="none"
                         opacity="0.4"
@@ -3308,7 +3312,7 @@ export default function PlayDesigner() {
                         cx={point.x}
                         cy={point.y}
                         r="6"
-                        fill="#06b6d4"
+                        fill={CONFIG_UI.selection}
                         stroke="#fff"
                         strokeWidth="2"
                         className="cursor-move"
@@ -3327,8 +3331,8 @@ export default function PlayDesigner() {
                   <g>
                     {(() => {
                       const player = players.find(p => p.id === selectedPlayer);
-                      const playerColor = player?.color || "#000000";
-                      const previewColor = routeType === "blocking" ? "#ffffff" : (routeType === "run" ? "#000000" : playerColor);
+                      const playerColor = player?.color || CONFIG_ROUTES.run;
+                      const previewColor = routeType === "blocking" ? CONFIG_ROUTES.blocking : (routeType === "run" ? CONFIG_ROUTES.run : playerColor);
                       const endPoint = currentRoutePoints[currentRoutePoints.length - 1];
                       const crossedLOS = endPoint && endPoint.y < FIELD.LOS_Y;
                       
@@ -3385,9 +3389,9 @@ export default function PlayDesigner() {
                     y={Math.min(lassoStart.y, lassoEnd.y)}
                     width={Math.abs(lassoEnd.x - lassoStart.x)}
                     height={Math.abs(lassoEnd.y - lassoStart.y)}
-                    stroke="#06b6d4"
+                    stroke={CONFIG_UI.selection}
                     strokeWidth="2"
-                    fill="rgba(6, 182, 212, 0.1)"
+                    fill={`${CONFIG_UI.selection}1A`}
                     strokeDasharray="5,5"
                   />
                 )}
@@ -3492,7 +3496,7 @@ export default function PlayDesigner() {
                     ) : (
                       <div
                         className={`w-6 h-6 ${
-                          playType === "offense" && player.color === "#6b7280" ? "" : "rounded-full"
+                          playType === "offense" && player.color === CONFIG_COLORS.offense.default ? "" : "rounded-full"
                         } flex items-center justify-center text-white font-bold text-xs ${
                           pendingRouteSelection?.playerId === player.id ? "player-pending-route" : ""
                         }`}
@@ -3776,7 +3780,7 @@ export default function PlayDesigner() {
                                     style: style,
                                     defensiveAction: "man",
                                     targetPlayerId: targetPlayer.id,
-                                    color: "#9ca3af",
+                                    color: CONFIG_ROUTES.man,
                                   };
                                   saveToHistory();
                                   setRoutes(prev => [...prev, newRoute]);

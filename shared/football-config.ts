@@ -5,10 +5,15 @@ export const FOOTBALL_CONFIG = {
     losY: 284,
     pixelsPerYard: 12,
     headerHeight: 60,
-    fieldHeight: 332,
-    fieldLeft: 47,
-    fieldRight: 647,
-    bottomPadding: 20,
+    sidePadding: 27,
+    bottomPadding: 12,
+    get fieldTop() { return this.headerHeight; },
+    get fieldLeft() { return this.sidePadding; },
+    get fieldRight() { return this.width - this.sidePadding; },
+    get fieldWidth() { return this.width - this.sidePadding * 2; },
+    get fieldHeight() { return this.height - this.headerHeight; },
+    get leftHashX() { return this.fieldLeft + 160; },
+    get rightHashX() { return this.fieldRight - 160; },
   },
   colors: {
     offense: {
@@ -30,6 +35,11 @@ export const FOOTBALL_CONFIG = {
       blitz: "#ef4444",
       man: "#9ca3af",
       zone: "#06b6d4",
+      blocking: "#ffffff",
+      run: "#000000",
+    },
+    ui: {
+      selection: "#06b6d4",
     },
     shapes: {
       pink: "#ec4899",
