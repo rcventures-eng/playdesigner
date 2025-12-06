@@ -1,0 +1,60 @@
+I need to upgrade the backend AI to be fully aware of my application's logic, but I want to ensure future changes automatically propagate to the AI without me rewriting prompts.
+
+Step 1: Create the Shared Source of Truth Please create a new file: shared/football-config.ts. This file must export a configuration object that BOTH the frontend and backend will use. Move all our hardcoded colors and dimensions here.
+
+TypeScript
+export const FOOTBALL_CONFIG = {
+  field: { width: 694, height: 392, losY: 284, pixelsPerYard: 12 },
+  // The AI will read these, and the Frontend will use them for CSS/Canvas
+  colors: {
+    offense: {
+      qb_rb: "#000000",      
+      receivers: "#39ff14",  
+      tightEnd: "#f97316",   
+      motion: "#eab308",     
+      lineman: "#1d4ed8"     
+    },
+    defense: {
+      lineman: "#87CEEB",    
+      linebacker: "#FFB6C1", 
+      secondary: "#9333ea"   
+    },
+    routes: {
+      primary: "#ef4444",    
+      blitz: "#ef4444",      
+      man: "#9ca3af" 
+    }
+  },
+  // A 'Logic Dictionary' we can expand later
+  logicRules: {
+    playAction: { trigger: "PA", outputFlag: "hasPlayAction" },
+    motion: { trigger: "Motion", outputFlag: "preSnapMotion" },
+    blitz: { shape: "x", routeType: "blitz" }
+  }
+};
+Step 2: Refactor Frontend to Use Truth
+
+Update PlayDesigner.tsx and your Player components to import colors directly from FOOTBALL_CONFIG.colors.
+
+Benefit: If I change a hex code in football-config.ts later, the app visuals update automatically.
+
+Step 3: Inject Truth into Backend AI
+
+In server/routes.ts, import FOOTBALL_CONFIG.
+
+Update the Gemini System Instruction to dynamically inject this config.
+
+Code Pattern:
+
+TypeScript
+const systemPrompt = `
+  You are the AI Play Designer. 
+  Here are the STRICT Rules of the application (Field, Colors, Logic). 
+  You must output JSON that aligns with these constants:
+  ${JSON.stringify(FOOTBALL_CONFIG, null, 2)}
+`;
+Benefit: When I add new logic or colors to the config file in the future, the AI receives the updated rules in its system prompt automatically on the very next server restart.
+
+Step 4: Logic & Schema Ensure the AI's response schema includes the playType, players, routes, and footballs arrays as discussed, using the values found in the config object.
+
+Please implement this 'Shared Configuration' architecture.
