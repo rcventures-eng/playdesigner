@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Download, Copy, Plus, Trash2, Circle as CircleIcon, MoveHorizontal, PenTool, Square as SquareIcon, Type, Hexagon, RotateCcw, Flag, Camera, X, Loader2 } from "lucide-react";
+import { Download, Copy, Plus, Trash2, Circle as CircleIcon, MoveHorizontal, PenTool, Square as SquareIcon, Type, Hexagon, RotateCcw, Flag, Camera, X, Loader2, Sparkles } from "lucide-react";
 import { toPng } from "html-to-image";
 import { useToast } from "@/hooks/use-toast";
 import underConstructionImage from "@assets/generated_images/under_construction_warning_banner.png";
@@ -27,7 +27,7 @@ const FIELD = {
   get FIELD_RIGHT() { return this.WIDTH - this.SIDE_PADDING; },
   get FIELD_WIDTH() { return this.WIDTH - this.SIDE_PADDING * 2; },
   get FIELD_HEIGHT() { return this.HEIGHT - this.HEADER_HEIGHT; },
-  getPlayerBounds(activeTab: "offense" | "defense" | "special") {
+  getPlayerBounds(activeTab: "offense" | "defense" | "special" | "ai-beta") {
     const isDefense = activeTab === "defense";
     return {
       minX: this.FIELD_LEFT + 12,
@@ -36,10 +36,10 @@ const FIELD = {
       maxY: isDefense ? this.HEIGHT - this.HEADER_HEIGHT - 12 : this.HEIGHT - this.BOTTOM_PADDING - 12,
     };
   },
-  getFieldStartY(activeTab: "offense" | "defense" | "special") {
+  getFieldStartY(activeTab: "offense" | "defense" | "special" | "ai-beta") {
     return activeTab === "defense" ? 0 : this.HEADER_HEIGHT;
   },
-  getHeaderStartY(activeTab: "offense" | "defense" | "special") {
+  getHeaderStartY(activeTab: "offense" | "defense" | "special" | "ai-beta") {
     return activeTab === "defense" ? (this.HEIGHT - this.HEADER_HEIGHT) : 0;
   },
   get LEFT_HASH_X() { return this.FIELD_LEFT + 160; },
@@ -148,23 +148,27 @@ function loadFormationFromConfig(
   }));
 }
 
+type PlayTypeKey = "offense" | "defense" | "special" | "ai-beta";
+
 export default function PlayDesigner() {
-  const [playType, setPlayType] = useState<"offense" | "defense" | "special">("offense");
+  const [playType, setPlayType] = useState<PlayTypeKey>("offense");
   const [players, setPlayers] = useState<Player[]>([]);
   const [routes, setRoutes] = useState<Route[]>([]);
   const [shapes, setShapes] = useState<Shape[]>([]);
   const [footballs, setFootballs] = useState<Football[]>([]);
   const [history, setHistory] = useState<HistoryState[]>([]);
   
-  const [playTypeStates, setPlayTypeStates] = useState<Record<"offense" | "defense" | "special", PlayTypeState>>({
+  const [playTypeStates, setPlayTypeStates] = useState<Record<PlayTypeKey, PlayTypeState>>({
     offense: createEmptyPlayTypeState(),
     defense: createEmptyPlayTypeState(),
     special: createEmptyPlayTypeState(),
+    "ai-beta": createEmptyPlayTypeState(),
   });
-  const playTypeStatesRef = useRef<Record<"offense" | "defense" | "special", PlayTypeState>>({
+  const playTypeStatesRef = useRef<Record<PlayTypeKey, PlayTypeState>>({
     offense: createEmptyPlayTypeState(),
     defense: createEmptyPlayTypeState(),
     special: createEmptyPlayTypeState(),
+    "ai-beta": createEmptyPlayTypeState(),
   });
   const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
   const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
@@ -276,7 +280,7 @@ export default function PlayDesigner() {
     CONFIG_COLORS.shapes.blue,
     CONFIG_COLORS.shapes.green,
   ];
-  const colors = playType === "offense" ? offenseColors : defenseColors;
+  const colors = (playType === "offense" || playType === "special" || playType === "ai-beta") ? offenseColors : defenseColors;
   
   const conceptLabels: Record<string, string> = {
     // Offense concepts
@@ -343,7 +347,7 @@ export default function PlayDesigner() {
     return labels[value] || value;
   };
 
-  const handlePlayTypeChange = (newPlayType: "offense" | "defense" | "special") => {
+  const handlePlayTypeChange = (newPlayType: PlayTypeKey) => {
     if (newPlayType === playType) return;
     
     const currentState: PlayTypeState = {
@@ -799,7 +803,7 @@ export default function PlayDesigner() {
   };
 
   // Helper to clamp player positions to current tab bounds
-  const clampPlayersToCurrentBounds = (playerList: Player[], activeTab: "offense" | "defense" | "special"): Player[] => {
+  const clampPlayersToCurrentBounds = (playerList: Player[], activeTab: PlayTypeKey): Player[] => {
     const bounds = FIELD.getPlayerBounds(activeTab);
     return playerList.map(p => ({
       ...p,
@@ -2364,11 +2368,15 @@ export default function PlayDesigner() {
         <div className="w-96 min-w-72 flex-shrink border-r border-border bg-card flex flex-col h-full overflow-y-auto">
           <div className="p-3 border-b border-border">
             <h1 className="text-xl font-bold text-foreground mb-2">Play Designer</h1>
-            <Tabs value={playType} onValueChange={(v) => handlePlayTypeChange(v as "offense" | "defense" | "special")} className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="offense" data-testid="tab-offense">Offense</TabsTrigger>
-                <TabsTrigger value="defense" data-testid="tab-defense">Defense</TabsTrigger>
-                <TabsTrigger value="special" data-testid="tab-special">Special</TabsTrigger>
+            <Tabs value={playType} onValueChange={(v) => handlePlayTypeChange(v as PlayTypeKey)} className="w-full">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="offense" data-testid="tab-offense" className="text-[11px] font-semibold px-1">Offense</TabsTrigger>
+                <TabsTrigger value="defense" data-testid="tab-defense" className="text-[11px] font-semibold px-1">Defense</TabsTrigger>
+                <TabsTrigger value="special" data-testid="tab-special" className="text-[11px] font-semibold px-1 opacity-50 cursor-not-allowed pointer-events-none">Special</TabsTrigger>
+                <TabsTrigger value="ai-beta" data-testid="tab-ai-beta" className="text-[11px] font-semibold px-1">
+                  <Sparkles className="w-3 h-3 mr-1 text-orange-500" />
+                  AI Beta
+                </TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -2414,7 +2422,7 @@ export default function PlayDesigner() {
                       </SelectContent>
                     </Select>
                   )}
-                  {playType === "special" && (
+                  {(playType === "special" || playType === "ai-beta") && (
                     <Select value={metadata.formation} onValueChange={(v) => setMetadata({ ...metadata, formation: v })}>
                       <SelectTrigger id="formation" data-testid="select-formation" className="h-8 text-sm">
                         <SelectValue placeholder="Select formation" />
@@ -2477,7 +2485,7 @@ export default function PlayDesigner() {
                     />
                   </div>
                 )}
-                {playType === "special" && (
+                {(playType === "special" || playType === "ai-beta") && (
                   <div>
                     <Label htmlFor="personnel" className="text-xs">Personnel</Label>
                     <Input
@@ -2874,8 +2882,8 @@ export default function PlayDesigner() {
           className="flex-1 h-full relative bg-muted/30 p-2 overflow-auto flex flex-col items-center justify-center"
           onClick={handleBackgroundClick}
         >
-          {/* AI Play Creator Interface - Special Teams Tab - Absolute Overlay */}
-          {playType === "special" && (
+          {/* AI Play Creator Interface - Special Teams & AI Beta Tab - Absolute Overlay */}
+          {(playType === "special" || playType === "ai-beta") && (
             <div 
               className="absolute top-0 left-0 right-0 z-10 flex justify-center mt-16 pointer-events-none"
               data-testid="special-ai-overlay"
