@@ -34,7 +34,15 @@ The system supports advanced defensive assignments through a long-press menu, in
 
 ### AI Play Creator
 
-The Special Teams tab features an AI Play Creator powered by Google Gemini 2.0 Flash. Users can describe a play in natural language or upload an image, and the AI generates players and routes on the canvas. The AI leverages a detailed system prompt with field dimensions, player color codes, and route types.
+The Special Teams tab features an AI Play Creator powered by Google Gemini 2.0 Flash. Users can describe a play in natural language or upload hand-drawn play diagrams, and the AI generates players and routes on the canvas. Key features include:
+-   **Text Prompts**: Natural language descriptions are processed with a comprehensive system prompt containing field dimensions, player color codes, and route types.
+-   **Image Upload**: Hand-drawn diagrams are processed via Gemini's vision model with specialized prompts that:
+    - Snap players to exact FORMATIONS coordinates (no pixel-based inference)
+    - Use spatial heuristics for unlabeled players (left-to-right ordering, LOS proximity)
+    - Interpret route styles (solid=passing, curved=curved, dotted=motion for offense only)
+    - Detect primary targets (marked with "1" or asterisk)
+-   **Backend Validation**: Infers isPrimary and isMotion flags from route geometry when AI doesn't set them explicitly. Validates defensive players never have motion routes.
+-   **Payload Support**: Server accepts up to 10MB JSON payloads for base64-encoded images.
 
 ### Shared Configuration Architecture
 
