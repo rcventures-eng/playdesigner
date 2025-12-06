@@ -209,6 +209,8 @@ export default function PlayDesigner() {
   const [isDrawingShape, setIsDrawingShape] = useState(false);
   const [shapeStart, setShapeStart] = useState<{ x: number; y: number } | null>(null);
   const [draggingRoutePoint, setDraggingRoutePoint] = useState<{ routeId: string; pointIndex: number } | null>(null);
+  const [editingRouteId, setEditingRouteId] = useState<string | null>(null);
+  const editingRouteStartPoints = useRef<{ x: number; y: number }[] | null>(null);
   const [lassoStart, setLassoStart] = useState<{ x: number; y: number } | null>(null);
   const [lassoEnd, setLassoEnd] = useState<{ x: number; y: number } | null>(null);
   const [selectedElements, setSelectedElements] = useState<{ players: string[]; routes: string[] }>({ players: [], routes: [] });
@@ -1523,6 +1525,12 @@ export default function PlayDesigner() {
       if (rect) {
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
+        
+        // First point (index 0) stays attached to player - skip updating it
+        if (draggingRoutePoint.pointIndex === 0) {
+          return;
+        }
+        
         setRoutes(prevRoutes => prevRoutes.map(r => {
           if (r.id === draggingRoutePoint.routeId) {
             const newPoints = [...r.points];
@@ -1605,6 +1613,16 @@ export default function PlayDesigner() {
   const handleCanvasPointerDown = (e: React.PointerEvent) => {
     if ((e.target as HTMLElement).closest('[data-testid^="player-"]')) {
       return;
+    }
+    
+    // Exit route edit mode when clicking on canvas background
+    if (editingRouteId) {
+      const targetEl = e.target as HTMLElement;
+      // Only exit if not clicking on a route or route handle
+      if (!targetEl.closest('[data-route-id]') && !targetEl.closest('[data-route-handle]')) {
+        setEditingRouteId(null);
+        editingRouteStartPoints.current = null;
+      }
     }
     
     if (tool === "select") {
@@ -3184,6 +3202,32 @@ export default function PlayDesigner() {
                           const crossedLOS = endPoint && endPoint.y < FIELD.LOS_Y;
                           return (
                             <>
+                              {/* Transparent hit area for entire motion route */}
+                              <path
+                                d={getRoutePath(route)}
+                                stroke="rgba(0,0,0,0.001)"
+                                strokeWidth="20"
+                                fill="none"
+                                className="cursor-pointer"
+                                style={{ pointerEvents: "stroke", touchAction: "none" }}
+                                data-route-id={route.id}
+                                data-testid={`route-hitarea-${route.id}`}
+                                onPointerDown={(e) => e.stopPropagation()}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedRoute(route.id);
+                                  setSelectedPlayer(null);
+                                  setSelectedShape(null);
+                                  setSelectedFootball(null);
+                                  setSelectedElements({ players: [], routes: [] });
+                                }}
+                                onDoubleClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingRouteId(route.id);
+                                  setSelectedRoute(route.id);
+                                  editingRouteStartPoints.current = JSON.parse(JSON.stringify(route.points));
+                                }}
+                              />
                               {belowLOS.length >= 2 && (
                                 <path
                                   d={getRoutePathForPoints(belowLOS, route.style)}
@@ -3191,17 +3235,7 @@ export default function PlayDesigner() {
                                   strokeWidth="3.6"
                                   fill="none"
                                   strokeDasharray="5,5"
-                                  onMouseDown={(e) => e.stopPropagation()}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedRoute(route.id);
-                                    setSelectedPlayer(null);
-                                    setSelectedShape(null);
-                                    setSelectedFootball(null);
-                                    setSelectedElements({ players: [], routes: [] });
-                                  }}
-                                  className="cursor-pointer"
-                                  style={{ pointerEvents: "auto" }}
+                                  style={{ pointerEvents: "none" }}
                                 />
                               )}
                               {aboveLOS.length >= 2 && (
@@ -3211,17 +3245,7 @@ export default function PlayDesigner() {
                                   strokeWidth="3.6"
                                   fill="none"
                                   markerEnd={crossedLOS ? `url(#arrowhead-${getRouteColor(route).replace('#', '')})` : undefined}
-                                  onMouseDown={(e) => e.stopPropagation()}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedRoute(route.id);
-                                    setSelectedPlayer(null);
-                                    setSelectedShape(null);
-                                    setSelectedFootball(null);
-                                    setSelectedElements({ players: [], routes: [] });
-                                  }}
-                                  className="cursor-pointer"
-                                  style={{ pointerEvents: "auto" }}
+                                  style={{ pointerEvents: "none" }}
                                   data-testid={`route-${route.id}`}
                                 />
                               )}
@@ -3240,35 +3264,54 @@ export default function PlayDesigner() {
                         })()}
                       </>
                     ) : (
-                      <path
-                        d={getRoutePath(route)}
-                        stroke={getRouteColor(route)}
-                        strokeWidth="3.6"
-                        fill="none"
-                        strokeDasharray={route.type === "assignment" && route.defensiveAction === "man" ? "5,5" : undefined}
-                        markerEnd={(() => {
-                          if (route.type === "blocking") {
-                            return "url(#arrowhead-blocking)";
-                          }
-                          return `url(#arrowhead-${getRouteColor(route).replace('#', '')})`;
-                        })()}
-                        onPointerDown={(e) => {
-                          e.stopPropagation();
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedRoute(route.id);
-                          setSelectedPlayer(null);
-                          setSelectedShape(null);
-                          setSelectedFootball(null);
-                          setSelectedElements({ players: [], routes: [] });
-                        }}
-                        className="cursor-pointer"
-                        style={{ pointerEvents: "auto", touchAction: "none" }}
-                        data-testid={`route-${route.id}`}
-                        data-target-player={route.type === "assignment" && route.defensiveAction === "man" ? route.targetPlayerId : undefined}
-                        data-route-type={route.type === "assignment" ? route.defensiveAction : route.type}
-                      />
+                      <>
+                        {/* Transparent hit area for easier clicking/double-clicking */}
+                        <path
+                          d={getRoutePath(route)}
+                          stroke="rgba(0,0,0,0.001)"
+                          strokeWidth="20"
+                          fill="none"
+                          className="cursor-pointer"
+                          style={{ pointerEvents: "stroke", touchAction: "none" }}
+                          data-route-id={route.id}
+                          data-testid={`route-hitarea-${route.id}`}
+                          onPointerDown={(e) => {
+                            e.stopPropagation();
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedRoute(route.id);
+                            setSelectedPlayer(null);
+                            setSelectedShape(null);
+                            setSelectedFootball(null);
+                            setSelectedElements({ players: [], routes: [] });
+                          }}
+                          onDoubleClick={(e) => {
+                            e.stopPropagation();
+                            setEditingRouteId(route.id);
+                            setSelectedRoute(route.id);
+                            editingRouteStartPoints.current = JSON.parse(JSON.stringify(route.points));
+                          }}
+                        />
+                        {/* Visible route path */}
+                        <path
+                          d={getRoutePath(route)}
+                          stroke={getRouteColor(route)}
+                          strokeWidth="3.6"
+                          fill="none"
+                          strokeDasharray={route.type === "assignment" && route.defensiveAction === "man" ? "5,5" : undefined}
+                          markerEnd={(() => {
+                            if (route.type === "blocking") {
+                              return "url(#arrowhead-blocking)";
+                            }
+                            return `url(#arrowhead-${getRouteColor(route).replace('#', '')})`;
+                          })()}
+                          style={{ pointerEvents: "none" }}
+                          data-testid={`route-${route.id}`}
+                          data-target-player={route.type === "assignment" && route.defensiveAction === "man" ? route.targetPlayerId : undefined}
+                          data-route-type={route.type === "assignment" ? route.defensiveAction : route.type}
+                        />
+                      </>
                     )}
                     {route.priority && route.points.length > 0 && (
                       <g>
@@ -3292,9 +3335,33 @@ export default function PlayDesigner() {
                         </text>
                       </g>
                     )}
-                    {selectedRoute === route.id && route.points.map((point, idx) => (
+                    {/* Route edit mode: blue handles when editingRouteId matches */}
+                    {editingRouteId === route.id && route.points.map((point, idx) => (
                       <circle
-                        key={idx}
+                        key={`edit-${idx}`}
+                        cx={point.x}
+                        cy={point.y}
+                        r="7"
+                        fill={idx === 0 ? "#6b7280" : "#3b82f6"}
+                        stroke="#fff"
+                        strokeWidth="2"
+                        className={idx === 0 ? "cursor-not-allowed" : "cursor-move"}
+                        style={{ touchAction: "none" }}
+                        data-route-handle="true"
+                        onPointerDown={(e) => {
+                          e.stopPropagation();
+                          if (idx === 0) return; // First point stays attached to player
+                          // Save history before starting drag for undo
+                          saveToHistory();
+                          setDraggingRoutePoint({ routeId: route.id, pointIndex: idx });
+                        }}
+                        data-testid={`route-edit-point-${route.id}-${idx}`}
+                      />
+                    ))}
+                    {/* Selection mode: orange handles when just selected (not editing) */}
+                    {selectedRoute === route.id && editingRouteId !== route.id && route.points.map((point, idx) => (
+                      <circle
+                        key={`select-${idx}`}
                         cx={point.x}
                         cy={point.y}
                         r="6"
@@ -3305,6 +3372,8 @@ export default function PlayDesigner() {
                         style={{ touchAction: "none" }}
                         onPointerDown={(e) => {
                           e.stopPropagation();
+                          if (idx === 0) return; // First point stays attached
+                          saveToHistory();
                           setDraggingRoutePoint({ routeId: route.id, pointIndex: idx });
                         }}
                         data-testid={`route-point-${route.id}-${idx}`}
