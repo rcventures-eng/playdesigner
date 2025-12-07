@@ -25,7 +25,7 @@ A sleek orange navigation bar sits above the entire application:
 
 The app uses a modern "Floating Console" aesthetic with breathing room around all edges:
 -   **Outer Wrapper**: `h-screen w-screen flex flex-col overflow-hidden` contains TopNav and workspace.
--   **Main Container**: `flex-1 bg-slate-950 p-10 flex flex-col gap-4` provides 40px padding from browser edges and consistent gaps between panels.
+-   **Main Container**: `flex-1 bg-slate-950 px-10 pb-10 pt-3 flex flex-col gap-4` provides 40px padding on sides/bottom, 12px on top (tighter connection to TopNav).
 -   **Left Sidebar**: `rounded-2xl border border-white/10 shadow-2xl bg-slate-900/95` appears as a floating card with subtle translucent styling.
 -   **Center Field Area**: `rounded-2xl bg-slate-900/50 border border-white/5` frames the play canvas with subtle visual boundaries.
 -   **Metadata Header**: When visible, also uses `rounded-2xl border border-white/10` to match the floating panel aesthetic.
