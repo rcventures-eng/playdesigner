@@ -602,20 +602,21 @@ export default function PlayDesigner() {
     let position: { x: number; y: number };
     let label: string | undefined;
     
-    // For gray players on offense, use sequential positions and labels based on how many exist
-    if (playType === "offense" && color === CONFIG_COLORS.offense.default) {
+    // For gray players on offense or AI Beta, use sequential positions and labels based on how many exist
+    const isOffensiveTab = playType === "offense" || playType === "ai-beta";
+    if (isOffensiveTab && color === CONFIG_COLORS.offense.default) {
       const existingGrayCount = players.filter(p => p.color === CONFIG_COLORS.offense.default).length;
       const positionIndex = existingGrayCount % grayPositions.length;
       position = grayPositions[positionIndex];
       // Assign sequential label: C, LG, RG, LT, RT, then OL for any extras
       label = existingGrayCount < grayLabels.length ? grayLabels[existingGrayCount] : "OL";
     } else {
-      // Use preset position for other offense players, default to center for defense
-      position = playType === "offense" && offensePositions[color] 
+      // Use preset position for other offense/AI Beta players, default to center for defense
+      position = isOffensiveTab && offensePositions[color] 
         ? offensePositions[color] 
         : { x: FIELD.WIDTH / 2, y: FIELD.LOS_Y };
-      // Assign color-based label for offense or defense
-      if (playType === "offense" && colorLabels[color]) {
+      // Assign color-based label for offense/AI Beta or defense
+      if (isOffensiveTab && colorLabels[color]) {
         label = colorLabels[color];
       } else if (playType === "defense" && defenseColorLabels[color]) {
         label = defenseColorLabels[color];
