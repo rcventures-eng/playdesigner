@@ -17,7 +17,7 @@ The frontend is a React and TypeScript application built with Vite, utilizing sh
 ### Floating Console Layout
 
 The app uses a modern "Floating Console" aesthetic with breathing room around all edges:
--   **Main Container**: `bg-slate-950 p-8 flex flex-col gap-4` provides 32px padding from browser edges and consistent gaps between panels.
+-   **Main Container**: `bg-slate-950 p-10 flex flex-col gap-4` provides 40px padding from browser edges and consistent gaps between panels.
 -   **Left Sidebar**: `rounded-2xl border border-white/10 shadow-2xl bg-slate-900/95` appears as a floating card with subtle translucent styling.
 -   **Center Field Area**: `rounded-2xl bg-slate-900/50 border border-white/5` frames the play canvas with subtle visual boundaries.
 -   **Metadata Header**: When visible, also uses `rounded-2xl border border-white/10` to match the floating panel aesthetic.
