@@ -2967,7 +2967,7 @@ export default function PlayDesigner() {
                     />
                   </div>
                   {/* Bottom row with Upload and Submit buttons on the right */}
-                  <div className="flex justify-end items-center gap-2">
+                  <div className="flex justify-end items-center gap-1">
                     {/* Hidden file input */}
                     <input
                       type="file"
@@ -2981,11 +2981,11 @@ export default function PlayDesigner() {
                     <button
                       onClick={() => fileInputRef.current?.click()}
                       disabled={isUploading}
-                      className="bg-orange-500 hover:bg-orange-600 text-white disabled:opacity-50 px-2 py-1 rounded text-xs font-medium transition-colors flex items-center justify-center"
+                      className="bg-orange-500 hover:bg-orange-600 text-white disabled:opacity-50 px-1 py-0.5 rounded text-xs font-medium transition-colors flex items-center justify-center"
                       data-testid="button-upload-play"
                     >
                       {isUploading ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <Loader2 className="h-2 w-2 animate-spin" />
                       ) : (
                         <>Upload Play</>
                       )}
@@ -2994,13 +2994,13 @@ export default function PlayDesigner() {
                     <button
                       onClick={() => handleGeneratePlay(uploadedImage || undefined)}
                       disabled={isGenerating || (!specialPrompt.trim() && !uploadedImage)}
-                      className="bg-orange-500 hover:bg-orange-600 disabled:bg-orange-400 disabled:cursor-not-allowed text-white p-2 rounded-lg transition-colors"
+                      className="bg-orange-500 hover:bg-orange-600 disabled:bg-orange-400 disabled:cursor-not-allowed text-white p-1 rounded-lg transition-colors"
                       data-testid="ai-submit-button"
                     >
                       {isGenerating ? (
-                        <Loader2 className="h-5 w-5 animate-spin" />
+                        <Loader2 className="h-3 w-3 animate-spin" />
                       ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
                           <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
                         </svg>
                       )}
