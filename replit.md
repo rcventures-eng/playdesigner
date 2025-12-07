@@ -99,6 +99,16 @@ The application features a 4-tab navigation with uniform styling (text-[11px] fo
 
 Each tab maintains independent state (players, routes, shapes, footballs, history) for complete isolation between play types.
 
+### Right Sidebar Directions Panel
+
+A fixed-width (w-96) directions panel on the right side provides guided instructions for building plays:
+-   **Content**: Six numbered sections covering Add Players, Position & Label, Draw Routes, Tag Your Play, Quick Actions, and Export Your Play.
+-   **Layout**: Uses flex column layout with scrollable content area (flex-1 overflow-y-auto) and fixed CTA section at bottom.
+-   **Pro Tips**: Orange-highlighted italic tips (using !text-orange-400) for AI Beta and account features.
+-   **CTA Buttons**: Two buttons at the bottom separated by a border-t:
+    -   **Create Your Free Account**: Primary orange button (variant="default", size="sm", w-full) matching Download as Image styling.
+    -   **Request a Feature**: Secondary green button (bg-green-600 hover:bg-green-700, text-xs) matching Preloaded Game Format styling.
+
 ## External Dependencies
 
 -   **UI Libraries**: Radix UI, shadcn/ui, Lucide React, class-variance-authority.
