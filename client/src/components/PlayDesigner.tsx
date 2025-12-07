@@ -12,6 +12,7 @@ import { toPng } from "html-to-image";
 import { useToast } from "@/hooks/use-toast";
 import underConstructionImage from "@assets/generated_images/under_construction_warning_banner.png";
 import { FOOTBALL_CONFIG, FORMATIONS, resolveColorKey, type FormationPlayer } from "../../../shared/football-config";
+import TopNav from "./TopNav";
 
 const CONFIG_FIELD = FOOTBALL_CONFIG.field;
 const FIELD = {
@@ -2384,8 +2385,10 @@ export default function PlayDesigner() {
   };
 
   return (
-    <div className={`h-screen w-screen bg-slate-950 p-10 flex flex-col gap-4 overflow-hidden ${isLongPressHolding || longPressMenuOpen ? "select-none" : ""}`}>
-      {(metadata.name || metadata.formation || metadata.concept || metadata.defenseConcept || metadata.personnel) && (
+    <div className="h-screen w-screen flex flex-col overflow-hidden">
+      <TopNav />
+      <div className={`flex-1 bg-slate-950 p-10 flex flex-col gap-4 overflow-hidden ${isLongPressHolding || longPressMenuOpen ? "select-none" : ""}`}>
+        {(metadata.name || metadata.formation || metadata.concept || metadata.defenseConcept || metadata.personnel) && (
         <div className="bg-gradient-to-r from-[#1a2332] to-[#2a3342] rounded-2xl border border-white/10 px-6 py-3 flex items-center gap-3 flex-wrap">
           {metadata.name && (
             <Badge variant="default" className="bg-primary text-primary-foreground font-semibold px-3 py-1.5 text-base" data-testid="badge-play-name">
@@ -4173,6 +4176,7 @@ export default function PlayDesigner() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
