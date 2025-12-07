@@ -3820,9 +3820,9 @@ export default function PlayDesigner() {
           )}
         </div>
 
-        <div className="w-96 border-l border-border bg-card p-4 overflow-y-auto" data-testid="directions-panel">
+        <div className="w-96 border-l border-border bg-card p-4 flex flex-col" data-testid="directions-panel">
           <h3 className="font-semibold text-base text-foreground mb-3">🏈 How to Build Your Play</h3>
-          <div className="space-y-4 text-sm text-muted-foreground">
+          <div className="space-y-4 text-sm text-muted-foreground flex-1 overflow-y-auto">
             <div>
               <p className="font-semibold text-foreground">1. Add Players</p>
               <p>Select a format (5v5, 7v7, 11v11) to load formations, or add individual players on Offense or Defense.</p>
@@ -3863,8 +3863,27 @@ export default function PlayDesigner() {
               <p className="font-semibold text-foreground">6. Export Your Play</p>
               <p>📥 <span className="font-medium">Download</span> – Save as image for printing</p>
               <p>📋 <span className="font-medium">Copy</span> – Paste into docs or slides</p>
-              <p className="!text-orange-400 italic mt-1">✨ Sign up to save plays & access starter templates!</p>
             </div>
+          </div>
+          
+          {/* CTA Buttons */}
+          <div className="mt-4 pt-4 border-t border-border space-y-2">
+            <Button
+              size="sm"
+              variant="default"
+              className="w-full"
+              data-testid="button-create-account"
+            >
+              Create Your Free Account
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="w-full bg-green-600 hover:bg-green-700 text-white border-0 text-xs"
+              data-testid="button-request-feature"
+            >
+              Request a Feature
+            </Button>
           </div>
         </div>
       </div>
