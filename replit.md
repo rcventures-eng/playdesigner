@@ -62,7 +62,8 @@ The system supports advanced defensive assignments through a long-press menu, in
 
 ### AI Play Creator
 
-The Special Teams tab features an AI Play Creator powered by Google Gemini 2.0 Flash. Users can describe a play in natural language or upload hand-drawn play diagrams, and the AI generates players and routes on the canvas. Key features include:
+The AI Beta tab features an AI Play Creator powered by Google Gemini 2.0 Flash. Users can describe a play in natural language or upload hand-drawn play diagrams, and the AI generates players and routes on the canvas. Key features include:
+-   **SportsCenter-Style Scrolling Ticker**: Suggestion chips scroll continuously right-to-left in a broadcast ticker style. Uses CSS keyframe animation with `translateX(-50%)` over 20 seconds. Chips are duplicated for seamless looping. Hover pauses the animation via `.ticker-container:hover .ticker-track { animation-play-state: paused; }`. Chips defined in centralized `suggestionChips` array for easy future additions.
 -   **Text Prompts**: Natural language descriptions are processed with a comprehensive system prompt containing field dimensions, player color codes, and route types.
 -   **Image Upload**: Hand-drawn diagrams are processed via Gemini's vision model with specialized prompts that:
     - Snap players to exact FORMATIONS coordinates (no pixel-based inference)
