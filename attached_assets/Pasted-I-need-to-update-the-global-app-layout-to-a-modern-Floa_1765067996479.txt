@@ -1,0 +1,66 @@
+I need to update the global app layout to a modern 'Floating Console' aesthetic. This will fix the spacing issues and add breathing room around the edges.
+
+The Main Container (The Frame) Currently, the app likely uses h-screen w-screen with edge-to-edge elements. Please refactor the root container (in App.tsx or the main layout file):
+Style: Apply h-screen w-screen bg-slate-950 p-4 flex gap-4 overflow-hidden.
+
+Effect: This adds a uniform buffer around the entire app (solving the 'Left/Right Edge' padding request) and creates a consistent gap between the panels.
+
+The Sidebars (The Floating Panels) Update the Left Sidebar (Designer Controls) and Right Sidebar (Help/Actions) to look like floating cards rather than full-height columns.
+Styling: Add rounded-2xl border border-white/10 shadow-2xl overflow-hidden bg-slate-900/95.
+
+Height: They should automatically take h-full (minus the parent padding) to fill the vertical space cleanly.
+
+The Center Stage (The Field Area) The area between the sidebars needs to utilize the space better.
+Container: Use flex-1 relative flex justify-center items-center rounded-2xl bg-slate-900/50 border border-white/5.
+
+Interaction with Scaling: Ensure the useResponsiveScale hook (from our previous step) measures this new Center Stage container (not the window).
+
+Visual Result: By measuring this specific container, the Field Canvas will automatically scale UP to fit perfectly within these rounded borders, eliminating the awkward 'blank space' by filling it with the useful play diagram.
+
+Summary of Changes
+Edges: 16px (p-4) padding from the browser bezel.
+
+Gaps: 16px (gap-4) spacing between panels.
+
+Field: Scales up to fill the center void, framed by a subtle border.
+
+Please output the updated Layout CSS/JSX structure to achieve this floating dashboard look.
+
+6 minutes ago
+
+4 messages & 8 actions
+This is a nice design upgrade! The "Floating Console" aesthetic will give the app a polished, modern look with clear visual hierarchy. Let me quickly check the current layout structure to plan the changes:
+Start building
+5 minutes ago
+Checkpoint made
+5 minutes ago
+•
+Free
+Transitioned from Plan to Build mode
+
+Rollback here
+
+Changes
+
+Preview
+
+7 messages & 27 actions
+I'll start implementing the Floating Console layout. This is a focused layout refactor that I can tackle directly.
+Checkpoint made
+3 minutes ago
+Update app layout to a modern floating console aesthetic with improved spacing and panel styling
+
+Rollback here
+
+Changes
+
+Preview
+Worked for 2 minutes
+The preview is telling me my app crashed. Should I rollback or debug with agent? I've never seen this before.
+
+1 minute ago
+
+Decided on rollback strategy
+I'd recommend clicking Rollback - it's the quickest way to get back to a working state.
+
+The crash happened because my layout changes broke the file structure with mismatched tags. Rolling back will restore the working version, and then I can apply the Floating Console design more carefully as a single, complete edit rather than making partial changes.
