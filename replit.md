@@ -25,7 +25,8 @@ The app uses a modern "Floating Console" aesthetic with breathing room around al
 ### Canvas and Drawing System
 
 The core play design functionality uses HTML5 Canvas and SVG for rendering. A `FIELD` configuration object defines field geometry and scaling. Key features include:
--   **Field Elements**: Line of scrimmage, yard lines, hash marks, draggable football, and a play-action marker.
+-   **Field Elements**: Line of scrimmage, yard lines, hash marks, yard line numbers (30/40/50), draggable football, and a play-action marker.
+-   **Yard Line Numbers**: TV-broadcast style numbers (30, 40, 50) rendered as subtle white SVG text at 0.25 opacity. Positioned at 20% and 80% field width, anchored to LOS (30 at LOS+12px, 40 at LOS-108px, 50 at LOS-228px). Uses bold 40px condensed font.
 -   **Motion Routes**: Differentiated visual display before and after the Line of Scrimmage.
 -   **Route Shifting**: When dragging a player, all their routes shift with them maintaining shape (non-assignment routes only). Delta is calculated between new and old position and applied to all route points.
 -   **Export Functionality**: Generates downloadable PNGs using `html-to-image`, optimized for quality at various sizes. Export always captures the logical canvas at 694×392 regardless of display scale.
