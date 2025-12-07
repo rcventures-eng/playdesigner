@@ -2618,15 +2618,15 @@ export default function PlayDesigner() {
                     </div>
                   )}
                 </div>
-                <div className="flex flex-col gap-1.5">
+                <div className="grid grid-cols-2 gap-2">
                   <Button
                     size="sm"
                     variant="secondary"
                     data-testid="button-format-5on5"
                     onClick={() => handleGameFormatClick("5v5")}
-                    className="w-full justify-center bg-green-600 hover:bg-green-700 text-white border-0"
+                    className="h-9 justify-center items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white border-0 text-[11px] font-medium whitespace-nowrap"
                   >
-                    <Flag className="h-4 w-4 text-red-500 mr-2" />
+                    <Flag className="h-3.5 w-3.5 text-red-500" />
                     5-on-5 Flag
                   </Button>
                   <Button
@@ -2634,9 +2634,9 @@ export default function PlayDesigner() {
                     variant="secondary"
                     data-testid="button-format-7on7"
                     onClick={() => handleGameFormatClick("7v7")}
-                    className="w-full justify-center bg-green-600 hover:bg-green-700 text-white border-0"
+                    className="h-9 justify-center items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white border-0 text-[11px] font-medium whitespace-nowrap"
                   >
-                    <Flag className="h-4 w-4 text-red-500 mr-2" />
+                    <Flag className="h-3.5 w-3.5 text-red-500" />
                     7-on-7 Flag
                   </Button>
                   <Button
@@ -2644,9 +2644,9 @@ export default function PlayDesigner() {
                     variant="secondary"
                     data-testid="button-format-9on9"
                     onClick={() => handleGameFormatClick("9v9")}
-                    className="w-full justify-center bg-green-600 hover:bg-green-700 text-white border-0"
+                    className="h-9 justify-center items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white border-0 text-[11px] font-medium whitespace-nowrap"
                   >
-                    <Flag className="h-4 w-4 text-red-500 mr-2" />
+                    <Flag className="h-3.5 w-3.5 text-red-500" />
                     9-on-9 Flag
                   </Button>
                   <Button
@@ -2654,9 +2654,9 @@ export default function PlayDesigner() {
                     variant="secondary"
                     data-testid="button-format-11on11"
                     onClick={() => handleGameFormatClick("11v11")}
-                    className="w-full justify-center bg-green-600 hover:bg-green-700 text-white border-0"
+                    className="h-9 justify-center items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white border-0 text-[11px] font-medium whitespace-nowrap"
                   >
-                    <svg className="h-4 w-4 mr-2" viewBox="0 0 20 40" fill="currentColor">
+                    <svg className="h-3.5 w-3.5" viewBox="0 0 20 40" fill="currentColor">
                       <ellipse cx="10" cy="20" rx="9.5" ry="19.5" fill="#8B4513" stroke="#654321" strokeWidth="1" />
                       <line x1="10" y1="2" x2="10" y2="38" stroke="#FFFFFF" strokeWidth="1.2" />
                     </svg>
