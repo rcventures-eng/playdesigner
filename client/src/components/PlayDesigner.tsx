@@ -2968,45 +2968,73 @@ export default function PlayDesigner() {
                   </div>
                 </div>
                 
-                {/* Button row - outside the glassmorphic container */}
-                <div className="flex justify-end items-center gap-1 w-full">
-                  {/* Hidden file input */}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    ref={fileInputRef}
-                    onChange={handleFileSelect}
-                    className="hidden"
-                    data-testid="file-input-upload"
-                  />
-                  {/* Upload button */}
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploading}
-                    className="bg-orange-500 hover:bg-orange-600 text-white disabled:opacity-50 px-1 py-0.5 rounded text-xs font-medium transition-colors flex items-center justify-center"
-                    data-testid="button-upload-play"
-                  >
-                    {isUploading ? (
-                      <Loader2 className="h-2 w-2 animate-spin" />
-                    ) : (
-                      <>Upload Play</>
-                    )}
-                  </button>
-                  {/* Submit button */}
-                  <button
-                    onClick={() => handleGeneratePlay(uploadedImage || undefined)}
-                    disabled={isGenerating || (!specialPrompt.trim() && !uploadedImage)}
-                    className="bg-orange-500 hover:bg-orange-600 disabled:bg-orange-400 disabled:cursor-not-allowed text-white p-1 rounded-lg transition-colors"
-                    data-testid="ai-submit-button"
-                  >
-                    {isGenerating ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="#4a8c4f">
-                        <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                      </svg>
-                    )}
-                  </button>
+                {/* Button row - suggestion chips on left, upload/submit on right */}
+                <div className="flex justify-between items-center gap-1 w-full">
+                  {/* Suggestion Chips */}
+                  <div className="flex items-center gap-1">
+                    <button 
+                      className="bg-slate-800/80 text-white text-xs border border-white/10 hover:bg-slate-700 rounded-full px-3 py-1 transition-colors"
+                      onClick={() => setSpecialPrompt("Pass play to beat Cover 2")}
+                      data-testid="chip-cover2"
+                    >
+                      Pass play to beat Cover 2
+                    </button>
+                    <button 
+                      className="bg-slate-800/80 text-white text-xs border border-white/10 hover:bg-slate-700 rounded-full px-3 py-1 transition-colors"
+                      onClick={() => setSpecialPrompt("Run play to beat man")}
+                      data-testid="chip-man"
+                    >
+                      Run play to beat man
+                    </button>
+                    <button 
+                      className="bg-slate-800/80 text-white text-xs border border-white/10 hover:bg-slate-700 rounded-full px-3 py-1 transition-colors"
+                      onClick={() => setSpecialPrompt("Quick pass to get a first down vs blitz")}
+                      data-testid="chip-blitz"
+                    >
+                      Quick pass to get a first down vs blitz
+                    </button>
+                  </div>
+                  
+                  {/* Right side: Upload and Submit */}
+                  <div className="flex items-center gap-1">
+                    {/* Hidden file input */}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      ref={fileInputRef}
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      data-testid="file-input-upload"
+                    />
+                    {/* Upload button */}
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploading}
+                      className="bg-orange-500 hover:bg-orange-600 text-white disabled:opacity-50 px-1 py-0.5 rounded text-xs font-medium transition-colors flex items-center justify-center"
+                      data-testid="button-upload-play"
+                    >
+                      {isUploading ? (
+                        <Loader2 className="h-2 w-2 animate-spin" />
+                      ) : (
+                        <>Upload Play</>
+                      )}
+                    </button>
+                    {/* Submit button */}
+                    <button
+                      onClick={() => handleGeneratePlay(uploadedImage || undefined)}
+                      disabled={isGenerating || (!specialPrompt.trim() && !uploadedImage)}
+                      className="bg-orange-500 hover:bg-orange-600 disabled:bg-orange-400 disabled:cursor-not-allowed text-white p-1 rounded-lg transition-colors"
+                      data-testid="ai-submit-button"
+                    >
+                      {isGenerating ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="#4a8c4f">
+                          <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                 </div>
                 
                 {/* Thumbnail Preview */}
@@ -3027,31 +3055,6 @@ export default function PlayDesigner() {
                     </button>
                   </div>
                 )}
-                
-                {/* Suggestion Chips */}
-                <div className="flex flex-wrap justify-center gap-2">
-                  <button 
-                    className="bg-slate-800/80 text-white text-xs border border-white/10 hover:bg-slate-700 rounded-full px-3 py-1 transition-colors"
-                    onClick={() => setSpecialPrompt("Pass play to beat Cover 2")}
-                    data-testid="chip-cover2"
-                  >
-                    Pass play to beat Cover 2
-                  </button>
-                  <button 
-                    className="bg-slate-800/80 text-white text-xs border border-white/10 hover:bg-slate-700 rounded-full px-3 py-1 transition-colors"
-                    onClick={() => setSpecialPrompt("Run play to beat man")}
-                    data-testid="chip-man"
-                  >
-                    Run play to beat man
-                  </button>
-                  <button 
-                    className="bg-slate-800/80 text-white text-xs border border-white/10 hover:bg-slate-700 rounded-full px-3 py-1 transition-colors"
-                    onClick={() => setSpecialPrompt("Quick pass to get a first down vs blitz on 3rd and medium")}
-                    data-testid="chip-blitz"
-                  >
-                    Quick pass to get a first down vs blitz on 3rd and medium
-                  </button>
-                </div>
               </div>
             </div>
           )}
