@@ -3222,15 +3222,15 @@ export default function PlayDesigner() {
                         );
                       })}
                       
-                      {/* Yard line numbers (TV-broadcast style) */}
+                      {/* Yard line numbers (sideline orientation like real fields) */}
                       {(() => {
                         const yardNumbers = [
                           { label: "30", y: FIELD.LOS_Y + 12 },
                           { label: "40", y: FIELD.LOS_Y - 108 },
                           { label: "50", y: FIELD.LOS_Y - 228 },
                         ];
-                        const leftX = FIELD.WIDTH * 0.2;
-                        const rightX = FIELD.WIDTH * 0.8;
+                        const leftX = FIELD.WIDTH * 0.15;
+                        const rightX = FIELD.WIDTH * 0.85;
                         
                         return yardNumbers.flatMap(({ label, y }) => {
                           if (y < 0 || y > FIELD.HEIGHT) return [];
@@ -3241,11 +3241,12 @@ export default function PlayDesigner() {
                               y={y}
                               fill="white"
                               opacity="0.25"
-                              fontSize="40"
+                              fontSize="32"
                               fontWeight="bold"
-                              fontFamily="'Roboto Condensed', 'Arial Narrow', sans-serif"
+                              fontFamily="'Arial Narrow', sans-serif"
                               textAnchor="middle"
                               dominantBaseline="middle"
+                              transform={`rotate(-90, ${leftX}, ${y})`}
                             >
                               {label}
                             </text>,
@@ -3255,11 +3256,12 @@ export default function PlayDesigner() {
                               y={y}
                               fill="white"
                               opacity="0.25"
-                              fontSize="40"
+                              fontSize="32"
                               fontWeight="bold"
-                              fontFamily="'Roboto Condensed', 'Arial Narrow', sans-serif"
+                              fontFamily="'Arial Narrow', sans-serif"
                               textAnchor="middle"
                               dominantBaseline="middle"
+                              transform={`rotate(90, ${rightX}, ${y})`}
                             >
                               {label}
                             </text>
