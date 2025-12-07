@@ -3868,14 +3868,14 @@ export default function PlayDesigner() {
           
           {/* CTA Buttons */}
           <div className="mt-4 pt-4 border-t border-border space-y-2">
-            <Button
-              size="sm"
-              variant="default"
-              className="w-full"
+            <button
+              className="w-full h-32 flex flex-col justify-center items-center bg-orange-500 hover:bg-orange-600 rounded-lg transition-colors"
               data-testid="button-create-account"
             >
-              Create Your Free Account
-            </Button>
+              <Sparkles className="w-8 h-8 text-white mb-2" />
+              <span className="text-2xl font-extrabold text-white">Create Your Free Account</span>
+              <span className="text-sm text-white/90 font-medium mt-1">Save plays & access templates</span>
+            </button>
             <Button
               size="sm"
               variant="secondary"
