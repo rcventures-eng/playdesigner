@@ -106,7 +106,7 @@ A fixed-width (w-96) directions panel on the right side provides guided instruct
 -   **Layout**: Uses flex column layout with scrollable content area (flex-1 overflow-y-auto) and fixed CTA section at bottom.
 -   **Pro Tips**: Orange-highlighted italic tips (using !text-orange-400) for AI Beta and account features.
 -   **CTA Buttons**: Two buttons at the bottom separated by a border-t:
-    -   **Create Your Free Account**: Primary orange button (variant="default", size="sm", w-full) matching Download as Image styling.
+    -   **Create Your Free Account**: Large promotional mega-button (h-32, w-full) with centered flex layout. Features Sparkles icon (w-8 h-8), text-2xl font-extrabold headline, and text-sm sub-text. Uses bg-orange-500 hover:bg-orange-600 brand colors.
     -   **Request a Feature**: Secondary green button (bg-green-600 hover:bg-green-700, text-xs) matching Preloaded Game Format styling.
 
 ## External Dependencies
