@@ -3864,30 +3864,30 @@ export default function PlayDesigner() {
               <p>📥 <span className="font-medium">Download</span> – Save as image for printing</p>
               <p>📋 <span className="font-medium">Copy</span> – Paste into docs or slides</p>
             </div>
-            
-            {/* CTA Buttons - positioned after content with tasteful spacing */}
-            <div className="mt-12 space-y-2">
-              <button
-                className="w-full h-32 flex flex-col justify-center items-center bg-orange-500 hover:bg-orange-600 rounded-lg transition-colors"
-                data-testid="button-create-account"
-              >
-                <Sparkles className="w-8 h-8 text-white mb-2" />
-                <span className="text-2xl font-extrabold text-white">Create Your Free Account</span>
-                <span className="text-sm text-white/90 font-medium mt-1">Save plays & access templates</span>
-              </button>
-              <Button
-                size="sm"
-                variant="secondary"
-                className="w-full bg-green-600 hover:bg-green-700 text-white border-0 text-xs"
-                data-testid="button-request-feature"
-              >
-                Request a Feature
-              </Button>
-            </div>
+          </div>
+          
+          {/* CTA Buttons - positioned in open space between content and Follow Us */}
+          <div className="mt-auto space-y-2 py-4">
+            <button
+              className="w-full h-32 flex flex-col justify-center items-center bg-orange-500 hover:bg-orange-600 rounded-lg transition-colors"
+              data-testid="button-create-account"
+            >
+              <Sparkles className="w-8 h-8 text-white mb-2" />
+              <span className="text-2xl font-extrabold text-white">Create Your Free Account</span>
+              <span className="text-sm text-white/90 font-medium mt-1">Save plays & access templates</span>
+            </button>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="w-full bg-green-600 hover:bg-green-700 text-white border-0 text-xs"
+              data-testid="button-request-feature"
+            >
+              Request a Feature
+            </Button>
           </div>
           
           {/* Follow Us Section - fixed at bottom */}
-          <div className="mt-4 pt-4 border-t border-border text-center" data-testid="follow-us-section">
+          <div className="pt-4 border-t border-border text-center" data-testid="follow-us-section">
             <p className="text-xs font-semibold text-muted-foreground mb-2">Follow Us</p>
             <div className="flex justify-center gap-4 text-xs text-muted-foreground">
               <a href="https://twitter.com/rcfootball" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors" data-testid="link-twitter">@Twitter</a>
