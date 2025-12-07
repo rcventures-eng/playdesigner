@@ -3866,7 +3866,7 @@ export default function PlayDesigner() {
             </div>
             
             {/* CTA Buttons - positioned after content with tasteful spacing */}
-            <div className="mt-6 space-y-2">
+            <div className="mt-12 space-y-2">
               <button
                 className="w-full h-32 flex flex-col justify-center items-center bg-orange-500 hover:bg-orange-600 rounded-lg transition-colors"
                 data-testid="button-create-account"
