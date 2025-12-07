@@ -1,12 +1,13 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { FOOTBALL_CONFIG, FORMATIONS, resolveColorKey } from "../shared/football-config";
 import { LOGIC_DICTIONARY } from "../shared/logic-dictionary";
 import { db } from "./db";
-import { aiGenerationLogs } from "@shared/schema";
-import { desc } from "drizzle-orm";
+import { aiGenerationLogs, users, teams, insertUserSchema, insertTeamSchema } from "@shared/schema";
+import { desc, eq } from "drizzle-orm";
+import bcrypt from "bcryptjs";
 
 // In-memory storage for logic dictionary changes (persisted only in memory for now)
 let customLogicDictionary: typeof LOGIC_DICTIONARY | null = null;
@@ -543,6 +544,147 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: error.message || "Failed to generate play",
         details: error.toString()
       });
+    }
+  });
+
+  // Auth middleware
+  const requireAuth = (req: Request, res: Response, next: NextFunction) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+    next();
+  };
+
+  // Authentication Routes
+  
+  // Register new user
+  app.post("/api/register", async (req, res) => {
+    try {
+      const result = insertUserSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ error: "Invalid input", details: result.error.flatten() });
+      }
+
+      const { email, password } = result.data;
+
+      // Check if user already exists
+      const existingUser = await db.select().from(users).where(eq(users.email, email)).limit(1);
+      if (existingUser.length > 0) {
+        return res.status(409).json({ error: "Email already registered" });
+      }
+
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Create user
+      const [newUser] = await db.insert(users).values({
+        email,
+        password: hashedPassword,
+      }).returning();
+
+      // Set session
+      req.session.userId = newUser.id;
+
+      res.status(201).json({ 
+        success: true, 
+        user: { id: newUser.id, email: newUser.email } 
+      });
+    } catch (error: any) {
+      console.error("Register error:", error);
+      res.status(500).json({ error: error.message || "Registration failed" });
+    }
+  });
+
+  // Login user
+  app.post("/api/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email and password are required" });
+      }
+
+      // Find user
+      const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+      if (!user) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+
+      // Verify password
+      const isValid = await bcrypt.compare(password, user.password);
+      if (!isValid) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+
+      // Set session
+      req.session.userId = user.id;
+
+      res.json({ 
+        success: true, 
+        user: { id: user.id, email: user.email } 
+      });
+    } catch (error: any) {
+      console.error("Login error:", error);
+      res.status(500).json({ error: error.message || "Login failed" });
+    }
+  });
+
+  // Logout user
+  app.post("/api/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ error: "Logout failed" });
+      }
+      res.clearCookie("connect.sid");
+      res.json({ success: true });
+    });
+  });
+
+  // Get current user
+  app.get("/api/me", requireAuth, async (req, res) => {
+    try {
+      const [user] = await db.select().from(users).where(eq(users.id, req.session.userId!)).limit(1);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      res.json({ id: user.id, email: user.email });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Team Management Routes
+  
+  // Create team
+  app.post("/api/teams", requireAuth, async (req, res) => {
+    try {
+      const result = insertTeamSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ error: "Invalid input", details: result.error.flatten() });
+      }
+
+      const { name, logoUrl } = result.data;
+
+      const [newTeam] = await db.insert(teams).values({
+        ownerId: req.session.userId!,
+        name,
+        logoUrl,
+      }).returning();
+
+      res.status(201).json(newTeam);
+    } catch (error: any) {
+      console.error("Create team error:", error);
+      res.status(500).json({ error: error.message || "Failed to create team" });
+    }
+  });
+
+  // Get user's teams
+  app.get("/api/teams", requireAuth, async (req, res) => {
+    try {
+      const userTeams = await db.select().from(teams).where(eq(teams.ownerId, req.session.userId!));
+      res.json(userTeams);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
     }
   });
 
