@@ -3225,34 +3225,47 @@ export default function PlayDesigner() {
                       {/* Yard line numbers (sideline orientation like real fields) */}
                       {(() => {
                         const yardNumbers = [
-                          { label: "30", y: FIELD.LOS_Y + 18, side: "left" },
-                          { label: "40", y: FIELD.LOS_Y - 102, side: "right" },
-                          { label: "50", y: FIELD.LOS_Y - 222, side: "left" },
+                          { label: "30", y: FIELD.LOS_Y + 18 },
+                          { label: "40", y: FIELD.LOS_Y - 102 },
+                          { label: "50", y: FIELD.LOS_Y - 222 },
                         ];
                         const leftX = FIELD.WIDTH * 0.15;
                         const rightX = FIELD.WIDTH * 0.85;
                         
-                        return yardNumbers.map(({ label, y, side }) => {
-                          if (y < 0 || y > FIELD.HEIGHT) return null;
-                          const x = side === "left" ? leftX : rightX;
-                          const rotation = side === "left" ? -90 : 90;
-                          return (
+                        return yardNumbers.flatMap(({ label, y }) => {
+                          if (y < 0 || y > FIELD.HEIGHT) return [];
+                          return [
                             <text
-                              key={`yard-num-${label}-${side}`}
-                              x={x}
+                              key={`yard-num-${label}-left`}
+                              x={leftX}
                               y={y}
                               fill="white"
                               opacity="0.25"
-                              fontSize="40"
+                              fontSize="32"
                               fontWeight="bold"
                               fontFamily="'Arial Narrow', sans-serif"
                               textAnchor="middle"
                               dominantBaseline="middle"
-                              transform={`rotate(${rotation}, ${x}, ${y})`}
+                              transform={`rotate(-90, ${leftX}, ${y})`}
+                            >
+                              {label}
+                            </text>,
+                            <text
+                              key={`yard-num-${label}-right`}
+                              x={rightX}
+                              y={y}
+                              fill="white"
+                              opacity="0.25"
+                              fontSize="32"
+                              fontWeight="bold"
+                              fontFamily="'Arial Narrow', sans-serif"
+                              textAnchor="middle"
+                              dominantBaseline="middle"
+                              transform={`rotate(90, ${rightX}, ${y})`}
                             >
                               {label}
                             </text>
-                          );
+                          ];
                         });
                       })()}
                     </>
