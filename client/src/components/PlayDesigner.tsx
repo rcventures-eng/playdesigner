@@ -2383,9 +2383,12 @@ export default function PlayDesigner() {
   };
 
   return (
-    <div className={`flex flex-col h-screen w-screen overflow-hidden bg-background ${isLongPressHolding || longPressMenuOpen ? "select-none" : ""}`}>
-      {(metadata.name || metadata.formation || metadata.concept || metadata.defenseConcept || metadata.personnel) && (
-        <div className="bg-gradient-to-r from-[#1a2332] to-[#2a3342] border-b border-border px-6 py-3 flex items-center gap-3 flex-wrap">
+    <div className={`h-screen w-screen bg-slate-950 p-4 flex gap-4 overflow-hidden ${isLongPressHolding || longPressMenuOpen ? "select-none" : ""}`}>
+      {/* Left Sidebar - Floating Panel */}
+      <div className="w-96 min-w-72 flex-shrink-0 rounded-2xl border border-white/10 shadow-2xl overflow-hidden bg-slate-900/95 flex flex-col h-full">
+        {/* Metadata bar inside sidebar */}
+        {(metadata.name || metadata.formation || metadata.concept || metadata.defenseConcept || metadata.personnel) && (
+          <div className="bg-gradient-to-r from-slate-800 to-slate-700 border-b border-white/10 px-4 py-2 flex items-center gap-2 flex-wrap">
           {metadata.name && (
             <Badge variant="default" className="bg-primary text-primary-foreground font-semibold px-3 py-1.5 text-base" data-testid="badge-play-name">
               {metadata.name}
@@ -2411,13 +2414,11 @@ export default function PlayDesigner() {
               Personnel: {metadata.personnel}
             </Badge>
           )}
-        </div>
-      )}
-
-      <div className="flex flex-row flex-1 overflow-hidden">
-        <div className="w-96 min-w-72 flex-shrink border-r border-border bg-card flex flex-col h-full overflow-y-auto">
-          <div className="p-3 border-b border-border">
-            <h1 className="text-xl font-bold text-foreground mb-2">Play Designer</h1>
+          </div>
+        )}
+        
+        <div className="p-3 border-b border-white/10">
+          <h1 className="text-xl font-bold text-white mb-2">Play Designer</h1>
             <Tabs value={playType} onValueChange={(v) => handlePlayTypeChange(v as PlayTypeKey)} className="w-full">
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="offense" data-testid="tab-offense" className="text-[11px] font-semibold px-1">Offense</TabsTrigger>
