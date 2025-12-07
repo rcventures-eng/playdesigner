@@ -3820,38 +3820,51 @@ export default function PlayDesigner() {
           )}
         </div>
 
-        <div className="w-96 border-l border-border bg-card p-4 overflow-y-auto">
-          <h3 className="font-semibold text-base text-foreground mb-3">🏈 How to Build Your Play</h3>
-          <div className="space-y-2 text-sm text-muted-foreground">
-            <p className="font-semibold text-foreground mt-3">1. Add Players</p>
-            <p>🎮 Choose a Game Format preset (5v5, 7v7, or 11v11) to instantly load a formation, or add players one at a time using the colored icons.</p>
+        <div className="w-80 border-l border-border bg-card p-3 flex flex-col" data-testid="directions-panel">
+          <h3 className="font-semibold text-sm text-foreground mb-2">🏈 How to Build Your Play</h3>
+          <div className="space-y-2 text-xs text-muted-foreground">
+            <div>
+              <p className="font-semibold text-foreground">Add Players</p>
+              <p>Select a format (5v5, 7v7, 11v11) to load formations, or add individual players on Offense or Defense.</p>
+              <p className="!text-orange-400 italic mt-1">💡 PRO TIP: Use AI Beta to generate a starting point, then fine-tune!</p>
+            </div>
             
-            <p className="font-semibold text-foreground mt-3">2. Position & Label</p>
-            <p>👆 <span className="font-medium">Move:</span> Click and drag quickly to reposition.</p>
-            <p>✏️ <span className="font-medium">Rename:</span> Double-click a player circle to edit its label (e.g., QB, WR, LT).</p>
+            <div>
+              <p className="font-semibold text-foreground">Position & Label</p>
+              <p>👆 <span className="font-medium">Move</span> – Click and drag to reposition</p>
+              <p>✏️ <span className="font-medium">Rename</span> – Double-click a player to edit its label</p>
+            </div>
             
-            <p className="font-semibold text-foreground mt-3">3. Draw Routes</p>
-            <p>👇 Long-press any player to open the Route Menu:</p>
-            <p>🎯 Choose <span className="font-medium">Pass</span>, <span className="font-medium">Run</span>, or <span className="font-medium">Block</span></p>
-            <p>📐 Select <span className="font-medium">Straight</span> or <span className="font-medium">Curved</span></p>
-            <p>💨 Toggle <span className="font-medium">Motion</span> for pre-snap movement</p>
-            <p>⭐ Toggle <span className="font-medium">Primary</span> to mark the main target</p>
-            <p>Click points on the field to draw, then click the player again to finish.</p>
+            <div>
+              <p className="font-semibold text-foreground">Draw Routes</p>
+              <p>👇 Long-press any player to open the Route Menu:</p>
+              <p className="pl-3">• 🎯 Choose <span className="font-medium">Pass</span>, <span className="font-medium">Run</span>, or <span className="font-medium">Block</span></p>
+              <p className="pl-3">• 📐 Pick <span className="font-medium">Straight</span> or <span className="font-medium">Curved</span></p>
+              <p className="pl-3">• 🟠 When outlined orange, click field points to draw</p>
+              <p className="pl-3">• 💨 Toggle <span className="font-medium">Motion</span> for pre-snap movement</p>
+              <p className="pl-3">• ⭐ Toggle <span className="font-medium">Primary</span> to mark main target</p>
+              <p className="italic mt-1">Click route endpoint to finish.</p>
+            </div>
             
-            <p className="font-semibold text-foreground mt-3">4. Tag Your Play</p>
-            <p>📝 Use the metadata fields to organize your playbook:</p>
-            <p><span className="font-medium">Name</span> your play (e.g., "Mesh Left")</p>
-            <p><span className="font-medium">Formation</span> (e.g., "Shotgun", "I-Form")</p>
-            <p><span className="font-medium">Concept</span> (e.g., "Play Action", "Screen")</p>
-            <p><span className="font-medium">Personnel</span> grouping (e.g., "1RB/3WR/1TE" or "2RB/2TE/1WR" etc.)</p>
+            <div>
+              <p className="font-semibold text-foreground">Tag Your Play</p>
+              <p>📝 Organize with optional metadata:</p>
+              <p><span className="font-medium">Name</span> · <span className="font-medium">Formation</span> · <span className="font-medium">Concept</span> · <span className="font-medium">Personnel</span></p>
+              <p className="italic mt-1">Note: More detail = better AI accuracy</p>
+            </div>
             
-            <p className="font-semibold text-foreground mt-3">5. Quick Actions</p>
-            <p>↩️ <span className="font-medium">Undo</span> reverses your last change</p>
-            <p>🗑️ <span className="font-medium">Clear All</span> wipes the field clean</p>
+            <div>
+              <p className="font-semibold text-foreground">Quick Actions</p>
+              <p>↩️ <span className="font-medium">Undo</span> – Reverses last change</p>
+              <p>🗑️ <span className="font-medium">Clear</span> – Wipes field clean</p>
+            </div>
             
-            <p className="font-semibold text-foreground mt-3">6. Save to Your Playbook</p>
-            <p>📥 <span className="font-medium">Download</span> saves as an image for printing</p>
-            <p>📋 <span className="font-medium">Copy</span> puts it on your clipboard for pasting into docs or slides</p>
+            <div>
+              <p className="font-semibold text-foreground">Export Your Play</p>
+              <p>📥 <span className="font-medium">Download</span> – Save as image for printing</p>
+              <p>📋 <span className="font-medium">Copy</span> – Paste into docs or slides</p>
+              <p className="!text-orange-400 italic mt-1">✨ Sign up to save plays & access starter templates!</p>
+            </div>
           </div>
         </div>
       </div>
