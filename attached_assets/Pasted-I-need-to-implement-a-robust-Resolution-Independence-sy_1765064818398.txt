@@ -1,0 +1,41 @@
+I need to implement a robust Resolution Independence system to ensure the Play Designer looks perfect on any screen size (Tablet, Desktop, and Mobile) without blurriness.
+
+1. The Layout Architecture (Separation of Concerns) Refactor the main content area into two distinct layers:
+
+Layer A (The Field Wrapper): This contains the Green Grass, Player Circles, and Routes. It WILL scale to fit the screen.
+
+Layer B (The UI Overlay): This contains the 'AI Beta' Interface, Toggle Buttons, and Popups. It WILL NOT scale (it remains 100% size for readability).
+
+Layout: Layer B should be absolutely positioned on top of Layer A, centered.
+
+2. The useResponsiveScale Hook Create a hook that measures the available screen space in the main panel.
+
+Logic: Calculate a scale factor to fit FIELD.WIDTH (694) and FIELD.HEIGHT (392) into the available space, with a 20px safety margin.
+
+Mobile Constraint: Ensure the scale never drops below a readable minimum (e.g., 0.4) to prevent the UI from becoming microscopic.
+
+3. Field Scaling (The CSS Transform)
+
+Apply transform: scale(scale) and transformOrigin: 'top center' to the Field Wrapper.
+
+Crucial Mouse Correction: Update all mouse event handlers (onMouseDown, onDrag). You must divide the mouse coordinates by the scale factor to map the cursor position correctly to the logical field coordinates.
+
+const logicalX = (event.clientX - rect.left) / scale;
+
+4. Text Readability (The Inverse Scale)
+
+Since Player Labels are HTML elements, scaling the field will shrink the text.
+
+Action: In the Player component style, add a 'Counter-Scale' to the text span:
+
+transform: \scale(${1 / scale})``
+
+Result: The player position moves correctly with the zoom, but the text label stays close to its original size, remaining crisp and readable even on smaller screens.
+
+5. Mobile Polish
+
+Set touch-action: none on the Field Canvas to prevent scrolling while dragging players.
+
+Ensure the 'AI Interface' (Layer B) uses max-width: 90% so it doesn't overflow on phone screens.
+
+Please refactor PlayDesigner.tsx and the Player component to implement this Smart Scaling system.

@@ -20,10 +20,20 @@ The core play design functionality uses HTML5 Canvas and SVG for rendering. A `F
 -   **Field Elements**: Line of scrimmage, yard lines, hash marks, draggable football, and a play-action marker.
 -   **Motion Routes**: Differentiated visual display before and after the Line of Scrimmage.
 -   **Route Shifting**: When dragging a player, all their routes shift with them maintaining shape (non-assignment routes only). Delta is calculated between new and old position and applied to all route points.
--   **Export Functionality**: Generates downloadable PNGs using `html-to-image`, optimized for quality at various sizes.
+-   **Export Functionality**: Generates downloadable PNGs using `html-to-image`, optimized for quality at various sizes. Export always captures the logical canvas at 694×392 regardless of display scale.
 -   **Interaction Model**: Drag-and-drop for players, click-to-draw for routes, and a long-press cascading menu for comprehensive player interactions.
 -   **Long-press vs Drag Detection**: Uses 8px movement threshold and timer fallback check to reliably distinguish between long-press (menu) and drag (move player) gestures.
 -   **Advanced Route Editing**: Double-click on any route to enter edit mode with blue control handles at every route point. The first point remains locked to the player position while other points can be freely dragged to adjust the route shape. Each drag operation creates an undo checkpoint. Curved routes auto-recalculate their curves when endpoints change. Click on the canvas background to exit edit mode.
+
+### Resolution Independence
+
+The canvas uses a responsive scaling system to fit various screen sizes while maintaining consistent coordinate handling:
+-   **Scale Calculation**: `useResponsiveScale` hook calculates scale factor based on container size (FIELD.WIDTH 694 × FIELD.HEIGHT 392) with 20px margin and 0.4 minimum scale.
+-   **Two-Layer Architecture**: Layer A (scaled field canvas with CSS transform) and Layer B (fixed-size AI overlay centered at 100%).
+-   **Coordinate Correction**: All pointer event handlers divide clientX/clientY by scale factor before using coordinates, ensuring accurate interaction at any zoom level.
+-   **Counter-Scaling**: Player labels (defensive and offensive) and Play-Action marker use `transform: scale(1/scale)` to maintain readability regardless of field zoom.
+-   **Menu Positioning**: Long-press menu position calculated with scale factor: `menuX = rect.left + player.x * scale`.
+-   **Touch Optimization**: Field canvas has `touch-action: none` for better mobile/tablet interaction.
 
 ### Player Rendering and Defensive Assignments
 

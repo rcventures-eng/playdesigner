@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -203,6 +203,8 @@ export default function PlayDesigner() {
   const [isDragging, setIsDragging] = useState(false);
   const isDraggingRef = useRef(false);  // Immediate sync ref for dragging state
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const dragOffsetRef = useRef({ x: 0, y: 0 });  // Immediate sync ref for drag offset
+  const draggingPlayerRef = useRef<string | null>(null);  // Immediate sync ref for which player is being dragged
   const [isDraggingShape, setIsDraggingShape] = useState(false);
   const [shapeDragOffset, setShapeDragOffset] = useState({ x: 0, y: 0 });
   const [isResizingShape, setIsResizingShape] = useState(false);
@@ -247,6 +249,8 @@ export default function PlayDesigner() {
   const [hoveredZoneShape, setHoveredZoneShape] = useState<"circle" | "oval" | "rectangle" | null>(null);
   
   const canvasRef = useRef<HTMLDivElement>(null);
+  const fieldContainerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
   const currentRoutePointsRef = useRef<{ x: number; y: number }[]>([]);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const longPressStartPos = useRef<{ x: number; y: number } | null>(null);
@@ -403,6 +407,36 @@ export default function PlayDesigner() {
     setIsDragging(false);
     setDraggingRoutePoint(null);
   }, [tool]);
+
+  // Responsive scaling: measure container and calculate scale factor
+  useEffect(() => {
+    const calculateScale = () => {
+      if (!fieldContainerRef.current) return;
+      const container = fieldContainerRef.current;
+      const availableWidth = container.clientWidth - 40; // 20px margin on each side
+      const availableHeight = container.clientHeight - 40;
+      
+      const scaleX = availableWidth / FIELD.WIDTH;
+      const scaleY = availableHeight / FIELD.HEIGHT;
+      const newScale = Math.max(0.4, Math.min(scaleX, scaleY, 1)); // Clamp between 0.4 and 1
+      
+      setScale(newScale);
+    };
+    
+    calculateScale();
+    
+    const resizeObserver = new ResizeObserver(calculateScale);
+    if (fieldContainerRef.current) {
+      resizeObserver.observe(fieldContainerRef.current);
+    }
+    
+    window.addEventListener("resize", calculateScale);
+    
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", calculateScale);
+    };
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1067,8 +1101,8 @@ export default function PlayDesigner() {
           pendingDragRef.current = {
             playerId,
             offset: {
-              x: e.clientX - rect.left - player.x,
-              y: e.clientY - rect.top - player.y,
+              x: (e.clientX - rect.left) / scale - player.x,
+              y: (e.clientY - rect.top) / scale - player.y,
             }
           };
         }
@@ -1106,11 +1140,12 @@ export default function PlayDesigner() {
           pendingDragRef.current = null; // Clear drag intent - menu wins
           
           // Calculate menu position with max width clamping
+          // Menu is positioned in screen coordinates, so multiply logical player position by scale
           const rect = canvasRef.current?.getBoundingClientRect();
           const maxMenuWidth = 380; // Max expanded width
           if (rect) {
-            const menuX = rect.left + player.x;
-            const menuY = rect.top + player.y + 16;
+            const menuX = rect.left + player.x * scale;
+            const menuY = rect.top + player.y * scale + 16;
             const clampedX = Math.max(8, Math.min(menuX, window.innerWidth - maxMenuWidth - 10));
             setLongPressMenuPosition({ x: clampedX, y: menuY });
           } else {
@@ -1149,7 +1184,9 @@ export default function PlayDesigner() {
     if (pendingDragRef.current) {
       isDraggingRef.current = true;  // Immediately sync for same-event access
       setIsDragging(true);
+      dragOffsetRef.current = pendingDragRef.current.offset;  // Immediately sync for same-event access
       setDragOffset(pendingDragRef.current.offset);
+      draggingPlayerRef.current = pendingDragRef.current.playerId;  // Track which player is being dragged
       pendingDragRef.current = null;
     }
     setLongPressPlayerRef(null);
@@ -1250,12 +1287,15 @@ export default function PlayDesigner() {
       setSelectedShape(null);
       setSelectedElements({ players: [], routes: [] });
       setIsDragging(true);
+      isDraggingRef.current = true;
       const rect = canvasRef.current?.getBoundingClientRect();
       if (rect) {
-        setDragOffset({
-          x: e.clientX - rect.left - football.x,
-          y: e.clientY - rect.top - football.y,
-        });
+        const offset = {
+          x: (e.clientX - rect.left) / scale - football.x,
+          y: (e.clientY - rect.top) / scale - football.y,
+        };
+        dragOffsetRef.current = offset;
+        setDragOffset(offset);
       }
     }
   };
@@ -1290,21 +1330,26 @@ export default function PlayDesigner() {
     }
     
     const bounds = FIELD.getPlayerBounds(playType);
-    // Use ref for immediate access (state may not be updated yet in same event)
-    if ((isDragging || isDraggingRef.current) && selectedPlayer && tool === "select") {
+    // Use refs for immediate access (state may not be updated yet in same event)
+    // Check draggingPlayerRef first as it's set synchronously in cancelLongPress
+    const dragPlayerIdRef = draggingPlayerRef.current;
+    const dragPlayerId = dragPlayerIdRef || selectedPlayer;
+    if ((isDragging || isDraggingRef.current) && dragPlayerId && tool === "select") {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (rect) {
         // Get current player position before updating
-        const currentPlayer = players.find(p => p.id === selectedPlayer);
-        const newX = Math.max(bounds.minX, Math.min(bounds.maxX, e.clientX - rect.left - dragOffset.x));
-        const newY = Math.max(bounds.minY, Math.min(bounds.maxY, e.clientY - rect.top - dragOffset.y));
+        const currentPlayer = players.find(p => p.id === dragPlayerId);
+        // Use dragOffsetRef for immediate access (state may not be updated yet after cancelLongPress)
+        const offset = dragOffsetRef.current;
+        const newX = Math.max(bounds.minX, Math.min(bounds.maxX, (e.clientX - rect.left) / scale - offset.x));
+        const newY = Math.max(bounds.minY, Math.min(bounds.maxY, (e.clientY - rect.top) / scale - offset.y));
         
         // Calculate movement delta for route shifting
         const deltaX = currentPlayer ? newX - currentPlayer.x : 0;
         const deltaY = currentPlayer ? newY - currentPlayer.y : 0;
         
         setPlayers(players.map(p =>
-          p.id === selectedPlayer ? { ...p, x: newX, y: newY } : p
+          p.id === dragPlayerId ? { ...p, x: newX, y: newY } : p
         ));
         
         // Update routes when player moves
@@ -1312,7 +1357,7 @@ export default function PlayDesigner() {
           let hasUpdates = false;
           const updatedRoutes = prevRoutes.map(r => {
             // Shift entire route when the route's owner player is moved (non-assignment routes)
-            if (r.playerId === selectedPlayer && r.type !== "assignment") {
+            if (r.playerId === dragPlayerId && r.type !== "assignment") {
               if (deltaX !== 0 || deltaY !== 0) {
                 hasUpdates = true;
                 const shiftedPoints = r.points.map(p => ({
@@ -1323,7 +1368,7 @@ export default function PlayDesigner() {
               }
             }
             // Update Man coverage endpoint when target player is moved
-            if (r.type === "assignment" && r.defensiveAction === "man" && r.targetPlayerId === selectedPlayer) {
+            if (r.type === "assignment" && r.defensiveAction === "man" && r.targetPlayerId === dragPlayerId) {
               hasUpdates = true;
               const updatedPoints = [...r.points];
               if (updatedPoints.length >= 2) {
@@ -1332,7 +1377,7 @@ export default function PlayDesigner() {
               return { ...r, points: updatedPoints };
             }
             // Update route start point when the defensive player is moved
-            if (r.type === "assignment" && r.playerId === selectedPlayer) {
+            if (r.type === "assignment" && r.playerId === dragPlayerId) {
               hasUpdates = true;
               const updatedPoints = [...r.points];
               if (updatedPoints.length >= 1) {
@@ -1348,11 +1393,12 @@ export default function PlayDesigner() {
     }
     
     // Handle football dragging
-    if (isDragging && selectedFootball && tool === "select") {
+    if ((isDragging || isDraggingRef.current) && selectedFootball && tool === "select") {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (rect) {
-        const newX = e.clientX - rect.left - dragOffset.x;
-        const newY = e.clientY - rect.top - dragOffset.y;
+        const offset = dragOffsetRef.current;
+        const newX = (e.clientX - rect.left) / scale - offset.x;
+        const newY = (e.clientY - rect.top) / scale - offset.y;
         setFootballs(footballs.map(f =>
           f.id === selectedFootball ? { 
             ...f,
@@ -1367,8 +1413,8 @@ export default function PlayDesigner() {
     if (isResizingShape && selectedShape && resizeHandle && resizeStartData && tool === "select") {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (rect) {
-        const currentX = e.clientX - rect.left;
-        const currentY = e.clientY - rect.top;
+        const currentX = (e.clientX - rect.left) / scale;
+        const currentY = (e.clientY - rect.top) / scale;
         const deltaX = currentX - resizeStartData.startX;
         const deltaY = currentY - resizeStartData.startY;
         
@@ -1449,8 +1495,8 @@ export default function PlayDesigner() {
           const shape = prev.find(s => s.id === selectedShape);
           if (!shape) return prev;
           
-          const newX = e.clientX - rect.left - shapeDragOffset.x;
-          const newY = e.clientY - rect.top - shapeDragOffset.y;
+          const newX = (e.clientX - rect.left) / scale - shapeDragOffset.x;
+          const newY = (e.clientY - rect.top) / scale - shapeDragOffset.y;
           // Keep shape within field bounds (use dynamic bounds for Defense tab)
           const shapeBounds = FIELD.getPlayerBounds(playType);
           const boundedX = Math.max(FIELD.FIELD_LEFT, Math.min(FIELD.FIELD_RIGHT - shape.width, newX));
@@ -1466,8 +1512,8 @@ export default function PlayDesigner() {
     if (tool === "route" && isDraggingStraightRoute && isDrawingRoute && currentRoutePointsRef.current.length >= 1) {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (rect) {
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        const x = (e.clientX - rect.left) / scale;
+        const y = (e.clientY - rect.top) / scale;
         const currentPoint = { x, y };
         
         if (routeStyle === "straight") {
@@ -1527,8 +1573,8 @@ export default function PlayDesigner() {
     if (draggingRoutePoint) {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (rect) {
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        const x = (e.clientX - rect.left) / scale;
+        const y = (e.clientY - rect.top) / scale;
         
         // First point (index 0) stays attached to player - skip updating it
         if (draggingRoutePoint.pointIndex === 0) {
@@ -1549,8 +1595,8 @@ export default function PlayDesigner() {
     if (tool === "select" && lassoStart && !isDragging && !draggingRoutePoint && !isDraggingStraightRoute) {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (rect) {
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        const x = (e.clientX - rect.left) / scale;
+        const y = (e.clientY - rect.top) / scale;
         setLassoEnd({ x, y });
       }
     }
@@ -1564,6 +1610,8 @@ export default function PlayDesigner() {
       finishRoute();
       setIsDraggingStraightRoute(false);
       isDraggingRef.current = false;
+      dragOffsetRef.current = { x: 0, y: 0 };
+      draggingPlayerRef.current = null;
       setIsDragging(false);
       setDraggingRoutePoint(null);
       setIsDraggingShape(false);
@@ -1574,6 +1622,8 @@ export default function PlayDesigner() {
     }
     
     isDraggingRef.current = false;
+    dragOffsetRef.current = { x: 0, y: 0 };
+    draggingPlayerRef.current = null;
     setIsDragging(false);
     setDraggingRoutePoint(null);
     setIsDraggingShape(false);
@@ -1632,8 +1682,8 @@ export default function PlayDesigner() {
     if (tool === "select") {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (rect) {
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        const x = (e.clientX - rect.left) / scale;
+        const y = (e.clientY - rect.top) / scale;
         setLassoStart({ x, y });
         setLassoEnd({ x, y });
         setSelectedElements({ players: [], routes: [] });
@@ -1645,8 +1695,8 @@ export default function PlayDesigner() {
     } else if (tool === "shape" && playType === "defense") {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (rect) {
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        const x = (e.clientX - rect.left) / scale;
+        const y = (e.clientY - rect.top) / scale;
         setShapeStart({ x, y });
         setIsDrawingShape(true);
       }
@@ -1663,8 +1713,8 @@ export default function PlayDesigner() {
     if (isDrawingShape && shapeStart) {
       const rect = canvasRef.current?.getBoundingClientRect();
       if (rect) {
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        const x = (e.clientX - rect.left) / scale;
+        const y = (e.clientY - rect.top) / scale;
         const width = Math.abs(x - shapeStart.x);
         const height = Math.abs(y - shapeStart.y);
         
@@ -2178,8 +2228,8 @@ export default function PlayDesigner() {
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
     
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
+    const clickX = (e.clientX - rect.left) / scale;
+    const clickY = (e.clientY - rect.top) / scale;
     
     // Calculate offset from shape top-left corner
     setShapeDragOffset({
@@ -2288,8 +2338,8 @@ export default function PlayDesigner() {
       y: shape.y,
       width: shape.width,
       height: shape.height,
-      startX: e.clientX - rect.left,
-      startY: e.clientY - rect.top,
+      startX: (e.clientX - rect.left) / scale,
+      startY: (e.clientY - rect.top) / scale,
     });
     
     // Save to history at start of resize for undo support
@@ -2879,18 +2929,19 @@ export default function PlayDesigner() {
         </div>
 
         <div 
-          className="flex-1 h-full relative bg-muted/30 p-2 overflow-auto flex flex-col items-center justify-center"
+          ref={fieldContainerRef}
+          className="flex-1 h-full relative bg-muted/30 p-2 overflow-hidden flex flex-col items-center justify-center"
           onClick={handleBackgroundClick}
         >
-          {/* AI Play Creator Interface - Special Teams & AI Beta Tab - Absolute Overlay */}
+          {/* Layer B: AI Play Creator Interface - Fixed size, centered over field (DOES NOT SCALE) */}
           {(playType === "special" || playType === "ai-beta") && (
             <div 
-              className="absolute top-0 left-0 right-0 z-10 flex justify-center mt-16 pointer-events-none"
+              className="absolute inset-0 z-20 flex items-start justify-center pt-16 pointer-events-none"
               data-testid="special-ai-overlay"
             >
               <div 
-                className="flex flex-col items-center gap-4 pointer-events-auto"
-                style={{ width: FIELD.WIDTH, maxWidth: FIELD.WIDTH }}
+                className="flex flex-col items-center gap-4 pointer-events-auto max-w-[90%]"
+                style={{ width: FIELD.WIDTH, maxWidth: "90%" }}
                 data-testid="special-ai-creator"
               >
                 {/* Headline */}
@@ -2995,7 +3046,14 @@ export default function PlayDesigner() {
               </div>
             </div>
           )}
-          <div className="bg-background rounded-lg shadow-lg p-2">
+          {/* Layer A: Field Wrapper - SCALES to fit available space */}
+          <div 
+            className="bg-background rounded-lg shadow-lg p-2"
+            style={{
+              transform: `scale(${scale})`,
+              transformOrigin: "top center",
+            }}
+          >
             <div
               ref={canvasRef}
               className="relative rounded cursor-crosshair overflow-hidden"
@@ -3513,7 +3571,10 @@ export default function PlayDesigner() {
                   >
                     {isDefensivePlayer ? (
                       <>
-                        <div className="w-4 h-4 rounded-full bg-white flex items-center justify-center shadow-sm absolute top-0 left-1/2 -translate-x-1/2 z-10">
+                        <div 
+                          className="w-4 h-4 rounded-full bg-white flex items-center justify-center shadow-sm absolute top-0 left-1/2 -translate-x-1/2 z-10"
+                          style={{ transform: `translateX(-50%) scale(${1 / scale})`, transformOrigin: 'center center' }}
+                        >
                           {editingPlayer === player.id ? (
                             <input
                               type="text"
@@ -3589,10 +3650,11 @@ export default function PlayDesigner() {
                             autoFocus
                             maxLength={2}
                             className="w-full h-full bg-transparent text-center text-white font-bold text-xs outline-none uppercase"
+                            style={{ transform: `scale(${1 / scale})`, transformOrigin: 'center center' }}
                             data-testid={`input-label-${player.id}`}
                           />
                         ) : (
-                          <span className="text-xs">{player.label || ""}</span>
+                          <span className="text-xs" style={{ transform: `scale(${1 / scale})`, transformOrigin: 'center center' }}>{player.label || ""}</span>
                         )}
                       </div>
                     )}
@@ -3634,7 +3696,9 @@ export default function PlayDesigner() {
                         position: 'absolute', 
                         left: -1, 
                         top: 9,
-                        pointerEvents: 'none'
+                        pointerEvents: 'none',
+                        transform: `scale(${1 / scale})`,
+                        transformOrigin: 'center center'
                       }}
                       data-testid={`play-action-marker-${football.id}`}
                     >
