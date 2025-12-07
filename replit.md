@@ -89,6 +89,23 @@ The backend uses Express.js with TypeScript, primarily serving static assets. It
 
 Drizzle ORM with PostgreSQL (Neon Database) is configured for type-safe database operations. While MVP uses client-side storage, a `users` schema exists for future authentication and play persistence.
 
+### Admin Dashboard
+
+A protected admin interface accessible via the "Log In" button in the TopNav:
+-   **Authentication**: Click "Login as Admin" link, enter password "touchdown" to access /admin route. Also supports URL query param `?key=touchdown` for direct access.
+-   **Location**: Route `/admin` renders `client/src/pages/admin.tsx`
+-   **Layout**: Dark slate sidebar navigation with three tabs:
+    -   **AI Logic**: JSON textarea editor for LOGIC_DICTIONARY with save functionality (POST to /api/admin/config)
+    -   **Presets**: Read-only view of formation coordinates for 5v5, 7v7, 9v9, 11v11 formats. Toggle between offense/defense to see player positions.
+    -   **Logs**: Table displaying AI generation history from database (ai_generation_logs table)
+-   **API Routes**:
+    -   `GET /api/admin/config` - Returns current LOGIC_DICTIONARY JSON
+    -   `POST /api/admin/config` - Updates LOGIC_DICTIONARY (in-memory, not persisted)
+    -   `GET /api/admin/presets` - Returns FORMATIONS object
+    -   `GET /api/admin/logs` - Returns AI generation logs (most recent 100)
+-   **Database Table**: `ai_generation_logs` stores: id, prompt, hasImage, status, timestamp
+-   **Logging**: `/api/generate-play` automatically logs both successful and failed AI generation attempts
+
 ### Play Type Tabs
 
 The application features a 4-tab navigation with uniform styling (text-[11px] font-semibold px-1):
