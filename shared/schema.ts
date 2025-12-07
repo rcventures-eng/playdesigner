@@ -1,21 +1,73 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, serial, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, serial, timestamp, boolean, jsonb, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
+  email: text("email").notNull().unique(),
   password: text("password").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
+  email: true,
   password: true,
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+export const teams = pgTable("teams", {
+  id: serial("id").primaryKey(),
+  ownerId: varchar("owner_id").notNull().references(() => users.id),
+  name: text("name").notNull(),
+  logoUrl: text("logo_url"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertTeamSchema = createInsertSchema(teams).omit({
+  id: true,
+  ownerId: true,
+  createdAt: true,
+});
+
+export type InsertTeam = z.infer<typeof insertTeamSchema>;
+export type Team = typeof teams.$inferSelect;
+
+export const plays = pgTable("plays", {
+  id: serial("id").primaryKey(),
+  teamId: integer("team_id").notNull().references(() => teams.id),
+  name: text("name").notNull(),
+  type: text("type").notNull(),
+  data: jsonb("data"),
+  tags: text("tags").array(),
+  isFavorite: boolean("is_favorite").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertPlaySchema = createInsertSchema(plays).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertPlay = z.infer<typeof insertPlaySchema>;
+export type Play = typeof plays.$inferSelect;
+
+export const aiLogs = pgTable("ai_logs", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id),
+  promptText: text("prompt_text"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertAiLogSchema = createInsertSchema(aiLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertAiLog = z.infer<typeof insertAiLogSchema>;
+export type AiLog = typeof aiLogs.$inferSelect;
 
 export const aiGenerationLogs = pgTable("ai_generation_logs", {
   id: serial("id").primaryKey(),
@@ -25,10 +77,10 @@ export const aiGenerationLogs = pgTable("ai_generation_logs", {
   timestamp: timestamp("timestamp").defaultNow(),
 });
 
-export const insertAiLogSchema = createInsertSchema(aiGenerationLogs).omit({
+export const insertAiGenerationLogSchema = createInsertSchema(aiGenerationLogs).omit({
   id: true,
   timestamp: true,
 });
 
-export type InsertAiLog = z.infer<typeof insertAiLogSchema>;
-export type AiLog = typeof aiGenerationLogs.$inferSelect;
+export type InsertAiGenerationLog = z.infer<typeof insertAiGenerationLogSchema>;
+export type AiGenerationLog = typeof aiGenerationLogs.$inferSelect;
