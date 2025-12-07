@@ -4,13 +4,16 @@ export default function TopNav() {
   return (
     <nav className="h-12 bg-orange-500 flex items-center justify-between px-6 shadow-md" data-testid="top-nav">
       {/* Left Side - Logo/Brand */}
-      <div className="flex items-center">
+      <div className="flex items-center gap-2">
         <img
           src={rcFootballLogo}
           alt="RC Football"
           className="h-9 w-auto object-contain"
           data-testid="brand-logo"
         />
+        <span className="font-bold text-white tracking-tight text-lg" data-testid="brand-name">
+          RC Football
+        </span>
       </div>
 
       {/* Right Side - Auth Actions */}
