@@ -18,7 +18,7 @@ The frontend is a React and TypeScript application built with Vite, utilizing sh
 
 A sleek orange navigation bar sits above the entire application:
 -   **TopNav Component**: `h-12 bg-orange-500 shadow-md` provides a 48px branded header with subtle shadow separation.
--   **Left Side**: Football icon + "Gridiron Designer" brand name (white, bold, tracking-tight).
+-   **Left Side**: RC Football logo image (h-9 w-auto object-contain).
 -   **Right Side**: Log In (text button), Sign Up (white pill button), and circular profile placeholder.
 
 ### Floating Console Layout
