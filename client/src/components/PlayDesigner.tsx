@@ -2955,14 +2955,17 @@ export default function PlayDesigner() {
                 
                 {/* Glassmorphic Input Container - Hero Size */}
                 <div className="w-full bg-slate-900/80 backdrop-blur-sm border border-white/20 rounded-xl p-3 flex flex-col shadow-xl gap-2">
-                  <textarea
-                    placeholder="Explain the play..."
-                    value={specialPrompt}
-                    onChange={(e) => setSpecialPrompt(e.target.value)}
-                    rows={2}
-                    className="h-24 min-h-[96px] max-h-24 bg-transparent text-white placeholder-white/50 outline-none p-4 resize-none"
-                    data-testid="ai-input"
-                  />
+                  {/* Fixed height wrapper to force textarea constraint */}
+                  <div className="w-full h-24">
+                    <textarea
+                      placeholder="Explain the play..."
+                      value={specialPrompt}
+                      onChange={(e) => setSpecialPrompt(e.target.value)}
+                      className="!h-full !min-h-0 w-full bg-transparent text-white placeholder-white/50 outline-none p-4 resize-none"
+                      style={{ height: '100%' }}
+                      data-testid="ai-input"
+                    />
+                  </div>
                   {/* Bottom row with Upload and Submit buttons on the right */}
                   <div className="flex justify-end items-center gap-2">
                     {/* Hidden file input */}
