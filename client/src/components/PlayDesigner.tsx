@@ -2968,35 +2968,68 @@ export default function PlayDesigner() {
                   </div>
                 </div>
                 
-                {/* Button row - suggestion chips on left, upload/submit on right */}
-                <div className="flex justify-between items-center gap-1 w-full">
-                  {/* Suggestion Chips */}
-                  <div className="flex items-center gap-1">
-                    <button 
-                      className="bg-slate-800/80 text-white text-xs border border-white/10 hover:bg-slate-700 rounded-full px-3 py-1 transition-colors"
-                      onClick={() => setSpecialPrompt("Pass play to beat Cover 2")}
-                      data-testid="chip-cover2"
-                    >
-                      Pass play to beat Cover 2
-                    </button>
-                    <button 
-                      className="bg-slate-800/80 text-white text-xs border border-white/10 hover:bg-slate-700 rounded-full px-3 py-1 transition-colors"
-                      onClick={() => setSpecialPrompt("Run play to beat man")}
-                      data-testid="chip-man"
-                    >
-                      Run play to beat man
-                    </button>
-                    <button 
-                      className="bg-slate-800/80 text-white text-xs border border-white/10 hover:bg-slate-700 rounded-full px-3 py-1 transition-colors"
-                      onClick={() => setSpecialPrompt("Quick pass to get a first down vs blitz")}
-                      data-testid="chip-blitz"
-                    >
-                      Quick pass to get a first down vs blitz
-                    </button>
-                  </div>
+                {/* Button row - scrolling ticker on left, upload/submit on right */}
+                <div className="flex justify-between items-center gap-2 w-full">
+                  {/* SportsCenter-style scrolling ticker */}
+                  {(() => {
+                    const suggestionChips = [
+                      { id: "cover2", label: "Pass play to beat Cover 2", prompt: "Pass play to beat Cover 2" },
+                      { id: "man", label: "Run play to beat man", prompt: "Run play to beat man" },
+                      { id: "blitz", label: "Quick pass vs blitz", prompt: "Quick pass to get a first down vs blitz" },
+                      { id: "redzone", label: "Red zone TD play", prompt: "Red zone touchdown play" },
+                      { id: "screen", label: "Screen pass", prompt: "Screen pass to the running back" },
+                    ];
+                    return (
+                      <div 
+                        className="flex-1 overflow-hidden relative ticker-container"
+                        style={{ maxWidth: 'calc(100% - 80px)' }}
+                        data-testid="suggestion-ticker"
+                      >
+                        <style>{`
+                          @keyframes ticker-scroll {
+                            0% { transform: translateX(0); }
+                            100% { transform: translateX(-50%); }
+                          }
+                          .ticker-track {
+                            animation: ticker-scroll 20s linear infinite;
+                          }
+                          .ticker-container:hover .ticker-track {
+                            animation-play-state: paused;
+                          }
+                        `}</style>
+                        <div 
+                          className="ticker-track flex items-center gap-2 whitespace-nowrap"
+                          style={{ width: 'max-content' }}
+                        >
+                          {/* First set of chips */}
+                          {suggestionChips.map((chip) => (
+                            <button
+                              key={chip.id}
+                              className="bg-slate-800/80 text-white text-xs border border-white/10 hover:bg-slate-700 rounded-full px-3 py-1 transition-colors flex-shrink-0"
+                              onClick={() => setSpecialPrompt(chip.prompt)}
+                              data-testid={`chip-${chip.id}`}
+                            >
+                              {chip.label}
+                            </button>
+                          ))}
+                          {/* Duplicate set for seamless loop */}
+                          {suggestionChips.map((chip) => (
+                            <button
+                              key={`dup-${chip.id}`}
+                              className="bg-slate-800/80 text-white text-xs border border-white/10 hover:bg-slate-700 rounded-full px-3 py-1 transition-colors flex-shrink-0"
+                              onClick={() => setSpecialPrompt(chip.prompt)}
+                              aria-hidden="true"
+                            >
+                              {chip.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
                   
                   {/* Right side: Upload and Submit */}
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 flex-shrink-0">
                     {/* Hidden file input */}
                     <input
                       type="file"
