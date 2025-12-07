@@ -27,7 +27,7 @@ export default function TopNav({ isAdmin, setIsAdmin }: TopNavProps) {
 
   const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (adminPassword === "touchdown") {
+    if (adminPassword === "fuzzy2622") {
       setIsAdmin?.(true);
       setShowLoginModal(false);
       setShowAdminLogin(false);

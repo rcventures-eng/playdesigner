@@ -73,7 +73,7 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const key = params.get("key");
-    if (key === "touchdown") {
+    if (key === "fuzzy2622") {
       setIsAdmin(true);
     }
   }, [setIsAdmin]);
@@ -82,7 +82,7 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
   useEffect(() => {
     if (!isAdmin) {
       const params = new URLSearchParams(window.location.search);
-      if (params.get("key") !== "touchdown") {
+      if (params.get("key") !== "fuzzy2622") {
         setLocation("/");
       }
     }
