@@ -3225,9 +3225,9 @@ export default function PlayDesigner() {
                       {/* Yard line numbers (sideline orientation like real fields) */}
                       {(() => {
                         const yardNumbers = [
-                          { label: "30", y: FIELD.LOS_Y + 12 },
-                          { label: "40", y: FIELD.LOS_Y - 108 },
-                          { label: "50", y: FIELD.LOS_Y - 228 },
+                          { label: "30", y: FIELD.LOS_Y + 18 },
+                          { label: "40", y: FIELD.LOS_Y - 102 },
+                          { label: "50", y: FIELD.LOS_Y - 222 },
                         ];
                         const leftX = FIELD.WIDTH * 0.15;
                         const rightX = FIELD.WIDTH * 0.85;
