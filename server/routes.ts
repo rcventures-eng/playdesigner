@@ -4,6 +4,12 @@ import { storage } from "./storage";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { FOOTBALL_CONFIG, FORMATIONS, resolveColorKey } from "../shared/football-config";
 import { LOGIC_DICTIONARY } from "../shared/logic-dictionary";
+import { db } from "./db";
+import { aiGenerationLogs } from "@shared/schema";
+import { desc } from "drizzle-orm";
+
+// In-memory storage for logic dictionary changes (persisted only in memory for now)
+let customLogicDictionary: typeof LOGIC_DICTIONARY | null = null;
 
 // Convert FORMATIONS to a format with resolved colors for AI consumption
 const getFormationsForAI = () => {
@@ -507,13 +513,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
         playData.mechanics.preSnapMotion = true;
       }
 
+      // Log the successful generation to database
+      try {
+        await db.insert(aiGenerationLogs).values({
+          prompt: prompt || null,
+          hasImage: !!image,
+          status: "success",
+        });
+      } catch (logError) {
+        console.error("Failed to log AI generation:", logError);
+      }
+
       res.json(playData);
     } catch (error: any) {
       console.error("Generate play error:", error);
+      
+      // Log the failed generation to database
+      try {
+        await db.insert(aiGenerationLogs).values({
+          prompt: req.body.prompt || null,
+          hasImage: !!req.body.image,
+          status: "error",
+        });
+      } catch (logError) {
+        console.error("Failed to log AI generation error:", logError);
+      }
+      
       res.status(500).json({ 
         error: error.message || "Failed to generate play",
         details: error.toString()
       });
+    }
+  });
+
+  // Admin API Routes
+  
+  // Get current logic dictionary
+  app.get("/api/admin/config", async (_req, res) => {
+    try {
+      res.json({
+        logicDictionary: customLogicDictionary || LOGIC_DICTIONARY,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Save logic dictionary (in-memory only for now)
+  app.post("/api/admin/config", async (req, res) => {
+    try {
+      const { logicDictionary } = req.body;
+      if (!logicDictionary) {
+        return res.status(400).json({ error: "logicDictionary is required" });
+      }
+      customLogicDictionary = logicDictionary;
+      res.json({ success: true, message: "Logic dictionary updated (in-memory)" });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get formation presets
+  app.get("/api/admin/presets", async (_req, res) => {
+    try {
+      res.json(FORMATIONS);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get AI generation logs
+  app.get("/api/admin/logs", async (_req, res) => {
+    try {
+      const logs = await db.select().from(aiGenerationLogs).orderBy(desc(aiGenerationLogs.timestamp)).limit(100);
+      res.json(logs);
+    } catch (error: any) {
+      console.error("Failed to fetch logs:", error);
+      res.status(500).json({ error: error.message });
     }
   });
 

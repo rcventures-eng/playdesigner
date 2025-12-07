@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -6,22 +7,24 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 
 import Home from "@/pages/home";
-
-function Router() {
-  return (
-    <Switch>
-      <Route path="/" component={Home}/>
-      <Route component={NotFound} />
-    </Switch>
-  );
-}
+import AdminDashboard from "@/pages/admin";
 
 function App() {
+  const [isAdmin, setIsAdmin] = useState(false);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
-        <Router />
+        <Switch>
+          <Route path="/">
+            <Home isAdmin={isAdmin} setIsAdmin={setIsAdmin} />
+          </Route>
+          <Route path="/admin">
+            <AdminDashboard isAdmin={isAdmin} setIsAdmin={setIsAdmin} />
+          </Route>
+          <Route component={NotFound} />
+        </Switch>
       </TooltipProvider>
     </QueryClientProvider>
   );
