@@ -187,6 +187,7 @@ export default function PlayDesigner() {
   const [isPlayAction, setIsPlayAction] = useState(false);
   const [showBlocking, setShowBlocking] = useState(true);
   const [includeOffense, setIncludeOffense] = useState(true);
+  const [includeDefense, setIncludeDefense] = useState(false);
   const [specialPrompt, setSpecialPrompt] = useState("");
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -913,9 +914,38 @@ export default function PlayDesigner() {
     console.log(`Defense ${format} preset loaded${withOffense ? ' with offense' : ''}`);
   };
 
+  const loadDefenseForOffenseTab = (format: "5v5" | "7v7" | "9v9" | "11v11") => {
+    saveToHistory();
+    
+    let defensePlayers: Player[] = [];
+    switch (format) {
+      case "5v5": defensePlayers = generateDefense5v5Formation(); break;
+      case "7v7": defensePlayers = generateDefense7v7Formation(); break;
+      case "9v9": defensePlayers = generateDefense9v9Formation(); break;
+      case "11v11": defensePlayers = generateDefense11v11Formation(); break;
+    }
+    
+    // Filter out any existing defensive players (side === "defense") and append new defense
+    const existingOffensePlayers = players.filter(p => p.side === "offense");
+    const combinedPlayers = [...existingOffensePlayers, ...defensePlayers];
+    
+    setPlayers(combinedPlayers);
+    // Keep existing routes/shapes/footballs - only clear selections
+    setSelectedPlayer(null);
+    setSelectedRoute(null);
+    setSelectedShape(null);
+    setSelectedFootball(null);
+    setSelectedElements({ players: [], routes: [] });
+    setTool("select");
+    
+    console.log(`Defense ${format} formation added to offense tab (${existingOffensePlayers.length} offense + ${defensePlayers.length} defense)`);
+  };
+
   const handleGameFormatClick = (format: "5v5" | "7v7" | "9v9" | "11v11") => {
     if (playType === "defense") {
       loadDefensePreset(format, includeOffense);
+    } else if ((playType === "offense" || playType === "ai-beta") && includeDefense) {
+      loadDefenseForOffenseTab(format);
     } else {
       switch (format) {
         case "5v5": handleLoad5v5(); break;
@@ -2618,6 +2648,19 @@ export default function PlayDesigner() {
                         data-testid="checkbox-include-offense"
                       />
                       <Label htmlFor="include-offense" className="text-xs">Add Offense?</Label>
+                    </div>
+                  )}
+                  {(playType === "offense" || playType === "ai-beta") && (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="include-defense"
+                        checked={includeDefense}
+                        onChange={(e) => setIncludeDefense(e.target.checked)}
+                        className="rounded"
+                        data-testid="checkbox-include-defense"
+                      />
+                      <Label htmlFor="include-defense" className="text-xs">Add Defense?</Label>
                     </div>
                   )}
                 </div>
