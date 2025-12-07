@@ -2956,7 +2956,8 @@ export default function PlayDesigner() {
                     placeholder="Explain the play..."
                     value={specialPrompt}
                     onChange={(e) => setSpecialPrompt(e.target.value)}
-                    className="flex-1 h-24 bg-transparent text-white placeholder-white/50 outline-none p-4 resize-none"
+                    rows={2}
+                    className="h-24 min-h-[96px] max-h-24 bg-transparent text-white placeholder-white/50 outline-none p-4 resize-none"
                     data-testid="ai-input"
                   />
                   {/* Bottom row with Upload and Submit buttons on the right */}
