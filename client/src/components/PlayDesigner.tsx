@@ -2956,7 +2956,7 @@ export default function PlayDesigner() {
                 {/* Glassmorphic Input Container - Hero Size */}
                 <div className="w-full bg-slate-900/80 backdrop-blur-sm border border-white/20 rounded-xl p-3 flex flex-col shadow-xl gap-2">
                   {/* Fixed height wrapper to force textarea constraint */}
-                  <div className="w-full h-24">
+                  <div className="w-full h-12">
                     <textarea
                       placeholder="Explain the play..."
                       value={specialPrompt}
