@@ -2940,7 +2940,7 @@ export default function PlayDesigner() {
           {/* Layer B: AI Play Creator Interface - Fixed size, centered over field (DOES NOT SCALE) */}
           {(playType === "special" || playType === "ai-beta") && (
             <div 
-              className="absolute inset-0 z-20 flex items-start justify-center pt-24 pointer-events-none"
+              className="absolute inset-0 z-20 flex items-start justify-center pt-2 pointer-events-none"
               data-testid="special-ai-overlay"
             >
               <div 
