@@ -92,12 +92,19 @@ Drizzle ORM with PostgreSQL (Neon Database) is configured for type-safe database
 ### Play Type Tabs
 
 The application features a 4-tab navigation with uniform styling (text-[11px] font-semibold px-1):
--   **Offense**: Standard offensive play design with formation presets and player colors.
--   **Defense**: Defensive play design with dynamic header layout optimization to maximize field space. Includes shape tools for zone coverage visualization.
+-   **Offense**: Standard offensive play design with formation presets and player colors. Features "Add Defense?" toggle to append defensive formations.
+-   **Defense**: Defensive play design with dynamic header layout optimization to maximize field space. Includes shape tools for zone coverage visualization. Features "Add Offense?" toggle.
 -   **Special**: Currently disabled (opacity-50, pointer-events-none). Reserved for future special teams plays.
--   **AI Beta**: Features an orange Sparkles icon. Clones all Special tab functionality including the AI Play Creator, formation presets, and manual editing. Provides a dedicated canvas for AI-assisted play creation.
+-   **AI Beta**: Features an orange Sparkles icon. Clones all Special tab functionality including the AI Play Creator, formation presets, and manual editing. Provides a dedicated canvas for AI-assisted play creation. Also features "Add Defense?" toggle.
 
 Each tab maintains independent state (players, routes, shapes, footballs, history) for complete isolation between play types.
+
+### Cross-Side Formation Toggles
+
+The Preloaded Game Format section includes optional toggles to add players from the opposite side:
+-   **"Add Defense?" (Offense/AI Beta tabs)**: When checked, clicking a game format button (5v5, 7v7, etc.) ADDS defensive players to existing offensive players. Replaces any previously loaded defense while preserving offense players and routes.
+-   **"Add Offense?" (Defense tab)**: When checked, clicking a game format loads BOTH defensive and offensive formations together in one click.
+-   Both offense and defense players can coexist on the field simultaneously, allowing for complete play visualization.
 
 ### Right Sidebar Directions Panel
 
