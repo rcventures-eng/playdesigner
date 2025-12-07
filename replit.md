@@ -14,6 +14,14 @@ Preferred communication style: Simple, everyday language.
 
 The frontend is a React and TypeScript application built with Vite, utilizing shadcn/ui and Tailwind CSS for a consistent design. State management uses React hooks, and Wouter handles client-side routing. The design system supports custom theming and dark mode.
 
+### Floating Console Layout
+
+The app uses a modern "Floating Console" aesthetic with breathing room around all edges:
+-   **Main Container**: `bg-slate-950 p-4 flex flex-col gap-4` provides 16px padding from browser edges and consistent gaps between panels.
+-   **Left Sidebar**: `rounded-2xl border border-white/10 shadow-2xl bg-slate-900/95` appears as a floating card with subtle translucent styling.
+-   **Center Field Area**: `rounded-2xl bg-slate-900/50 border border-white/5` frames the play canvas with subtle visual boundaries.
+-   **Metadata Header**: When visible, also uses `rounded-2xl border border-white/10` to match the floating panel aesthetic.
+
 ### Canvas and Drawing System
 
 The core play design functionality uses HTML5 Canvas and SVG for rendering. A `FIELD` configuration object defines field geometry and scaling. Key features include:
