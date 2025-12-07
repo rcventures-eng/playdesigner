@@ -8,7 +8,7 @@ import express, {
 } from "express";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
-import { Pool } from "@neondatabase/serverless";
+import pg from "pg";
 
 import { registerRoutes } from "./routes";
 
@@ -45,12 +45,12 @@ app.use(express.json({
 app.use(express.urlencoded({ extended: false }));
 
 const PgSession = connectPgSimple(session);
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 
 app.use(
   session({
     store: new PgSession({
-      pool: pool as any,
+      pool: pool,
       tableName: "session",
       createTableIfMissing: true,
     }),
