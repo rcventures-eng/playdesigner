@@ -3221,6 +3221,51 @@ export default function PlayDesigner() {
                           </g>
                         );
                       })}
+                      
+                      {/* Yard line numbers (TV-broadcast style) */}
+                      {(() => {
+                        const yardNumbers = [
+                          { label: "30", y: FIELD.LOS_Y + 12 },
+                          { label: "40", y: FIELD.LOS_Y - 108 },
+                          { label: "50", y: FIELD.LOS_Y - 228 },
+                        ];
+                        const leftX = FIELD.WIDTH * 0.2;
+                        const rightX = FIELD.WIDTH * 0.8;
+                        
+                        return yardNumbers.flatMap(({ label, y }) => {
+                          if (y < 0 || y > FIELD.HEIGHT) return [];
+                          return [
+                            <text
+                              key={`yard-num-${label}-left`}
+                              x={leftX}
+                              y={y}
+                              fill="white"
+                              opacity="0.25"
+                              fontSize="40"
+                              fontWeight="bold"
+                              fontFamily="'Roboto Condensed', 'Arial Narrow', sans-serif"
+                              textAnchor="middle"
+                              dominantBaseline="middle"
+                            >
+                              {label}
+                            </text>,
+                            <text
+                              key={`yard-num-${label}-right`}
+                              x={rightX}
+                              y={y}
+                              fill="white"
+                              opacity="0.25"
+                              fontSize="40"
+                              fontWeight="bold"
+                              fontFamily="'Roboto Condensed', 'Arial Narrow', sans-serif"
+                              textAnchor="middle"
+                              dominantBaseline="middle"
+                            >
+                              {label}
+                            </text>
+                          ];
+                        });
+                      })()}
                     </>
                   );
                 })()}
