@@ -5,20 +5,27 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import SignUpModal from "./SignUpModal";
 
 interface TopNavProps {
   isAdmin?: boolean;
   setIsAdmin?: (value: boolean) => void;
+  showSignUp?: boolean;
+  setShowSignUp?: (value: boolean) => void;
 }
 
-export default function TopNav({ isAdmin, setIsAdmin }: TopNavProps) {
+export default function TopNav({ isAdmin, setIsAdmin, showSignUp, setShowSignUp }: TopNavProps) {
   const [, setLocation] = useLocation();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [localShowSignUp, setLocalShowSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [error, setError] = useState("");
+  
+  const isSignUpOpen = showSignUp ?? localShowSignUp;
+  const handleSignUpChange = setShowSignUp ?? setLocalShowSignUp;
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,6 +81,7 @@ export default function TopNav({ isAdmin, setIsAdmin }: TopNavProps) {
             Log In
           </button>
           <button
+            onClick={() => handleSignUpChange(true)}
             className="bg-white text-orange-600 rounded-full px-4 py-1 text-xs font-bold hover:bg-gray-100 transition-colors"
             data-testid="button-signup"
           >
@@ -195,6 +203,9 @@ export default function TopNav({ isAdmin, setIsAdmin }: TopNavProps) {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Sign Up Modal */}
+      <SignUpModal open={isSignUpOpen} onOpenChange={handleSignUpChange} />
     </>
   );
 }

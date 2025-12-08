@@ -11,6 +11,7 @@ import AdminDashboard from "@/pages/admin";
 
 function App() {
   const [isAdmin, setIsAdmin] = useState(false);
+  const [showSignUp, setShowSignUp] = useState(false);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -18,7 +19,12 @@ function App() {
         <Toaster />
         <Switch>
           <Route path="/">
-            <Home isAdmin={isAdmin} setIsAdmin={setIsAdmin} />
+            <Home 
+              isAdmin={isAdmin} 
+              setIsAdmin={setIsAdmin} 
+              showSignUp={showSignUp}
+              setShowSignUp={setShowSignUp}
+            />
           </Route>
           <Route path="/admin">
             <AdminDashboard isAdmin={isAdmin} setIsAdmin={setIsAdmin} />

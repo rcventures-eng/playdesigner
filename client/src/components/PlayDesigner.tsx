@@ -154,9 +154,11 @@ type PlayTypeKey = "offense" | "defense" | "special" | "ai-beta";
 interface PlayDesignerProps {
   isAdmin?: boolean;
   setIsAdmin?: (value: boolean) => void;
+  showSignUp?: boolean;
+  setShowSignUp?: (value: boolean) => void;
 }
 
-export default function PlayDesigner({ isAdmin, setIsAdmin }: PlayDesignerProps) {
+export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowSignUp }: PlayDesignerProps) {
   const [playType, setPlayType] = useState<PlayTypeKey>("offense");
   const [players, setPlayers] = useState<Player[]>([]);
   const [routes, setRoutes] = useState<Route[]>([]);
@@ -2421,7 +2423,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin }: PlayDesignerProps)
 
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden">
-      <TopNav isAdmin={isAdmin} setIsAdmin={setIsAdmin} />
+      <TopNav isAdmin={isAdmin} setIsAdmin={setIsAdmin} showSignUp={showSignUp} setShowSignUp={setShowSignUp} />
       <div className={`flex-1 bg-slate-950 px-10 pb-10 pt-3 flex flex-col gap-4 overflow-hidden ${isLongPressHolding || longPressMenuOpen ? "select-none" : ""}`}>
         {(metadata.name || metadata.formation || metadata.concept || metadata.defenseConcept || metadata.personnel) && (
         <div className="bg-gradient-to-r from-[#1a2332] to-[#2a3342] rounded-2xl border border-white/10 px-6 py-3 flex items-center gap-3 flex-wrap">
@@ -3917,6 +3919,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin }: PlayDesignerProps)
           {/* CTA Buttons - positioned in open space between content and Follow Us */}
           <div className="mt-auto space-y-2 py-4">
             <button
+              onClick={() => setShowSignUp?.(true)}
               className="w-full h-32 flex flex-col justify-center items-center bg-orange-500 hover:bg-orange-600 rounded-lg transition-colors"
               data-testid="button-create-account"
             >
