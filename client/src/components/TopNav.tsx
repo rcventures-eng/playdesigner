@@ -40,7 +40,12 @@ export default function TopNav({ isAdmin, setIsAdmin, showSignUp, setShowSignUp 
     setIsLoading(true);
 
     try {
-      const response = await apiRequest("POST", "/api/login", { email, password });
+      const response = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+        credentials: "include",
+      });
       const data = await response.json();
 
       if (!response.ok) {
