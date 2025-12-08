@@ -1,0 +1,53 @@
+I need to generate a comprehensive 'Technical Handoff Document' (TECHNICAL_HANDOFF.md) to onboard a new Technical Architect. This document must synthesize the last two weeks of development, explaining not just what exists, but how it works and why specific decisions were made.
+
+Please write a single Markdown file covering these 6 sections:
+
+1. Project Overview & Stack
+
+Goal: AI-Native Football Play Designer (Text-to-Play & Image-to-Play).
+
+Stack: React (Frontend), Node/Express (Backend), PostgreSQL + Drizzle ORM (Database), Tailwind CSS (Styling), Replit (Infrastructure).
+
+AI: Google Gemini 1.5 Flash (via Vercel AI SDK or direct API).
+
+Email: Resend.
+
+2. Core Architecture: The 'Single Source of Truth'
+
+Explain the shared/football-config.ts pattern.
+
+Explain the shared/logic-dictionary.ts pattern and how it drives the AI's 'Football IQ'.
+
+Crucial: Explain that the AI reads the same config file as the rendering engine to prevent hallucinations.
+
+3. The Rendering Engine (The 'Smart Scale' System)
+
+Explain the Resolution Independence strategy.
+
+Layer A (Field): Uses CSS Transform (scale()) to fit the screen.
+
+Layer B (UI Overlay): Does NOT scale, floating on top to keep text readable.
+
+The 'Mouse Correction': How we divide clientX by the scale factor to keep drag-and-drop accurate.
+
+4. The AI Pipeline (/api/generate-play)
+
+Summarize the Prompt Engineering strategy (System Instructions + Context Injection).
+
+Explain the Multimodal flow (Image-to-Play) and the 'Snap-to-Grid' logic where we force the AI to use hardcoded coordinates from presets (5v5, 7v7) rather than guessing.
+
+5. Database & Schema Logic
+
+Summarize the current schema (users, teams, plays).
+
+Highlight the recent refactor: Plays are now linked to User (not Team) to allow immediate saving, with Team being an optional organizational layer.
+
+6. Current Status & Known 'Gotchas'
+
+Yard Lines: Explain the specific -90 / +90 degree rotation logic for broadcast-style numbers.
+
+Text Box: Explain the 'Nuclear Option' (Inline Styles) used to force the AI input box height.
+
+Authentication: Summarize the Session-based auth and the Resend 'Welcome Email' trigger.
+
+Please output the full Markdown content for this file.
