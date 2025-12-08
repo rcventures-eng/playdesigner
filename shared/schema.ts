@@ -7,12 +7,16 @@ export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
+  firstName: text("first_name"),
+  favoriteTeam: text("favorite_team"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
   email: true,
   password: true,
+  firstName: true,
+  favoriteTeam: true,
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;

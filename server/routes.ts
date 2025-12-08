@@ -565,12 +565,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid input", details: result.error.flatten() });
       }
 
-      const { email, password } = result.data;
+      const { email, password, firstName, favoriteTeam } = result.data;
 
       // Check if user already exists
       const existingUser = await db.select().from(users).where(eq(users.email, email)).limit(1);
       if (existingUser.length > 0) {
-        return res.status(409).json({ error: "Email already registered" });
+        return res.status(409).json({ error: "Email already exists" });
       }
 
       // Hash password
@@ -580,6 +580,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const [newUser] = await db.insert(users).values({
         email,
         password: hashedPassword,
+        firstName: firstName || null,
+        favoriteTeam: favoriteTeam || null,
       }).returning();
 
       // Set session
@@ -587,7 +589,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.status(201).json({ 
         success: true, 
-        user: { id: newUser.id, email: newUser.email } 
+        user: { 
+          id: newUser.id, 
+          email: newUser.email,
+          firstName: newUser.firstName,
+          favoriteTeam: newUser.favoriteTeam
+        } 
       });
     } catch (error: any) {
       console.error("Register error:", error);
