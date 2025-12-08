@@ -56,9 +56,25 @@ export default function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
   const [favoriteTeam, setFavoriteTeam] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  
+  const [touched, setTouched] = useState({
+    email: false,
+    password: false,
+    confirmPassword: false,
+  });
 
+  const isValidEmail = (email: string) => {
+    if (!email) return true;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const emailError = touched.email && email && !isValidEmail(email);
+  const passwordError = touched.password && password.length > 0 && password.length < 8;
   const passwordsMatch = password === confirmPassword || confirmPassword === "";
-  const isFormValid = email && password.length >= 8 && password === confirmPassword;
+  const confirmPasswordError = touched.confirmPassword && confirmPassword && !passwordsMatch;
+  
+  const isFormValid = email && isValidEmail(email) && password.length >= 8 && password === confirmPassword;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,6 +129,7 @@ export default function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
     setFirstName("");
     setFavoriteTeam("");
     setError("");
+    setTouched({ email: false, password: false, confirmPassword: false });
   };
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -156,11 +173,19 @@ export default function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              onBlur={() => setTouched(t => ({ ...t, email: true }))}
               placeholder="coach@team.com"
               required
-              className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500"
+              className={`bg-slate-800 border-slate-600 text-white placeholder:text-slate-500 ${
+                emailError ? "border-red-500 focus-visible:ring-red-500" : ""
+              }`}
               data-testid="input-signup-email"
             />
+            {emailError && (
+              <p className="text-xs text-red-400" data-testid="text-email-error">
+                Invalid email format
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -172,12 +197,20 @@ export default function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              onBlur={() => setTouched(t => ({ ...t, password: true }))}
               placeholder="Min 8 characters"
               required
               minLength={8}
-              className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500"
+              className={`bg-slate-800 border-slate-600 text-white placeholder:text-slate-500 ${
+                passwordError ? "border-red-500 focus-visible:ring-red-500" : ""
+              }`}
               data-testid="input-signup-password"
             />
+            {passwordError && (
+              <p className="text-xs text-red-400" data-testid="text-password-error">
+                Not enough characters
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -189,14 +222,15 @@ export default function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
+              onBlur={() => setTouched(t => ({ ...t, confirmPassword: true }))}
               placeholder="Re-enter your password"
               required
               className={`bg-slate-800 border-slate-600 text-white placeholder:text-slate-500 ${
-                !passwordsMatch ? "border-red-500 focus-visible:ring-red-500" : ""
+                confirmPasswordError ? "border-red-500 focus-visible:ring-red-500" : ""
               }`}
               data-testid="input-signup-confirm-password"
             />
-            {!passwordsMatch && (
+            {confirmPasswordError && (
               <p className="text-xs text-red-400" data-testid="text-password-mismatch">
                 Passwords do not match
               </p>
