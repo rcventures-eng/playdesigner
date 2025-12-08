@@ -748,6 +748,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin authentication middleware - requires both session auth AND admin key
+  const ADMIN_KEY = "fuzzy2622";
+  
+  const verifyAdmin = (req: Request, res: Response, next: NextFunction) => {
+    // First check: user must be logged in with a valid session
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+    
+    // Second check: must provide valid admin key
+    const key = req.query.key || req.headers['x-admin-key'];
+    if (key !== ADMIN_KEY) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    
+    next();
+  };
+
+  // Admin: Get all users for email management
+  app.get("/api/admin/users", verifyAdmin, async (_req, res) => {
+    try {
+      const allUsers = await db.select({
+        id: users.id,
+        email: users.email,
+        firstName: users.firstName,
+        favoriteTeam: users.favoriteTeam,
+      }).from(users).orderBy(desc(users.id)).limit(50);
+      res.json(allUsers);
+    } catch (error: any) {
+      console.error("Failed to fetch users:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Admin: Resend welcome email
+  app.post("/api/admin/resend-welcome-email", verifyAdmin, async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ error: "Email is required" });
+      }
+
+      // Look up user to get their first name
+      const [user] = await db.select({
+        firstName: users.firstName,
+        email: users.email,
+      }).from(users).where(eq(users.email, email)).limit(1);
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      await sendWelcomeEmail(user.email, user.firstName);
+      
+      res.json({ success: true, message: `Welcome email sent to ${email}` });
+    } catch (error: any) {
+      console.error("Failed to send welcome email:", error);
+      res.status(500).json({ error: error.message || "Failed to send email" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

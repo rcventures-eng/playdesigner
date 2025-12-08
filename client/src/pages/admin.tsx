@@ -10,13 +10,15 @@ import {
   Home, 
   Save, 
   RefreshCw,
-  LogOut
+  LogOut,
+  Mail,
+  Send
 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
-type AdminTab = "logic" | "presets" | "logs";
+type AdminTab = "logic" | "presets" | "logs" | "email";
 type GameFormat = "5v5" | "7v7" | "9v9" | "11v11";
 
 interface AILog {
@@ -37,6 +39,13 @@ interface FormationPlayer {
 
 interface ConfigData {
   logicDictionary: Record<string, unknown>;
+}
+
+interface AdminUser {
+  id: string;
+  email: string;
+  firstName: string | null;
+  favoriteTeam: string | null;
 }
 
 interface FormationVariant {
@@ -67,6 +76,7 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
   const [selectedFormat, setSelectedFormat] = useState<GameFormat | null>(null);
   const [selectedSide, setSelectedSide] = useState<"offense" | "defense">("offense");
   const [presetPlayers, setPresetPlayers] = useState<FormationPlayer[]>([]);
+  const [emailInput, setEmailInput] = useState("");
   const { toast } = useToast();
 
   // Check URL key as fallback auth
@@ -104,6 +114,43 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
   const { data: presetsData } = useQuery<PresetsData>({
     queryKey: ["/api/admin/presets"],
     enabled: isAdmin,
+  });
+
+  // Fetch users for email management (include admin key and credentials)
+  const { data: usersData, isLoading: usersLoading } = useQuery<AdminUser[]>({
+    queryKey: ["/api/admin/users"],
+    queryFn: async () => {
+      const response = await fetch("/api/admin/users?key=fuzzy2622", {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch users");
+      return response.json();
+    },
+    enabled: isAdmin && activeTab === "email",
+  });
+
+  // Send welcome email mutation (include admin key)
+  const sendWelcomeEmailMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const response = await fetch("/api/admin/resend-welcome-email?key=fuzzy2622", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to send email");
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({ title: "Success", description: data.message });
+      setEmailInput("");
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
   });
 
   useEffect(() => {
@@ -221,6 +268,18 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
             <FileText className="w-4 h-4" />
             Logs
           </button>
+          <button
+            onClick={() => setActiveTab("email")}
+            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+              activeTab === "email" 
+                ? "bg-orange-500/20 text-orange-400" 
+                : "text-slate-300 hover:bg-slate-800"
+            }`}
+            data-testid="tab-email"
+          >
+            <Mail className="w-4 h-4" />
+            Email
+          </button>
         </nav>
 
         <div className="p-4 border-t border-slate-700 space-y-2">
@@ -255,6 +314,7 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
             {activeTab === "logic" && "AI Logic Dictionary"}
             {activeTab === "presets" && "Formation Presets"}
             {activeTab === "logs" && "AI Generation Logs"}
+            {activeTab === "email" && "Email Management"}
           </h2>
           {activeTab === "logic" && (
             <Button 
@@ -441,6 +501,86 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
                   )}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Email Tab */}
+          {activeTab === "email" && (
+            <div className="space-y-6" data-testid="content-email">
+              {/* Send Welcome Email Form */}
+              <div className="bg-slate-900 rounded-lg border border-slate-700 p-6">
+                <h3 className="text-lg font-semibold text-white mb-4">Send Welcome Email</h3>
+                <p className="text-sm text-slate-400 mb-4">
+                  Enter an email address to resend the welcome email. The user must have an account.
+                </p>
+                <div className="flex gap-3">
+                  <Input
+                    type="email"
+                    placeholder="coach@example.com"
+                    value={emailInput}
+                    onChange={(e) => setEmailInput(e.target.value)}
+                    className="flex-1 bg-slate-800 border-slate-600 text-white"
+                    data-testid="input-email-address"
+                  />
+                  <Button
+                    onClick={() => sendWelcomeEmailMutation.mutate(emailInput)}
+                    disabled={!emailInput || sendWelcomeEmailMutation.isPending}
+                    className="bg-orange-500 hover:bg-orange-600"
+                    data-testid="button-send-email"
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    {sendWelcomeEmailMutation.isPending ? "Sending..." : "Send Email"}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Registered Users List */}
+              <div className="bg-slate-900 rounded-lg border border-slate-700 overflow-hidden">
+                <div className="p-4 border-b border-slate-700">
+                  <h3 className="text-lg font-semibold text-white">Registered Users</h3>
+                  <p className="text-sm text-slate-400">Click on any user to populate the email field</p>
+                </div>
+                {usersLoading ? (
+                  <div className="p-8 text-center text-slate-400">Loading users...</div>
+                ) : !usersData || usersData.length === 0 ? (
+                  <div className="p-8 text-center text-slate-500">No registered users yet.</div>
+                ) : (
+                  <div className="divide-y divide-slate-700/50">
+                    {usersData.map((user) => (
+                      <button
+                        key={user.id}
+                        onClick={() => setEmailInput(user.email)}
+                        className="w-full flex items-center justify-between p-4 hover:bg-slate-800/50 transition-colors text-left"
+                        data-testid={`user-row-${user.id}`}
+                      >
+                        <div>
+                          <div className="text-white font-medium" data-testid={`text-user-email-${user.id}`}>
+                            {user.email}
+                          </div>
+                          <div className="text-sm text-slate-400">
+                            {user.firstName || "No name"} 
+                            {user.favoriteTeam && ` • ${user.favoriteTeam}`}
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            sendWelcomeEmailMutation.mutate(user.email);
+                          }}
+                          disabled={sendWelcomeEmailMutation.isPending}
+                          className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                          data-testid={`button-send-to-${user.id}`}
+                        >
+                          <Mail className="w-3 h-3 mr-1" />
+                          Send
+                        </Button>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </main>
