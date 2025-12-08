@@ -5,7 +5,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { FOOTBALL_CONFIG, FORMATIONS, resolveColorKey } from "../shared/football-config";
 import { LOGIC_DICTIONARY } from "../shared/logic-dictionary";
 import { db } from "./db";
-import { aiGenerationLogs, users, teams, passwordResetTokens, insertUserSchema, insertTeamSchema } from "@shared/schema";
+import { aiGenerationLogs, users, teams, plays, passwordResetTokens, insertUserSchema, insertTeamSchema, insertPlaySchema } from "@shared/schema";
 import { desc, eq, and, gt } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
@@ -844,6 +844,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(userTeams);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Play Management Routes
+
+  // Save a play (requires authentication, teamId is optional)
+  app.post("/api/plays", requireAuth, async (req, res) => {
+    try {
+      const result = insertPlaySchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ error: "Invalid input", details: result.error.flatten() });
+      }
+
+      const { name, type, data, tags, isFavorite, teamId } = result.data;
+
+      // If teamId is provided, verify it belongs to the current user
+      if (teamId) {
+        const [team] = await db.select().from(teams).where(
+          and(
+            eq(teams.id, teamId),
+            eq(teams.ownerId, req.session.userId!)
+          )
+        ).limit(1);
+        
+        if (!team) {
+          return res.status(403).json({ error: "Team not found or access denied" });
+        }
+      }
+
+      const [newPlay] = await db.insert(plays).values({
+        userId: req.session.userId!,
+        teamId: teamId || null,
+        name,
+        type,
+        data,
+        tags: tags || null,
+        isFavorite: isFavorite ?? false,
+      }).returning();
+
+      res.status(201).json(newPlay);
+    } catch (error: any) {
+      console.error("Create play error:", error);
+      res.status(500).json({ error: error.message || "Failed to save play" });
+    }
+  });
+
+  // Get user's plays (with optional teamId filter)
+  app.get("/api/plays", requireAuth, async (req, res) => {
+    try {
+      const teamId = req.query.teamId ? parseInt(req.query.teamId as string) : null;
+
+      let userPlays;
+      if (teamId) {
+        // Filter by both userId and teamId
+        userPlays = await db.select().from(plays).where(
+          and(
+            eq(plays.userId, req.session.userId!),
+            eq(plays.teamId, teamId)
+          )
+        ).orderBy(desc(plays.createdAt));
+      } else {
+        // Return all plays for the user
+        userPlays = await db.select().from(plays).where(
+          eq(plays.userId, req.session.userId!)
+        ).orderBy(desc(plays.createdAt));
+      }
+
+      res.json(userPlays);
+    } catch (error: any) {
+      console.error("Get plays error:", error);
+      res.status(500).json({ error: error.message || "Failed to get plays" });
     }
   });
 

@@ -41,7 +41,13 @@ The backend uses Express.js with TypeScript, providing API routes for AI play ge
 
 ### Data Storage
 
-Drizzle ORM with PostgreSQL manages data, including `users`, `teams`, `plays`, `ai_logs`, and `ai_generation_logs` tables.
+Drizzle ORM with PostgreSQL manages data, including `users`, `teams`, `plays`, `ai_logs`, `ai_generation_logs`, and `password_reset_tokens` tables.
+
+**Plays Table Structure**: The `plays` table links directly to users via `userId` (required), with an optional `teamId` for organization. This allows users to save plays immediately after signup without creating a team first. Teams serve as an optional organizational layer.
+
+**Play API Routes**:
+- `POST /api/plays`: Creates a play for the authenticated user. Requires `name` and `type`; accepts optional `teamId`, `data`, `tags`, and `isFavorite`. If `teamId` is provided, validates the team belongs to the current user.
+- `GET /api/plays`: Returns all plays for the authenticated user, ordered by creation date (newest first). Supports optional `?teamId=` query parameter to filter by team.
 
 ### Authentication System
 

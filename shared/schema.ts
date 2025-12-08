@@ -42,7 +42,8 @@ export type Team = typeof teams.$inferSelect;
 
 export const plays = pgTable("plays", {
   id: serial("id").primaryKey(),
-  teamId: integer("team_id").notNull().references(() => teams.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  teamId: integer("team_id").references(() => teams.id),
   name: text("name").notNull(),
   type: text("type").notNull(),
   data: jsonb("data"),
@@ -53,6 +54,7 @@ export const plays = pgTable("plays", {
 
 export const insertPlaySchema = createInsertSchema(plays).omit({
   id: true,
+  userId: true,
   createdAt: true,
 });
 
