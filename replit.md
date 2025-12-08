@@ -47,6 +47,12 @@ Drizzle ORM with PostgreSQL manages data, including `users`, `teams`, `plays`, `
 
 Session-based authentication uses `express-session` with `connect-pg-simple` for PostgreSQL-backed sessions and `bcryptjs` for password hashing. API routes exist for registration, login, logout, and retrieving user information.
 
+**TopNav Authentication UI**: The TopNav component conditionally renders based on authentication state:
+- **Logged out**: Displays "Log In" and "Sign Up" buttons
+- **Logged in**: Displays personalized greeting "Hey Coach [NAME]" with user avatar and dropdown menu containing logout option
+- User data is fetched via `/api/me` endpoint which returns `id`, `email`, `firstName`, and `isAdmin`
+- Admin state is automatically synced from the user data to enable/disable admin features
+
 ### Admin Dashboard
 
 A protected admin interface at `/admin` allows for configuration of the AI Logic (`LOGIC_DICTIONARY`), viewing formation presets, accessing AI generation logs, and managing user emails.
