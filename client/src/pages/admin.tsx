@@ -79,48 +79,67 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
   const [emailInput, setEmailInput] = useState("");
   const { toast } = useToast();
 
-  // Check URL key as fallback auth
+  // Check admin status from server (secure endpoint)
+  const { data: adminCheck, isLoading: adminCheckLoading } = useQuery<{ isAdmin: boolean }>({
+    queryKey: ["/api/admin/check"],
+    queryFn: async () => {
+      const response = await fetch("/api/admin/check", { credentials: "include" });
+      return response.json();
+    },
+  });
+
+  // Update isAdmin state based on server response
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const key = params.get("key");
-    if (key === "fuzzy2622") {
+    if (adminCheck?.isAdmin && !isAdmin) {
       setIsAdmin(true);
     }
-  }, [setIsAdmin]);
+  }, [adminCheck, isAdmin, setIsAdmin]);
 
-  // Redirect if not admin
+  // Redirect if not admin (after admin check completes)
   useEffect(() => {
-    if (!isAdmin) {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("key") !== "fuzzy2622") {
-        setLocation("/");
-      }
+    if (!adminCheckLoading && !adminCheck?.isAdmin && !isAdmin) {
+      setLocation("/");
     }
-  }, [isAdmin, setLocation]);
+  }, [isAdmin, adminCheck, adminCheckLoading, setLocation]);
 
-  // Fetch logic dictionary
+  // Fetch logic dictionary (uses session-based auth)
   const { data: configData, isLoading: configLoading } = useQuery<ConfigData>({
     queryKey: ["/api/admin/config"],
+    queryFn: async () => {
+      const response = await fetch("/api/admin/config", { credentials: "include" });
+      if (!response.ok) throw new Error("Failed to fetch config");
+      return response.json();
+    },
     enabled: isAdmin,
   });
 
-  // Fetch AI logs
+  // Fetch AI logs (uses session-based auth)
   const { data: logsData, isLoading: logsLoading, refetch: refetchLogs } = useQuery<AILog[]>({
     queryKey: ["/api/admin/logs"],
+    queryFn: async () => {
+      const response = await fetch("/api/admin/logs", { credentials: "include" });
+      if (!response.ok) throw new Error("Failed to fetch logs");
+      return response.json();
+    },
     enabled: isAdmin && activeTab === "logs",
   });
 
-  // Fetch presets
+  // Fetch presets (uses session-based auth)
   const { data: presetsData } = useQuery<PresetsData>({
     queryKey: ["/api/admin/presets"],
+    queryFn: async () => {
+      const response = await fetch("/api/admin/presets", { credentials: "include" });
+      if (!response.ok) throw new Error("Failed to fetch presets");
+      return response.json();
+    },
     enabled: isAdmin,
   });
 
-  // Fetch users for email management (include admin key and credentials)
+  // Fetch users for email management (uses session-based auth)
   const { data: usersData, isLoading: usersLoading } = useQuery<AdminUser[]>({
     queryKey: ["/api/admin/users"],
     queryFn: async () => {
-      const response = await fetch("/api/admin/users?key=fuzzy2622", {
+      const response = await fetch("/api/admin/users", {
         credentials: "include",
       });
       if (!response.ok) throw new Error("Failed to fetch users");
@@ -129,10 +148,10 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
     enabled: isAdmin && activeTab === "email",
   });
 
-  // Send welcome email mutation (include admin key)
+  // Send welcome email mutation (uses session-based auth)
   const sendWelcomeEmailMutation = useMutation({
     mutationFn: async (email: string) => {
-      const response = await fetch("/api/admin/resend-welcome-email?key=fuzzy2622", {
+      const response = await fetch("/api/admin/resend-welcome-email", {
         method: "POST",
         body: JSON.stringify({ email }),
         headers: { "Content-Type": "application/json" },
@@ -169,7 +188,7 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
     }
   }, [presetsData, selectedFormat, selectedSide]);
 
-  // Save logic mutation
+  // Save logic mutation (uses session-based auth)
   const saveLogicMutation = useMutation({
     mutationFn: async (json: string) => {
       const parsed = JSON.parse(json);
@@ -177,6 +196,7 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
         method: "POST",
         body: JSON.stringify({ logicDictionary: parsed }),
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
       });
       if (!response.ok) throw new Error("Failed to save");
       return response.json();

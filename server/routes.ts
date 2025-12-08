@@ -703,8 +703,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Admin API Routes
   
-  // Get current logic dictionary
-  app.get("/api/admin/config", async (_req, res) => {
+  // Check if current user is an admin (secure endpoint)
+  app.get("/api/admin/check", async (req, res) => {
+    try {
+      if (!req.session?.userId) {
+        return res.json({ isAdmin: false });
+      }
+      
+      const [user] = await db.select({ isAdmin: users.isAdmin })
+        .from(users)
+        .where(eq(users.id, req.session.userId))
+        .limit(1);
+      
+      res.json({ isAdmin: user?.isAdmin === true });
+    } catch (error: any) {
+      console.error("Admin check failed:", error);
+      res.json({ isAdmin: false });
+    }
+  });
+
+  // Admin authentication middleware - requires session auth AND isAdmin flag
+  // NOTE: Define middleware BEFORE routes that use it
+  const verifyAdmin = async (req: Request, res: Response, next: NextFunction) => {
+    // First check: user must be logged in with a valid session
+    if (!req.session?.userId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+    
+    try {
+      // Second check: verify user has admin privileges in database
+      const [user] = await db.select({ isAdmin: users.isAdmin })
+        .from(users)
+        .where(eq(users.id, req.session.userId))
+        .limit(1);
+      
+      if (!user || !user.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      
+      next();
+    } catch (error) {
+      console.error("Admin verification failed:", error);
+      return res.status(500).json({ error: "Authorization check failed" });
+    }
+  };
+
+  // Get current logic dictionary (protected)
+  app.get("/api/admin/config", verifyAdmin, async (_req, res) => {
     try {
       res.json({
         logicDictionary: customLogicDictionary || LOGIC_DICTIONARY,
@@ -714,8 +759,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Save logic dictionary (in-memory only for now)
-  app.post("/api/admin/config", async (req, res) => {
+  // Save logic dictionary (protected, in-memory only for now)
+  app.post("/api/admin/config", verifyAdmin, async (req, res) => {
     try {
       const { logicDictionary } = req.body;
       if (!logicDictionary) {
@@ -728,8 +773,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get formation presets
-  app.get("/api/admin/presets", async (_req, res) => {
+  // Get formation presets (protected)
+  app.get("/api/admin/presets", verifyAdmin, async (_req, res) => {
     try {
       res.json(FORMATIONS);
     } catch (error: any) {
@@ -737,8 +782,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get AI generation logs
-  app.get("/api/admin/logs", async (_req, res) => {
+  // Get AI generation logs (protected)
+  app.get("/api/admin/logs", verifyAdmin, async (_req, res) => {
     try {
       const logs = await db.select().from(aiGenerationLogs).orderBy(desc(aiGenerationLogs.timestamp)).limit(100);
       res.json(logs);
@@ -747,24 +792,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: error.message });
     }
   });
-
-  // Admin authentication middleware - requires both session auth AND admin key
-  const ADMIN_KEY = "fuzzy2622";
-  
-  const verifyAdmin = (req: Request, res: Response, next: NextFunction) => {
-    // First check: user must be logged in with a valid session
-    if (!req.session?.userId) {
-      return res.status(401).json({ error: "Authentication required" });
-    }
-    
-    // Second check: must provide valid admin key
-    const key = req.query.key || req.headers['x-admin-key'];
-    if (key !== ADMIN_KEY) {
-      return res.status(403).json({ error: "Admin access required" });
-    }
-    
-    next();
-  };
 
   // Admin: Get all users for email management
   app.get("/api/admin/users", verifyAdmin, async (_req, res) => {
