@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { LogOut, User, ChevronDown } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { LogOut, ChevronDown, FileText, BookOpen } from "lucide-react";
 import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import SignUpModal from "./SignUpModal";
@@ -219,8 +219,25 @@ export default function TopNav({ isAdmin, setIsAdmin, showSignUp, setShowSignUp 
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem 
-                  onClick={handleLogout}
+                  onClick={() => setLocation("/plays")}
                   className="cursor-pointer"
+                  data-testid="link-plays"
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  Plays
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => setLocation("/playbooks")}
+                  className="cursor-pointer"
+                  data-testid="link-playbooks"
+                >
+                  <BookOpen className="mr-2 h-4 w-4" />
+                  Team Playbooks
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={handleLogout}
+                  className="cursor-pointer text-red-500 focus:text-red-500"
                   data-testid="button-logout"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
