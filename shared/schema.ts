@@ -89,3 +89,14 @@ export const insertAiGenerationLogSchema = createInsertSchema(aiGenerationLogs).
 
 export type InsertAiGenerationLog = z.infer<typeof insertAiGenerationLogSchema>;
 export type AiGenerationLog = typeof aiGenerationLogs.$inferSelect;
+
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  token: varchar("token", { length: 64 }).notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;

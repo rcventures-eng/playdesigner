@@ -12,7 +12,8 @@ import {
   RefreshCw,
   LogOut,
   Mail,
-  Send
+  Send,
+  Key
 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
@@ -77,6 +78,8 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
   const [selectedSide, setSelectedSide] = useState<"offense" | "defense">("offense");
   const [presetPlayers, setPresetPlayers] = useState<FormationPlayer[]>([]);
   const [emailInput, setEmailInput] = useState("");
+  const [resetPasswordEmail, setResetPasswordEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const { toast } = useToast();
 
   // Check admin status from server (secure endpoint)
@@ -166,6 +169,31 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
     onSuccess: (data) => {
       toast({ title: "Success", description: data.message });
       setEmailInput("");
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Admin password reset mutation (uses session-based auth)
+  const resetPasswordMutation = useMutation({
+    mutationFn: async ({ email, password }: { email: string; password: string }) => {
+      const response = await fetch("/api/admin/reset-user-password", {
+        method: "POST",
+        body: JSON.stringify({ email, newPassword: password }),
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to reset password");
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({ title: "Success", description: data.message });
+      setResetPasswordEmail("");
+      setNewPassword("");
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -554,11 +582,46 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
                 </div>
               </div>
 
+              {/* Admin Password Reset Form */}
+              <div className="bg-slate-900 rounded-lg border border-slate-700 p-6">
+                <h3 className="text-lg font-semibold text-white mb-4">Reset User Password</h3>
+                <p className="text-sm text-slate-400 mb-4">
+                  Reset a user's password directly. Enter their email and a new password.
+                </p>
+                <div className="space-y-3">
+                  <Input
+                    type="email"
+                    placeholder="User email address"
+                    value={resetPasswordEmail}
+                    onChange={(e) => setResetPasswordEmail(e.target.value)}
+                    className="bg-slate-800 border-slate-600 text-white"
+                    data-testid="input-reset-email"
+                  />
+                  <Input
+                    type="password"
+                    placeholder="New password (min 8 characters)"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="bg-slate-800 border-slate-600 text-white"
+                    data-testid="input-new-password"
+                  />
+                  <Button
+                    onClick={() => resetPasswordMutation.mutate({ email: resetPasswordEmail, password: newPassword })}
+                    disabled={!resetPasswordEmail || !newPassword || newPassword.length < 8 || resetPasswordMutation.isPending}
+                    className="w-full bg-orange-500 hover:bg-orange-600"
+                    data-testid="button-reset-password"
+                  >
+                    <Key className="w-4 h-4 mr-2" />
+                    {resetPasswordMutation.isPending ? "Resetting..." : "Reset Password"}
+                  </Button>
+                </div>
+              </div>
+
               {/* Registered Users List */}
               <div className="bg-slate-900 rounded-lg border border-slate-700 overflow-hidden">
                 <div className="p-4 border-b border-slate-700">
                   <h3 className="text-lg font-semibold text-white">Registered Users</h3>
-                  <p className="text-sm text-slate-400">Click on any user to populate the email field</p>
+                  <p className="text-sm text-slate-400">Send welcome email or reset password for any user</p>
                 </div>
                 {usersLoading ? (
                   <div className="p-8 text-center text-slate-400">Loading users...</div>
@@ -567,10 +630,9 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
                 ) : (
                   <div className="divide-y divide-slate-700/50">
                     {usersData.map((user) => (
-                      <button
+                      <div
                         key={user.id}
-                        onClick={() => setEmailInput(user.email)}
-                        className="w-full flex items-center justify-between p-4 hover:bg-slate-800/50 transition-colors text-left"
+                        className="flex items-center justify-between p-4 hover:bg-slate-800/50 transition-colors"
                         data-testid={`user-row-${user.id}`}
                       >
                         <div>
@@ -582,21 +644,30 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
                             {user.favoriteTeam && ` • ${user.favoriteTeam}`}
                           </div>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            sendWelcomeEmailMutation.mutate(user.email);
-                          }}
-                          disabled={sendWelcomeEmailMutation.isPending}
-                          className="border-slate-600 text-slate-300 hover:bg-slate-700"
-                          data-testid={`button-send-to-${user.id}`}
-                        >
-                          <Mail className="w-3 h-3 mr-1" />
-                          Send
-                        </Button>
-                      </button>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => sendWelcomeEmailMutation.mutate(user.email)}
+                            disabled={sendWelcomeEmailMutation.isPending}
+                            className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                            data-testid={`button-send-to-${user.id}`}
+                          >
+                            <Mail className="w-3 h-3 mr-1" />
+                            Email
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setResetPasswordEmail(user.email)}
+                            className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                            data-testid={`button-reset-${user.id}`}
+                          >
+                            <Key className="w-3 h-3 mr-1" />
+                            Reset
+                          </Button>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 )}

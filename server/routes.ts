@@ -5,10 +5,11 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { FOOTBALL_CONFIG, FORMATIONS, resolveColorKey } from "../shared/football-config";
 import { LOGIC_DICTIONARY } from "../shared/logic-dictionary";
 import { db } from "./db";
-import { aiGenerationLogs, users, teams, insertUserSchema, insertTeamSchema } from "@shared/schema";
-import { desc, eq } from "drizzle-orm";
+import { aiGenerationLogs, users, teams, passwordResetTokens, insertUserSchema, insertTeamSchema } from "@shared/schema";
+import { desc, eq, and, gt } from "drizzle-orm";
 import bcrypt from "bcryptjs";
-import { sendWelcomeEmail } from "./resend";
+import crypto from "crypto";
+import { sendWelcomeEmail, sendPasswordResetEmail } from "./resend";
 
 // In-memory storage for logic dictionary changes (persisted only in memory for now)
 let customLogicDictionary: typeof LOGIC_DICTIONARY | null = null;
@@ -653,6 +654,132 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Forgot password - request reset link
+  app.post("/api/forgot-password", async (req, res) => {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ error: "Email is required" });
+      }
+
+      // Find user by email
+      const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+      
+      // Always return success to prevent email enumeration attacks
+      if (!user) {
+        return res.json({ success: true, message: "If an account with that email exists, a reset link has been sent." });
+      }
+
+      // Generate secure random token
+      const token = crypto.randomBytes(32).toString("hex");
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+
+      // Store token in database
+      await db.insert(passwordResetTokens).values({
+        userId: user.id,
+        token,
+        expiresAt,
+      });
+
+      // Build reset link
+      const baseUrl = process.env.REPL_SLUG && process.env.REPL_OWNER
+        ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`
+        : req.protocol + "://" + req.get("host");
+      const resetLink = `${baseUrl}/reset-password?token=${token}`;
+
+      // Send email
+      try {
+        await sendPasswordResetEmail(email, resetLink);
+        console.log(`Password reset email sent to ${email}`);
+      } catch (emailError) {
+        console.error("Failed to send password reset email:", emailError);
+        // Don't expose email errors to prevent enumeration
+      }
+
+      res.json({ success: true, message: "If an account with that email exists, a reset link has been sent." });
+    } catch (error: any) {
+      console.error("Forgot password error:", error);
+      res.status(500).json({ error: error.message || "Failed to process request" });
+    }
+  });
+
+  // Reset password with token
+  app.post("/api/reset-password", async (req, res) => {
+    try {
+      const { token, password } = req.body;
+
+      if (!token || !password) {
+        return res.status(400).json({ error: "Token and password are required" });
+      }
+
+      if (password.length < 8) {
+        return res.status(400).json({ error: "Password must be at least 8 characters" });
+      }
+
+      // Find valid token
+      const [resetToken] = await db.select()
+        .from(passwordResetTokens)
+        .where(
+          and(
+            eq(passwordResetTokens.token, token),
+            eq(passwordResetTokens.used, false),
+            gt(passwordResetTokens.expiresAt, new Date())
+          )
+        )
+        .limit(1);
+
+      if (!resetToken) {
+        return res.status(400).json({ error: "Invalid or expired reset link. Please request a new one." });
+      }
+
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Update user's password
+      await db.update(users)
+        .set({ password: hashedPassword })
+        .where(eq(users.id, resetToken.userId));
+
+      // Mark token as used
+      await db.update(passwordResetTokens)
+        .set({ used: true })
+        .where(eq(passwordResetTokens.id, resetToken.id));
+
+      res.json({ success: true, message: "Password has been reset successfully. You can now log in." });
+    } catch (error: any) {
+      console.error("Reset password error:", error);
+      res.status(500).json({ error: error.message || "Failed to reset password" });
+    }
+  });
+
+  // Validate reset token (for frontend to check if token is valid)
+  app.get("/api/validate-reset-token", async (req, res) => {
+    try {
+      const token = req.query.token as string;
+
+      if (!token) {
+        return res.json({ valid: false });
+      }
+
+      const [resetToken] = await db.select()
+        .from(passwordResetTokens)
+        .where(
+          and(
+            eq(passwordResetTokens.token, token),
+            eq(passwordResetTokens.used, false),
+            gt(passwordResetTokens.expiresAt, new Date())
+          )
+        )
+        .limit(1);
+
+      res.json({ valid: !!resetToken });
+    } catch (error: any) {
+      console.error("Validate token error:", error);
+      res.json({ valid: false });
+    }
+  });
+
   // Get current user
   app.get("/api/me", requireAuth, async (req, res) => {
     try {
@@ -834,6 +961,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Failed to send welcome email:", error);
       res.status(500).json({ error: error.message || "Failed to send email" });
+    }
+  });
+
+  // Admin: Reset user password directly
+  app.post("/api/admin/reset-user-password", verifyAdmin, async (req, res) => {
+    try {
+      const { email, newPassword } = req.body;
+      
+      if (!email || !newPassword) {
+        return res.status(400).json({ error: "Email and new password are required" });
+      }
+
+      if (newPassword.length < 8) {
+        return res.status(400).json({ error: "Password must be at least 8 characters" });
+      }
+
+      // Find user
+      const [user] = await db.select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      // Update password
+      await db.update(users)
+        .set({ password: hashedPassword })
+        .where(eq(users.id, user.id));
+
+      res.json({ success: true, message: `Password reset successfully for ${email}` });
+    } catch (error: any) {
+      console.error("Admin reset password error:", error);
+      res.status(500).json({ error: error.message || "Failed to reset password" });
     }
   });
 
