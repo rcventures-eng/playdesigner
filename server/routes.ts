@@ -796,7 +796,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-      res.json({ id: user.id, email: user.email });
+      res.json({ id: user.id, email: user.email, firstName: user.firstName, isAdmin: user.isAdmin });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

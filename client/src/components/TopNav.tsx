@@ -1,13 +1,24 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import rcFootballLogo from "@assets/RC_Football_1765082048330.png";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { LogOut, User, ChevronDown } from "lucide-react";
+import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import SignUpModal from "./SignUpModal";
+
+interface UserData {
+  id: string;
+  email: string;
+  firstName: string | null;
+  isAdmin: boolean;
+}
 
 interface TopNavProps {
   isAdmin?: boolean;
@@ -33,6 +44,61 @@ export default function TopNav({ isAdmin, setIsAdmin, showSignUp, setShowSignUp 
   
   const isSignUpOpen = showSignUp ?? localShowSignUp;
   const handleSignUpChange = setShowSignUp ?? setLocalShowSignUp;
+
+  // Fetch current user data - return null on 401 (not logged in)
+  const { data: user, isLoading: userLoading } = useQuery<UserData | null>({
+    queryKey: ["/api/me"],
+    queryFn: getQueryFn<UserData | null>({ on401: "returnNull" }),
+    retry: false,
+  });
+
+  const isLoggedIn = !!user;
+
+  // Sync admin state when user data changes (including logout)
+  useEffect(() => {
+    if (setIsAdmin) {
+      setIsAdmin(user?.isAdmin ?? false);
+    }
+  }, [user, setIsAdmin]);
+
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/me"] });
+      toast({
+        title: "Logged out",
+        description: "You've been logged out successfully.",
+      });
+    } catch (err) {
+      console.error("Logout error:", err);
+    }
+  };
+
+  // Get user initials for avatar
+  const getUserInitials = () => {
+    if (user?.firstName) {
+      return user.firstName.charAt(0).toUpperCase();
+    }
+    if (user?.email) {
+      return user.email.charAt(0).toUpperCase();
+    }
+    return "U";
+  };
+
+  // Get display name
+  const getDisplayName = () => {
+    if (user?.firstName) {
+      return user.firstName;
+    }
+    if (user?.email) {
+      return user.email.split("@")[0];
+    }
+    return "Coach";
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,25 +197,55 @@ export default function TopNav({ isAdmin, setIsAdmin, showSignUp, setShowSignUp 
 
         {/* Right Side - Auth Actions */}
         <div className="flex items-center gap-4">
-          <button
-            onClick={() => setShowLoginModal(true)}
-            className="text-white/90 hover:text-white text-sm font-medium transition-colors"
-            data-testid="button-login"
-          >
-            Log In
-          </button>
-          <button
-            onClick={() => handleSignUpChange(true)}
-            className="bg-white text-orange-600 rounded-full px-4 py-1 text-xs font-bold hover:bg-gray-100 transition-colors"
-            data-testid="button-signup"
-          >
-            Sign Up
-          </button>
-          <div
-            className="w-8 h-8 rounded-full bg-white/20"
-            data-testid="profile-placeholder"
-            title="Profile"
-          />
+          {userLoading ? (
+            <div className="w-8 h-8 rounded-full bg-white/20 animate-pulse" />
+          ) : isLoggedIn ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button 
+                  className="flex items-center gap-2 hover:bg-orange-600/50 rounded-full pl-3 pr-2 py-1 transition-colors"
+                  data-testid="button-user-menu"
+                >
+                  <span className="text-white text-sm font-medium" data-testid="text-greeting">
+                    Hey Coach {getDisplayName()}
+                  </span>
+                  <Avatar className="h-8 w-8 border-2 border-white/30">
+                    <AvatarFallback className="bg-white text-orange-600 font-bold text-sm">
+                      {getUserInitials()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <ChevronDown className="h-4 w-4 text-white/80" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem 
+                  onClick={handleLogout}
+                  className="cursor-pointer"
+                  data-testid="button-logout"
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Log Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <>
+              <button
+                onClick={() => setShowLoginModal(true)}
+                className="text-white/90 hover:text-white text-sm font-medium transition-colors"
+                data-testid="button-login"
+              >
+                Log In
+              </button>
+              <button
+                onClick={() => handleSignUpChange(true)}
+                className="bg-white text-orange-600 rounded-full px-4 py-1 text-xs font-bold hover:bg-gray-100 transition-colors"
+                data-testid="button-signup"
+              >
+                Sign Up
+              </button>
+            </>
+          )}
         </div>
       </nav>
 
