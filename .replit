@@ -47,6 +47,10 @@ localPort = 40003
 externalPort = 3001
 
 [[ports]]
+localPort = 40511
+externalPort = 8080
+
+[[ports]]
 localPort = 40959
 externalPort = 3000
 
@@ -93,3 +97,6 @@ author = "agent"
 task = "shell.exec"
 args = "npm run dev"
 waitForPort = 5000
+
+[agent]
+integrations = ["resend:1.0.0"]
