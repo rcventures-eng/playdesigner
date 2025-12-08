@@ -639,7 +639,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error("Login error:", error);
-      res.status(500).json({ error: error.message || "Login failed" });
+      
+      // Handle database connection errors with user-friendly message
+      if (error.code === 'EAI_AGAIN' || error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+        return res.status(503).json({ error: "Service temporarily unavailable. Please try again in a moment." });
+      }
+      if (error.code === 'ETIMEDOUT' || error.code === 'ESOCKETTIMEDOUT') {
+        return res.status(503).json({ error: "Connection timed out. Please try again." });
+      }
+      
+      res.status(500).json({ error: "Login failed. Please try again." });
     }
   });
 

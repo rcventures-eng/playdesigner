@@ -45,7 +45,16 @@ app.use(express.json({
 app.use(express.urlencoded({ extended: false }));
 
 const PgSession = connectPgSimple(session);
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+const pool = new pg.Pool({ 
+  connectionString: process.env.DATABASE_URL,
+  connectionTimeoutMillis: 10000,
+  idleTimeoutMillis: 30000,
+  max: 10,
+});
+
+pool.on('error', (err) => {
+  log(`Database pool error: ${err.message}`, 'database');
+});
 
 app.use(
   session({
@@ -53,6 +62,9 @@ app.use(
       pool: pool,
       tableName: "session",
       createTableIfMissing: true,
+      errorLog: (err) => {
+        log(`Session store error: ${err.message}`, 'session');
+      },
     }),
     secret: process.env.SESSION_SECRET || "fallback-secret-for-dev",
     resave: false,
@@ -61,6 +73,7 @@ app.use(
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      sameSite: process.env.NODE_ENV === "production" ? "lax" : undefined,
     },
   })
 );
