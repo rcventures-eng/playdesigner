@@ -217,21 +217,21 @@ export default function TopNav({ isAdmin, setIsAdmin, showSignUp, setShowSignUp 
                   <ChevronDown className="h-4 w-4 text-white/80" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuContent align="end" className="w-48 bg-white">
                 <DropdownMenuItem 
                   onClick={() => setLocation("/plays")}
-                  className="cursor-pointer"
+                  className="cursor-pointer text-black focus:text-black"
                   data-testid="link-plays"
                 >
-                  <FileText className="mr-2 h-4 w-4" />
+                  <FileText className="mr-2 h-4 w-4 text-black" />
                   Plays
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={() => setLocation("/playbooks")}
-                  className="cursor-pointer"
+                  className="cursor-pointer text-black focus:text-black"
                   data-testid="link-playbooks"
                 >
-                  <BookOpen className="mr-2 h-4 w-4" />
+                  <BookOpen className="mr-2 h-4 w-4 text-black" />
                   Team Playbooks
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
