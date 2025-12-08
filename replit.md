@@ -49,7 +49,11 @@ Session-based authentication uses `express-session` with `connect-pg-simple` for
 
 ### Admin Dashboard
 
-A protected admin interface at `/admin` allows for configuration of the AI Logic (`LOGIC_DICTIONARY`), viewing formation presets, and accessing AI generation logs.
+A protected admin interface at `/admin` allows for configuration of the AI Logic (`LOGIC_DICTIONARY`), viewing formation presets, accessing AI generation logs, and managing user emails.
+
+**Security**: Admin access is controlled by a database-backed `isAdmin` flag on the users table. The `verifyAdmin` middleware checks both valid session authentication AND the isAdmin flag before granting access to any admin endpoints. All admin API calls use session-based authentication with credentials. Non-admin users are redirected to the home page and receive 401/403 errors if they attempt direct API access.
+
+**Email Management**: Admins can view registered users and resend welcome emails through the admin panel. Welcome emails are sent via Resend integration with HTML escaping for security.
 
 ### Play Type Tabs
 
