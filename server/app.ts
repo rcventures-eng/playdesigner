@@ -31,6 +31,9 @@ export function log(message: string, source = "express") {
 
 export const app = express();
 
+// Trust proxy for Replit - needed to correctly detect https from X-Forwarded-Proto
+app.set('trust proxy', 1);
+
 declare module 'http' {
   interface IncomingMessage {
     rawBody: unknown

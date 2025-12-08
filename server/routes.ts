@@ -691,10 +691,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         expiresAt,
       });
 
-      // Build reset link
-      const baseUrl = process.env.REPL_SLUG && process.env.REPL_OWNER
-        ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`
-        : req.protocol + "://" + req.get("host");
+      // Build reset link using trusted base URL
+      // In production, use the configured APP_BASE_URL or Replit production URL
+      // In development, use localhost/dev preview URL
+      let baseUrl: string;
+      if (process.env.NODE_ENV === "production") {
+        // Use configured production URL or construct from Replit environment
+        baseUrl = process.env.APP_BASE_URL || 
+          (process.env.REPL_SLUG && process.env.REPL_OWNER 
+            ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`
+            : "https://workspace.artvandelet2002.repl.co");
+      } else {
+        // Development: use request origin (safe since it's internal)
+        baseUrl = `${req.protocol}://${req.get("host")}`;
+      }
       const resetLink = `${baseUrl}/reset-password?token=${token}`;
 
       // Send email
