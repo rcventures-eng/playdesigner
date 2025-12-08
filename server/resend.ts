@@ -59,3 +59,143 @@ export async function sendEmail(options: SendEmailOptions) {
     text: options.text
   });
 }
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function getWelcomeEmailHtml(firstName?: string | null): string {
+  const safeName = firstName ? escapeHtml(firstName) : null;
+  const greeting = safeName ? `Hey Coach ${safeName}` : "Hey Coach";
+  
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to RC Football</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #1a1a2e; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" style="width: 100%; max-width: 600px; border-collapse: collapse;">
+          
+          <!-- Header with Logo -->
+          <tr>
+            <td style="padding: 30px 40px; background-color: #0f172a; border-radius: 12px 12px 0 0; text-align: center;">
+              <table role="presentation" style="margin: 0 auto;">
+                <tr>
+                  <td style="background-color: #f97316; width: 48px; height: 48px; border-radius: 8px; text-align: center; vertical-align: middle;">
+                    <span style="color: #0f172a; font-size: 20px; font-weight: bold;">RC</span>
+                  </td>
+                  <td style="padding-left: 12px;">
+                    <span style="color: #f97316; font-size: 24px; font-weight: bold;">RC Football</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Main Content -->
+          <tr>
+            <td style="padding: 40px; background-color: #1e293b;">
+              <h1 style="color: #f97316; font-size: 28px; margin: 0 0 24px 0; font-weight: 600;">
+                ${greeting} -
+              </h1>
+              
+              <p style="color: #e2e8f0; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                Football is a game of inches and you've made the first move shifting that one inch into your favor by starting to design your plays with RC Football's play designer.
+              </p>
+              
+              <p style="color: #e2e8f0; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0;">
+                You've unlocked the ability to:
+              </p>
+              
+              <table role="presentation" style="width: 100%; margin-bottom: 24px;">
+                <tr>
+                  <td style="padding: 12px 16px; background-color: #334155; border-radius: 8px; margin-bottom: 8px;">
+                    <span style="color: #f97316; font-size: 18px; margin-right: 8px;">&#10003;</span>
+                    <span style="color: #e2e8f0; font-size: 15px;">Save your plays</span>
+                  </td>
+                </tr>
+                <tr><td style="height: 8px;"></td></tr>
+                <tr>
+                  <td style="padding: 12px 16px; background-color: #334155; border-radius: 8px;">
+                    <span style="color: #f97316; font-size: 18px; margin-right: 8px;">&#10003;</span>
+                    <span style="color: #e2e8f0; font-size: 15px;">Access our most popular play templates</span>
+                  </td>
+                </tr>
+                <tr><td style="height: 8px;"></td></tr>
+                <tr>
+                  <td style="padding: 12px 16px; background-color: #334155; border-radius: 8px;">
+                    <span style="color: #f97316; font-size: 18px; margin-right: 8px;">&#10003;</span>
+                    <span style="color: #e2e8f0; font-size: 15px;">Put our AI Beta features to use</span>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="color: #e2e8f0; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                We're still early but love hearing from coaches like you. What specifically were you looking for when you decided to sign up and is there anything we can help you with to get started?
+              </p>
+              
+              <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 24px 0 0 0; font-style: italic;">
+                Just reply to this email - we read every message.
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 24px 40px; background-color: #0f172a; border-radius: 0 0 12px 12px; text-align: center;">
+              <p style="color: #64748b; font-size: 13px; margin: 0;">
+                RC Football - Design plays. Build your playbook. Dominate.
+              </p>
+            </td>
+          </tr>
+          
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+}
+
+function getWelcomeEmailText(firstName?: string | null): string {
+  const greeting = firstName ? `Hey Coach ${firstName}` : "Hey Coach";
+  
+  return `
+${greeting} -
+
+Football is a game of inches and you've made the first move shifting that one inch into your favor by starting to design your plays with RC Football's play designer.
+
+You've unlocked the ability to:
+- Save your plays
+- Access our most popular play templates
+- Put our AI Beta features to use
+
+We're still early but love hearing from coaches like you. What specifically were you looking for when you decided to sign up and is there anything we can help you with to get started?
+
+Just reply to this email - we read every message.
+
+---
+RC Football - Design plays. Build your playbook. Dominate.
+  `.trim();
+}
+
+export async function sendWelcomeEmail(email: string, firstName?: string | null) {
+  return sendEmail({
+    to: email,
+    subject: "Welcome to RC Football, Coach!",
+    html: getWelcomeEmailHtml(firstName),
+    text: getWelcomeEmailText(firstName)
+  });
+}

@@ -8,6 +8,7 @@ import { db } from "./db";
 import { aiGenerationLogs, users, teams, insertUserSchema, insertTeamSchema } from "@shared/schema";
 import { desc, eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
+import { sendWelcomeEmail } from "./resend";
 
 // In-memory storage for logic dictionary changes (persisted only in memory for now)
 let customLogicDictionary: typeof LOGIC_DICTIONARY | null = null;
@@ -586,6 +587,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Set session
       req.session.userId = newUser.id;
+
+      // Send welcome email (fire and forget - don't block registration)
+      sendWelcomeEmail(email, firstName).catch((emailError) => {
+        console.error("Failed to send welcome email:", emailError);
+      });
 
       res.status(201).json({ 
         success: true, 
