@@ -1,0 +1,47 @@
+I need to implement the Sign Up User Interface and connect it to our backend registration route.
+
+1. The Component Structure (SignUpModal.tsx) Please create a SignUpModal component (using a standard dialog/modal pattern) that triggers when the user clicks 'Sign Up' in the Top Nav or the 'Create your Account' button in the sidebar.
+
+2. The UI Layout
+
+Style: A centered modal card. Dark theme (bg-slate-900), rounded corners, subtle border (border-white/10), and a shadow.
+
+Header: 'Join RC Football' with subtext 'Design plays, build your playbook, and dominate.'
+
+3. The Form Fields Create a vertical form with the following inputs. Use your best judgment for spacing (gap-4).
+
+Email Address (Required, type="email")
+
+Password (Required, type="password", Min 8 chars)
+
+Confirm Password (Required, type="password")
+
+Validation: If this does not match 'Password', show a red error text immediately and disable the submit button.
+
+First Name (Optional, type="text")
+
+Favorite NFL Team (Optional, Select Dropdown)
+
+Data Source: Please generate a constant array of all 32 NFL teams (City + Name) sorted alphabetically (e.g., 'Arizona Cardinals', 'Atlanta Falcons'... to 'Washington Commanders').
+
+4. The Submission Logic
+
+Action: On submit, validate inputs, then send a POST request to /api/register.
+
+Payload: { email, password, firstName, favoriteTeam }.
+
+Loading State: While waiting for the server, change the 'Create Account' button text to 'Creating...' and disable it to prevent duplicates.
+
+Error Handling: If the server returns an error (e.g., 'Email already exists'), display it in a red alert box at the top of the form.
+
+Success: On success, store the user session/token, close the modal, and show a 'Welcome' toast notification.
+
+5. Integration
+
+Export the SignUpModal and mount it in the main App layout.
+
+Create a global state (or use a prop) to control isSignUpOpen.
+
+Wire up the 'Sign Up' button in TopNav and the large Orange Mega-Button in Sidebar to open this modal (setIsSignUpOpen(true)).
+
+Please output the full code for the SignUpModal and the list of NFL teams.
