@@ -65,6 +65,12 @@ A protected admin interface at `/admin` allows for configuration of the AI Logic
 
 **Security**: Admin access is controlled by a database-backed `isAdmin` flag on the users table. The `verifyAdmin` middleware checks both valid session authentication AND the isAdmin flag before granting access to any admin endpoints. All admin API calls use session-based authentication with credentials. Non-admin users are redirected to the home page and receive 401/403 errors if they attempt direct API access.
 
+**Registered Users Table**: The Email tab displays a sortable, paginated data table of registered users:
+-   **Columns**: First Name, Favorite NFL Team, IP Address, Account Created, Last Login, Actions
+-   **Features**: Click column headers to sort (asc/desc with visual indicator), 20 rows per page with Previous/Next pagination
+-   **API Endpoint**: `GET /api/admin/users?page=1&limit=20&sortBy=createdAt&sortOrder=desc` returns paginated user data
+-   **Login Tracking**: On successful login, `lastLoginAt` (timestamp) and `lastLoginIp` (from x-forwarded-for header) are updated
+
 **Email Management**: Admins can view registered users and resend welcome emails through the admin panel. Welcome emails are sent via Resend integration with HTML escaping for security.
 
 ### Play Type Tabs
