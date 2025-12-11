@@ -674,19 +674,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { userType, featureDescription, useCase } = req.body;
 
-      // Basic validation
-      if (!userType || !featureDescription || !useCase) {
-        return res.status(400).json({ error: "All fields are required" });
+      // Validate with schema
+      const validUserTypes = ["Football Parent", "Amateur Coach", "Professional Coach"];
+      if (!userType || typeof userType !== "string" || !validUserTypes.includes(userType)) {
+        return res.status(400).json({ error: "Invalid user type" });
+      }
+      if (!featureDescription || typeof featureDescription !== "string" || featureDescription.trim().length === 0) {
+        return res.status(400).json({ error: "Feature description is required" });
+      }
+      if (!useCase || typeof useCase !== "string" || useCase.trim().length === 0) {
+        return res.status(400).json({ error: "Use case is required" });
+      }
+
+      // Limit field lengths to prevent abuse
+      const maxLength = 5000;
+      if (featureDescription.length > maxLength || useCase.length > maxLength) {
+        return res.status(400).json({ error: "Content too long" });
       }
 
       // Get userId if user is logged in (optional)
       const userId = req.session?.userId || null;
 
-      // Store in database
+      // Store in database with sanitized values
       await db.insert(featureRequests).values({
-        userType,
-        featureDescription,
-        useCase,
+        userType: userType.trim(),
+        featureDescription: featureDescription.trim(),
+        useCase: useCase.trim(),
         userId,
       });
 
