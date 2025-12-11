@@ -1086,6 +1086,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Build sort column
       const sortColumns: Record<string, any> = {
+        email: users.email,
         firstName: users.firstName,
         favoriteNFLTeam: users.favoriteNFLTeam,
         lastLoginIp: users.lastLoginIp,

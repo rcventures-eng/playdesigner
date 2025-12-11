@@ -63,7 +63,7 @@ interface UsersResponse {
   totalPages: number;
 }
 
-type SortColumn = "firstName" | "favoriteNFLTeam" | "lastLoginIp" | "createdAt" | "lastLoginAt";
+type SortColumn = "email" | "firstName" | "favoriteNFLTeam" | "lastLoginIp" | "createdAt" | "lastLoginAt";
 type SortOrder = "asc" | "desc";
 
 interface FormationVariant {
@@ -675,6 +675,18 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
                           <tr>
                             <th
                               className="text-left p-3 text-slate-400 font-medium cursor-pointer hover:text-white transition-colors"
+                              onClick={() => handleSort("email")}
+                              data-testid="th-email"
+                            >
+                              <div className="flex items-center gap-1">
+                                Email
+                                {usersSortBy === "email" && (
+                                  <span className="text-orange-400">{usersSortOrder === "asc" ? "↑" : "↓"}</span>
+                                )}
+                              </div>
+                            </th>
+                            <th
+                              className="text-left p-3 text-slate-400 font-medium cursor-pointer hover:text-white transition-colors"
                               onClick={() => handleSort("firstName")}
                               data-testid="th-first-name"
                             >
@@ -743,6 +755,9 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
                               className={`hover:bg-slate-800/50 transition-colors ${index % 2 === 1 ? "bg-slate-800/20" : ""}`}
                               data-testid={`user-row-${user.id}`}
                             >
+                              <td className="p-3 text-slate-300 font-medium" data-testid={`text-user-email-${user.id}`}>
+                                {user.email}
+                              </td>
                               <td className="p-3 text-slate-300" data-testid={`text-user-name-${user.id}`}>
                                 {user.firstName || "—"}
                               </td>
