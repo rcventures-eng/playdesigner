@@ -117,14 +117,15 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
   });
 
   // Fetch AI logs (uses session-based auth)
+  // Include adminCheck?.isAdmin in queryKey to trigger refetch when admin status is confirmed
   const { data: logsData, isLoading: logsLoading, refetch: refetchLogs } = useQuery<AILog[]>({
-    queryKey: ["/api/admin/logs"],
+    queryKey: ["/api/admin/logs", adminCheck?.isAdmin],
     queryFn: async () => {
       const response = await fetch("/api/admin/logs", { credentials: "include" });
       if (!response.ok) throw new Error("Failed to fetch logs");
       return response.json();
     },
-    enabled: isAdmin && activeTab === "logs",
+    enabled: (isAdmin || adminCheck?.isAdmin) && activeTab === "logs",
   });
 
   // Fetch presets (uses session-based auth)
@@ -139,8 +140,9 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
   });
 
   // Fetch users for email management (uses session-based auth)
-  const { data: usersData, isLoading: usersLoading } = useQuery<AdminUser[]>({
-    queryKey: ["/api/admin/users"],
+  // Include adminCheck?.isAdmin in queryKey to trigger refetch when admin status is confirmed
+  const { data: usersData, isLoading: usersLoading, refetch: refetchUsers } = useQuery<AdminUser[]>({
+    queryKey: ["/api/admin/users", adminCheck?.isAdmin],
     queryFn: async () => {
       const response = await fetch("/api/admin/users", {
         credentials: "include",
@@ -148,7 +150,7 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
       if (!response.ok) throw new Error("Failed to fetch users");
       return response.json();
     },
-    enabled: isAdmin && activeTab === "email",
+    enabled: (isAdmin || adminCheck?.isAdmin) && activeTab === "email",
   });
 
   // Send welcome email mutation (uses session-based auth)
