@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { 
   Settings, 
   Database, 
@@ -13,11 +14,13 @@ import {
   LogOut,
   Mail,
   Send,
-  Key
+  Key,
+  Shield
 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 
 type AdminTab = "logic" | "presets" | "logs" | "email";
 type GameFormat = "5v5" | "7v7" | "9v9" | "11v11";
@@ -47,6 +50,8 @@ interface AdminUser {
   email: string;
   firstName: string | null;
   favoriteTeam: string | null;
+  isAdmin: boolean;
+  createdAt: string;
 }
 
 interface FormationVariant {
@@ -117,15 +122,15 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
   });
 
   // Fetch AI logs (uses session-based auth)
-  // Include adminCheck?.isAdmin in queryKey to trigger refetch when admin status is confirmed
+  // Fetch once when admin is confirmed, cache for use on logs tab
   const { data: logsData, isLoading: logsLoading, refetch: refetchLogs } = useQuery<AILog[]>({
-    queryKey: ["/api/admin/logs", adminCheck?.isAdmin],
+    queryKey: ["/api/admin/logs"],
     queryFn: async () => {
       const response = await fetch("/api/admin/logs", { credentials: "include" });
       if (!response.ok) throw new Error("Failed to fetch logs");
       return response.json();
     },
-    enabled: (isAdmin || adminCheck?.isAdmin) && activeTab === "logs",
+    enabled: isAdmin || adminCheck?.isAdmin,
   });
 
   // Fetch presets (uses session-based auth)
@@ -140,17 +145,19 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
   });
 
   // Fetch users for email management (uses session-based auth)
-  // Include adminCheck?.isAdmin in queryKey to trigger refetch when admin status is confirmed
+  // Fetch once when admin is confirmed, cache for use on email tab
   const { data: usersData, isLoading: usersLoading, refetch: refetchUsers } = useQuery<AdminUser[]>({
-    queryKey: ["/api/admin/users", adminCheck?.isAdmin],
+    queryKey: ["/api/admin/users"],
     queryFn: async () => {
       const response = await fetch("/api/admin/users", {
         credentials: "include",
       });
       if (!response.ok) throw new Error("Failed to fetch users");
-      return response.json();
+      const data = await response.json();
+      console.log("Admin User Data Received:", data);
+      return data;
     },
-    enabled: (isAdmin || adminCheck?.isAdmin) && activeTab === "email",
+    enabled: isAdmin || adminCheck?.isAdmin,
   });
 
   // Send welcome email mutation (uses session-based auth)
@@ -630,47 +637,76 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
                 ) : !usersData || usersData.length === 0 ? (
                   <div className="p-8 text-center text-slate-500">No registered users yet.</div>
                 ) : (
-                  <div className="divide-y divide-slate-700/50">
-                    {usersData.map((user) => (
-                      <div
-                        key={user.id}
-                        className="flex items-center justify-between p-4 hover:bg-slate-800/50 transition-colors"
-                        data-testid={`user-row-${user.id}`}
-                      >
-                        <div>
-                          <div className="text-white font-medium" data-testid={`text-user-email-${user.id}`}>
-                            {user.email}
-                          </div>
-                          <div className="text-sm text-slate-400">
-                            {user.firstName || "No name"} 
-                            {user.favoriteTeam && ` • ${user.favoriteTeam}`}
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => sendWelcomeEmailMutation.mutate(user.email)}
-                            disabled={sendWelcomeEmailMutation.isPending}
-                            className="border-slate-600 text-slate-300 hover:bg-slate-700"
-                            data-testid={`button-send-to-${user.id}`}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm" data-testid="table-users">
+                      <thead className="bg-slate-800/50">
+                        <tr>
+                          <th className="text-left p-3 text-slate-400 font-medium">Date Joined</th>
+                          <th className="text-left p-3 text-slate-400 font-medium">Email</th>
+                          <th className="text-left p-3 text-slate-400 font-medium">First Name</th>
+                          <th className="text-left p-3 text-slate-400 font-medium">Favorite Team</th>
+                          <th className="text-left p-3 text-slate-400 font-medium">Role</th>
+                          <th className="text-right p-3 text-slate-400 font-medium">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-700/50">
+                        {usersData.map((user) => (
+                          <tr
+                            key={user.id}
+                            className="hover:bg-slate-800/50 transition-colors"
+                            data-testid={`user-row-${user.id}`}
                           >
-                            <Mail className="w-3 h-3 mr-1" />
-                            Email
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setResetPasswordEmail(user.email)}
-                            className="border-slate-600 text-slate-300 hover:bg-slate-700"
-                            data-testid={`button-reset-${user.id}`}
-                          >
-                            <Key className="w-3 h-3 mr-1" />
-                            Reset
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                            <td className="p-3 text-slate-300" data-testid={`text-user-date-${user.id}`}>
+                              {user.createdAt ? format(new Date(user.createdAt), "MMM d, yyyy") : "N/A"}
+                            </td>
+                            <td className="p-3 text-white font-medium" data-testid={`text-user-email-${user.id}`}>
+                              {user.email}
+                            </td>
+                            <td className="p-3 text-slate-300" data-testid={`text-user-name-${user.id}`}>
+                              {user.firstName || "N/A"}
+                            </td>
+                            <td className="p-3 text-slate-300" data-testid={`text-user-team-${user.id}`}>
+                              {user.favoriteTeam || "N/A"}
+                            </td>
+                            <td className="p-3" data-testid={`text-user-role-${user.id}`}>
+                              {user.isAdmin ? (
+                                <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30">
+                                  <Shield className="w-3 h-3 mr-1" />
+                                  Admin
+                                </Badge>
+                              ) : (
+                                <span className="text-slate-500">User</span>
+                              )}
+                            </td>
+                            <td className="p-3 text-right">
+                              <div className="flex gap-2 justify-end">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => sendWelcomeEmailMutation.mutate(user.email)}
+                                  disabled={sendWelcomeEmailMutation.isPending}
+                                  className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                                  data-testid={`button-send-to-${user.id}`}
+                                >
+                                  <Mail className="w-3 h-3 mr-1" />
+                                  Email
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setResetPasswordEmail(user.email)}
+                                  className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                                  data-testid={`button-reset-${user.id}`}
+                                >
+                                  <Key className="w-3 h-3 mr-1" />
+                                  Reset
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>

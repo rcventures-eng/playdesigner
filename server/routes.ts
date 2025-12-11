@@ -1018,7 +1018,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: users.email,
         firstName: users.firstName,
         favoriteTeam: users.favoriteTeam,
-      }).from(users).orderBy(desc(users.id)).limit(50);
+        isAdmin: users.isAdmin,
+        createdAt: users.createdAt,
+      }).from(users).orderBy(desc(users.createdAt)).limit(50);
       res.json(allUsers);
     } catch (error: any) {
       console.error("Failed to fetch users:", error);
