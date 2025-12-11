@@ -59,6 +59,41 @@ pool.on('error', (err) => {
   log(`Database pool error: ${err.message}`, 'database');
 });
 
+// Migration: Copy data from old favorite_team column to favorite_nfl_team if needed
+async function migrateTeamColumn() {
+  try {
+    // Check if the old favorite_team column exists
+    const columnCheck = await pool.query(`
+      SELECT column_name FROM information_schema.columns 
+      WHERE table_name = 'users' AND column_name = 'favorite_team'
+    `);
+    
+    if (columnCheck.rows.length > 0) {
+      log('Found old favorite_team column, migrating data...', 'migration');
+      
+      // Copy data from old column to new column where new column is empty
+      const result = await pool.query(`
+        UPDATE users 
+        SET favorite_nfl_team = favorite_team 
+        WHERE favorite_team IS NOT NULL 
+          AND favorite_team != '' 
+          AND (favorite_nfl_team IS NULL OR favorite_nfl_team = '')
+      `);
+      
+      log(`Migrated ${result.rowCount} users' team data`, 'migration');
+      
+      // Optionally drop the old column after migration
+      // await pool.query('ALTER TABLE users DROP COLUMN favorite_team');
+      // log('Dropped old favorite_team column', 'migration');
+    }
+  } catch (err: any) {
+    log(`Team column migration error (non-fatal): ${err.message}`, 'migration');
+  }
+}
+
+// Run migration on startup
+migrateTeamColumn();
+
 app.use(
   session({
     store: new PgSession({
