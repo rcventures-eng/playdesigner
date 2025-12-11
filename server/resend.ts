@@ -312,3 +312,107 @@ export async function sendPasswordResetEmail(email: string, resetLink: string) {
     text: getPasswordResetEmailText(resetLink)
   });
 }
+
+interface FeatureRequestData {
+  userType: string;
+  featureDescription: string;
+  useCase: string;
+}
+
+function getFeatureRequestEmailHtml(data: FeatureRequestData): string {
+  const safeUserType = escapeHtml(data.userType);
+  const safeFeature = escapeHtml(data.featureDescription);
+  const safeUseCase = escapeHtml(data.useCase);
+  
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Feature Request - RC Football</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #1a1a2e; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" style="width: 100%; max-width: 600px; border-collapse: collapse;">
+          
+          <!-- Header -->
+          <tr>
+            <td style="padding: 30px 40px; background-color: #0f172a; border-radius: 12px 12px 0 0; text-align: center;">
+              <h1 style="color: #22c55e; font-size: 24px; margin: 0; font-weight: bold;">New Feature Request</h1>
+            </td>
+          </tr>
+          
+          <!-- Main Content -->
+          <tr>
+            <td style="padding: 40px; background-color: #1e293b;">
+              <table role="presentation" style="width: 100%;">
+                <tr>
+                  <td style="padding: 16px; background-color: #334155; border-radius: 8px; margin-bottom: 16px;">
+                    <p style="color: #94a3b8; font-size: 12px; text-transform: uppercase; margin: 0 0 8px 0;">User Type</p>
+                    <p style="color: #e2e8f0; font-size: 16px; margin: 0; font-weight: 600;">${safeUserType}</p>
+                  </td>
+                </tr>
+                <tr><td style="height: 16px;"></td></tr>
+                <tr>
+                  <td style="padding: 16px; background-color: #334155; border-radius: 8px;">
+                    <p style="color: #94a3b8; font-size: 12px; text-transform: uppercase; margin: 0 0 8px 0;">Feature Request</p>
+                    <p style="color: #e2e8f0; font-size: 16px; margin: 0; line-height: 1.6; white-space: pre-wrap;">${safeFeature}</p>
+                  </td>
+                </tr>
+                <tr><td style="height: 16px;"></td></tr>
+                <tr>
+                  <td style="padding: 16px; background-color: #334155; border-radius: 8px;">
+                    <p style="color: #94a3b8; font-size: 12px; text-transform: uppercase; margin: 0 0 8px 0;">Use Case</p>
+                    <p style="color: #e2e8f0; font-size: 16px; margin: 0; line-height: 1.6; white-space: pre-wrap;">${safeUseCase}</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 24px 40px; background-color: #0f172a; border-radius: 0 0 12px 12px; text-align: center;">
+              <p style="color: #64748b; font-size: 13px; margin: 0;">
+                RC Football - Feature Request System
+              </p>
+            </td>
+          </tr>
+          
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+}
+
+function getFeatureRequestEmailText(data: FeatureRequestData): string {
+  return `
+New Feature Request - RC Football
+
+USER TYPE: ${data.userType}
+
+FEATURE REQUEST:
+${data.featureDescription}
+
+USE CASE:
+${data.useCase}
+
+---
+RC Football - Feature Request System
+  `.trim();
+}
+
+export async function sendFeatureRequestEmail(data: FeatureRequestData) {
+  return sendEmail({
+    to: "ray@raymcarroll.com",
+    subject: `New Feature Request from ${data.userType}`,
+    html: getFeatureRequestEmailHtml(data),
+    text: getFeatureRequestEmailText(data)
+  });
+}

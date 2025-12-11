@@ -5,11 +5,11 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { FOOTBALL_CONFIG, FORMATIONS, resolveColorKey } from "../shared/football-config";
 import { LOGIC_DICTIONARY } from "../shared/logic-dictionary";
 import { db } from "./db";
-import { aiGenerationLogs, users, teams, plays, passwordResetTokens, insertUserSchema, insertTeamSchema, insertPlaySchema } from "@shared/schema";
+import { aiGenerationLogs, users, teams, plays, passwordResetTokens, featureRequests, insertUserSchema, insertTeamSchema, insertPlaySchema, insertFeatureRequestSchema } from "@shared/schema";
 import { desc, eq, and, gt } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import { sendWelcomeEmail, sendPasswordResetEmail } from "./resend";
+import { sendWelcomeEmail, sendPasswordResetEmail, sendFeatureRequestEmail } from "./resend";
 
 // In-memory storage for logic dictionary changes (persisted only in memory for now)
 let customLogicDictionary: typeof LOGIC_DICTIONARY | null = null;
@@ -661,6 +661,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.clearCookie("connect.sid");
       res.json({ success: true });
     });
+  });
+
+  // Feature request submission (no auth required)
+  app.post("/api/feature-requests", async (req, res) => {
+    try {
+      // Honeypot check - if "website" field has any value, silently reject
+      if (req.body.website && req.body.website.trim() !== "") {
+        // Bot detected - return success to not tip off bots, but don't store or email
+        return res.status(201).json({ success: true });
+      }
+
+      const { userType, featureDescription, useCase } = req.body;
+
+      // Basic validation
+      if (!userType || !featureDescription || !useCase) {
+        return res.status(400).json({ error: "All fields are required" });
+      }
+
+      // Get userId if user is logged in (optional)
+      const userId = req.session?.userId || null;
+
+      // Store in database
+      await db.insert(featureRequests).values({
+        userType,
+        featureDescription,
+        useCase,
+        userId,
+      });
+
+      // Send email notification (fire and forget)
+      sendFeatureRequestEmail({
+        userType,
+        featureDescription,
+        useCase,
+      }).catch((emailError) => {
+        console.error("Failed to send feature request email:", emailError);
+      });
+
+      res.status(201).json({ success: true });
+    } catch (error: any) {
+      console.error("Feature request error:", error);
+      res.status(500).json({ error: "Failed to submit feature request" });
+    }
   });
 
   // Forgot password - request reset link

@@ -102,3 +102,20 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
 });
 
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+
+export const featureRequests = pgTable("feature_requests", {
+  id: serial("id").primaryKey(),
+  userType: text("user_type").notNull(),
+  featureDescription: text("feature_description").notNull(),
+  useCase: text("use_case").notNull(),
+  userId: varchar("user_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertFeatureRequestSchema = createInsertSchema(featureRequests).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertFeatureRequest = z.infer<typeof insertFeatureRequestSchema>;
+export type FeatureRequest = typeof featureRequests.$inferSelect;
