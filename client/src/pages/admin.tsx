@@ -49,10 +49,22 @@ interface AdminUser {
   id: string;
   email: string;
   firstName: string | null;
-  favoriteTeam: string | null;
+  favoriteNFLTeam: string | null;
   isAdmin: boolean;
   createdAt: string;
+  lastLoginAt: string | null;
+  lastLoginIp: string | null;
 }
+
+interface UsersResponse {
+  users: AdminUser[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
+type SortColumn = "firstName" | "favoriteNFLTeam" | "lastLoginIp" | "createdAt" | "lastLoginAt";
+type SortOrder = "asc" | "desc";
 
 interface FormationVariant {
   players: FormationPlayer[];
@@ -85,6 +97,9 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
   const [emailInput, setEmailInput] = useState("");
   const [resetPasswordEmail, setResetPasswordEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [usersSortBy, setUsersSortBy] = useState<SortColumn>("createdAt");
+  const [usersSortOrder, setUsersSortOrder] = useState<SortOrder>("desc");
+  const [usersPage, setUsersPage] = useState(1);
   const { toast } = useToast();
 
   // Check admin status from server (secure endpoint)
@@ -146,19 +161,33 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
 
   // Fetch users for email management (uses session-based auth)
   // Fetch once when admin is confirmed, cache for use on email tab
-  const { data: usersData, isLoading: usersLoading, refetch: refetchUsers } = useQuery<AdminUser[]>({
-    queryKey: ["/api/admin/users"],
+  const { data: usersResponse, isLoading: usersLoading, refetch: refetchUsers } = useQuery<UsersResponse>({
+    queryKey: ["/api/admin/users", usersPage, usersSortBy, usersSortOrder],
     queryFn: async () => {
-      const response = await fetch("/api/admin/users", {
+      const params = new URLSearchParams({
+        page: usersPage.toString(),
+        limit: "20",
+        sortBy: usersSortBy,
+        sortOrder: usersSortOrder,
+      });
+      const response = await fetch(`/api/admin/users?${params}`, {
         credentials: "include",
       });
       if (!response.ok) throw new Error("Failed to fetch users");
-      const data = await response.json();
-      console.log("Admin User Data Received:", data);
-      return data;
+      return response.json();
     },
     enabled: isAdmin || adminCheck?.isAdmin,
   });
+
+  const handleSort = (column: SortColumn) => {
+    if (usersSortBy === column) {
+      setUsersSortOrder(usersSortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setUsersSortBy(column);
+      setUsersSortOrder("desc");
+    }
+    setUsersPage(1);
+  };
 
   // Send welcome email mutation (uses session-based auth)
   const sendWelcomeEmailMutation = useMutation({
@@ -630,84 +659,166 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
               <div className="bg-slate-900 rounded-lg border border-slate-700 overflow-hidden">
                 <div className="p-4 border-b border-slate-700">
                   <h3 className="text-lg font-semibold text-white">Registered Users</h3>
-                  <p className="text-sm text-slate-400">Send welcome email or reset password for any user</p>
+                  <p className="text-sm text-slate-400">
+                    {usersResponse ? `${usersResponse.total} users total` : "Loading..."}
+                  </p>
                 </div>
                 {usersLoading ? (
                   <div className="p-8 text-center text-slate-400">Loading users...</div>
-                ) : !usersData || usersData.length === 0 ? (
+                ) : !usersResponse || usersResponse.users.length === 0 ? (
                   <div className="p-8 text-center text-slate-500">No registered users yet.</div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm" data-testid="table-users">
-                      <thead className="bg-slate-800/50">
-                        <tr>
-                          <th className="text-left p-3 text-slate-400 font-medium">Date Joined</th>
-                          <th className="text-left p-3 text-slate-400 font-medium">Email</th>
-                          <th className="text-left p-3 text-slate-400 font-medium">First Name</th>
-                          <th className="text-left p-3 text-slate-400 font-medium">Favorite Team</th>
-                          <th className="text-left p-3 text-slate-400 font-medium">Role</th>
-                          <th className="text-right p-3 text-slate-400 font-medium">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-700/50">
-                        {usersData.map((user) => (
-                          <tr
-                            key={user.id}
-                            className="hover:bg-slate-800/50 transition-colors"
-                            data-testid={`user-row-${user.id}`}
-                          >
-                            <td className="p-3 text-slate-300" data-testid={`text-user-date-${user.id}`}>
-                              {user.createdAt ? format(new Date(user.createdAt), "MMM d, yyyy") : "N/A"}
-                            </td>
-                            <td className="p-3 text-white font-medium" data-testid={`text-user-email-${user.id}`}>
-                              {user.email}
-                            </td>
-                            <td className="p-3 text-slate-300" data-testid={`text-user-name-${user.id}`}>
-                              {user.firstName || "N/A"}
-                            </td>
-                            <td className="p-3 text-slate-300" data-testid={`text-user-team-${user.id}`}>
-                              {user.favoriteTeam || "N/A"}
-                            </td>
-                            <td className="p-3" data-testid={`text-user-role-${user.id}`}>
-                              {user.isAdmin ? (
-                                <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30">
-                                  <Shield className="w-3 h-3 mr-1" />
-                                  Admin
-                                </Badge>
-                              ) : (
-                                <span className="text-slate-500">User</span>
-                              )}
-                            </td>
-                            <td className="p-3 text-right">
-                              <div className="flex gap-2 justify-end">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => sendWelcomeEmailMutation.mutate(user.email)}
-                                  disabled={sendWelcomeEmailMutation.isPending}
-                                  className="border-slate-600 text-slate-300 hover:bg-slate-700"
-                                  data-testid={`button-send-to-${user.id}`}
-                                >
-                                  <Mail className="w-3 h-3 mr-1" />
-                                  Email
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => setResetPasswordEmail(user.email)}
-                                  className="border-slate-600 text-slate-300 hover:bg-slate-700"
-                                  data-testid={`button-reset-${user.id}`}
-                                >
-                                  <Key className="w-3 h-3 mr-1" />
-                                  Reset
-                                </Button>
+                  <>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm" data-testid="table-users">
+                        <thead className="bg-slate-800/50">
+                          <tr>
+                            <th
+                              className="text-left p-3 text-slate-400 font-medium cursor-pointer hover:text-white transition-colors"
+                              onClick={() => handleSort("firstName")}
+                              data-testid="th-first-name"
+                            >
+                              <div className="flex items-center gap-1">
+                                First Name
+                                {usersSortBy === "firstName" && (
+                                  <span className="text-orange-400">{usersSortOrder === "asc" ? "↑" : "↓"}</span>
+                                )}
                               </div>
-                            </td>
+                            </th>
+                            <th
+                              className="text-left p-3 text-slate-400 font-medium cursor-pointer hover:text-white transition-colors"
+                              onClick={() => handleSort("favoriteNFLTeam")}
+                              data-testid="th-favorite-team"
+                            >
+                              <div className="flex items-center gap-1">
+                                Favorite NFL Team
+                                {usersSortBy === "favoriteNFLTeam" && (
+                                  <span className="text-orange-400">{usersSortOrder === "asc" ? "↑" : "↓"}</span>
+                                )}
+                              </div>
+                            </th>
+                            <th
+                              className="text-left p-3 text-slate-400 font-medium cursor-pointer hover:text-white transition-colors"
+                              onClick={() => handleSort("lastLoginIp")}
+                              data-testid="th-ip-address"
+                            >
+                              <div className="flex items-center gap-1">
+                                IP Address
+                                {usersSortBy === "lastLoginIp" && (
+                                  <span className="text-orange-400">{usersSortOrder === "asc" ? "↑" : "↓"}</span>
+                                )}
+                              </div>
+                            </th>
+                            <th
+                              className="text-left p-3 text-slate-400 font-medium cursor-pointer hover:text-white transition-colors"
+                              onClick={() => handleSort("createdAt")}
+                              data-testid="th-created-at"
+                            >
+                              <div className="flex items-center gap-1">
+                                Account Created
+                                {usersSortBy === "createdAt" && (
+                                  <span className="text-orange-400">{usersSortOrder === "asc" ? "↑" : "↓"}</span>
+                                )}
+                              </div>
+                            </th>
+                            <th
+                              className="text-left p-3 text-slate-400 font-medium cursor-pointer hover:text-white transition-colors"
+                              onClick={() => handleSort("lastLoginAt")}
+                              data-testid="th-last-login"
+                            >
+                              <div className="flex items-center gap-1">
+                                Last Login
+                                {usersSortBy === "lastLoginAt" && (
+                                  <span className="text-orange-400">{usersSortOrder === "asc" ? "↑" : "↓"}</span>
+                                )}
+                              </div>
+                            </th>
+                            <th className="text-right p-3 text-slate-400 font-medium">Actions</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                        </thead>
+                        <tbody className="divide-y divide-slate-700/50">
+                          {usersResponse.users.map((user, index) => (
+                            <tr
+                              key={user.id}
+                              className={`hover:bg-slate-800/50 transition-colors ${index % 2 === 1 ? "bg-slate-800/20" : ""}`}
+                              data-testid={`user-row-${user.id}`}
+                            >
+                              <td className="p-3 text-slate-300" data-testid={`text-user-name-${user.id}`}>
+                                {user.firstName || "—"}
+                              </td>
+                              <td className="p-3 text-slate-300" data-testid={`text-user-team-${user.id}`}>
+                                {user.favoriteNFLTeam || "—"}
+                              </td>
+                              <td className="p-3 text-slate-400 font-mono text-xs" data-testid={`text-user-ip-${user.id}`}>
+                                {user.lastLoginIp || "—"}
+                              </td>
+                              <td className="p-3 text-slate-300" data-testid={`text-user-created-${user.id}`}>
+                                {user.createdAt ? format(new Date(user.createdAt), "MMM d, yyyy") : "—"}
+                              </td>
+                              <td className="p-3 text-slate-300" data-testid={`text-user-login-${user.id}`}>
+                                {user.lastLoginAt ? format(new Date(user.lastLoginAt), "MMM d, yyyy h:mm a") : "Never"}
+                              </td>
+                              <td className="p-3 text-right">
+                                <div className="flex gap-2 justify-end">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => sendWelcomeEmailMutation.mutate(user.email)}
+                                    disabled={sendWelcomeEmailMutation.isPending}
+                                    className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                                    data-testid={`button-send-to-${user.id}`}
+                                  >
+                                    <Mail className="w-3 h-3 mr-1" />
+                                    Email
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setResetPasswordEmail(user.email)}
+                                    className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                                    data-testid={`button-reset-${user.id}`}
+                                  >
+                                    <Key className="w-3 h-3 mr-1" />
+                                    Reset
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {/* Pagination Controls */}
+                    {usersResponse.totalPages > 1 && (
+                      <div className="flex items-center justify-between p-4 border-t border-slate-700">
+                        <div className="text-sm text-slate-400">
+                          Page {usersResponse.page} of {usersResponse.totalPages}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setUsersPage(p => Math.max(1, p - 1))}
+                            disabled={usersPage === 1 || usersLoading}
+                            className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                            data-testid="button-prev-page"
+                          >
+                            Previous
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setUsersPage(p => Math.min(usersResponse.totalPages, p + 1))}
+                            disabled={usersPage >= usersResponse.totalPages || usersLoading}
+                            className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                            data-testid="button-next-page"
+                          >
+                            Next
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>

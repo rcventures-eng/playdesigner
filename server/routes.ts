@@ -6,7 +6,7 @@ import { FOOTBALL_CONFIG, FORMATIONS, resolveColorKey } from "../shared/football
 import { LOGIC_DICTIONARY } from "../shared/logic-dictionary";
 import { db } from "./db";
 import { aiGenerationLogs, users, teams, plays, passwordResetTokens, featureRequests, insertUserSchema, insertTeamSchema, insertPlaySchema, insertFeatureRequestSchema } from "@shared/schema";
-import { desc, eq, and, gt } from "drizzle-orm";
+import { desc, eq, and, gt, asc, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { sendWelcomeEmail, sendPasswordResetEmail, sendFeatureRequestEmail } from "./resend";
@@ -567,7 +567,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid input", details: result.error.flatten() });
       }
 
-      const { email, password, firstName, favoriteTeam } = result.data;
+      const { email, password, firstName, favoriteNFLTeam } = result.data;
 
       // Check if user already exists
       const existingUser = await db.select().from(users).where(eq(users.email, email)).limit(1);
@@ -583,7 +583,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email,
         password: hashedPassword,
         firstName: firstName || null,
-        favoriteTeam: favoriteTeam || null,
+        favoriteNFLTeam: favoriteNFLTeam || null,
       }).returning();
 
       // Set session
@@ -600,7 +600,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: newUser.id, 
           email: newUser.email,
           firstName: newUser.firstName,
-          favoriteTeam: newUser.favoriteTeam
+          favoriteNFLTeam: newUser.favoriteNFLTeam
         } 
       });
     } catch (error: any) {
@@ -629,6 +629,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!isValid) {
         return res.status(401).json({ error: "Invalid credentials" });
       }
+
+      // Capture client IP (handle Replit's proxy)
+      const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || null;
+
+      // Update lastLoginAt and lastLoginIp
+      await db.update(users).set({
+        lastLoginAt: new Date(),
+        lastLoginIp: clientIp,
+      }).where(eq(users.id, user.id));
 
       // Set session
       req.session.userId = user.id;
@@ -1066,18 +1075,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin: Get all users for email management
-  app.get("/api/admin/users", verifyAdmin, async (_req, res) => {
+  // Admin: Get all users for email management with pagination and sorting
+  app.get("/api/admin/users", verifyAdmin, async (req, res) => {
     try {
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+      const sortBy = (req.query.sortBy as string) || "createdAt";
+      const sortOrder = (req.query.sortOrder as string) === "asc" ? "asc" : "desc";
+      const offset = (page - 1) * limit;
+
+      // Build sort column
+      const sortColumns: Record<string, any> = {
+        firstName: users.firstName,
+        favoriteNFLTeam: users.favoriteNFLTeam,
+        lastLoginIp: users.lastLoginIp,
+        createdAt: users.createdAt,
+        lastLoginAt: users.lastLoginAt,
+      };
+      const sortColumn = sortColumns[sortBy] || users.createdAt;
+
+      // Get total count
+      const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(users);
+      const total = Number(count);
+      const totalPages = Math.ceil(total / limit);
+
+      // Get paginated users with sorting
       const allUsers = await db.select({
         id: users.id,
         email: users.email,
         firstName: users.firstName,
-        favoriteTeam: users.favoriteTeam,
+        favoriteNFLTeam: users.favoriteNFLTeam,
         isAdmin: users.isAdmin,
         createdAt: users.createdAt,
-      }).from(users).orderBy(desc(users.createdAt)).limit(50);
-      res.json(allUsers);
+        lastLoginAt: users.lastLoginAt,
+        lastLoginIp: users.lastLoginIp,
+      }).from(users)
+        .orderBy(sortOrder === "asc" ? asc(sortColumn) : desc(sortColumn))
+        .limit(limit)
+        .offset(offset);
+
+      res.json({
+        users: allUsers,
+        total,
+        page,
+        totalPages,
+      });
     } catch (error: any) {
       console.error("Failed to fetch users:", error);
       res.status(500).json({ error: error.message });

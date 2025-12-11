@@ -8,16 +8,19 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
   firstName: text("first_name"),
-  favoriteTeam: text("favorite_team"),
+  lastName: text("last_name"),
+  favoriteNFLTeam: text("favorite_nfl_team"),
   isAdmin: boolean("is_admin").default(false),
   createdAt: timestamp("created_at").defaultNow(),
+  lastLoginAt: timestamp("last_login_at"),
+  lastLoginIp: text("last_login_ip"),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
   email: true,
   password: true,
   firstName: true,
-  favoriteTeam: true,
+  favoriteNFLTeam: true,
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;

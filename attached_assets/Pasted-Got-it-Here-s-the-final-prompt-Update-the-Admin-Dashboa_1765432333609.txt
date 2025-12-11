@@ -1,0 +1,78 @@
+Got it. Here's the final prompt:
+
+---
+
+```
+Update the Admin Dashboard to display a proper data table in the "Registered Users" section with sortable columns and pagination.
+
+## Tech Stack Context
+- React + TypeScript
+- Tailwind CSS + shadcn/ui components
+- Drizzle ORM + PostgreSQL
+- Express backend
+- Admin route already exists at /admin with a "Registered Users" section (may just be a header currently)
+
+## Schema Changes Required (shared/schema.ts)
+
+Add the following fields to the `users` table:
+
+1. `lastName` (varchar, nullable) — not captured yet, just adding the field for future use
+2. `favoriteNFLTeam` (varchar, nullable) — will store team name string
+3. `lastLoginAt` (timestamp, nullable) — updated on each successful login
+4. `lastLoginIp` (varchar, nullable) — stores IP address from most recent login
+
+## Data Migration
+
+For any user who currently owns a team in the `teams` table:
+- Copy their team's `name` value into the user's new `favoriteNFLTeam` field
+- If a user owns multiple teams, use the first one created (earliest createdAt)
+- Do NOT delete the teams data — we'll repurpose it later
+
+## Login Logic Update
+
+On successful login (wherever authentication is handled):
+- Update `lastLoginAt` to current timestamp
+- Capture client IP address and store in `lastLoginIp`
+- For IP capture behind Replit's proxy, use: `req.headers['x-forwarded-for']?.split(',')[0] || req.ip`
+
+## Admin UI Requirements
+
+Replace the current "Registered Users" section with a proper data table:
+
+**Columns (in this order):**
+| Column | Source | Sortable |
+|--------|--------|----------|
+| First Name | users.firstName | Yes |
+| Favorite NFL Team | users.favoriteNFLTeam | Yes |
+| IP Address | users.lastLoginIp | Yes |
+| Account Created | users.createdAt | Yes |
+| Last Login | users.lastLoginAt | Yes |
+
+**Table Features:**
+- Sortable columns — click column header to sort asc/desc, show visual indicator for current sort
+- Pagination — 20 rows per page, show page controls (Previous/Next or numbered pages)
+- Default sort: Account Created descending (newest first)
+- Handle null values gracefully (show "—" or "Never" for empty lastLoginAt)
+- Format dates in readable format (e.g., "Dec 10, 2024" or "Dec 10, 2024 7:30 PM")
+
+**Styling:**
+- Match existing admin dashboard dark theme
+- Use shadcn/ui Table component if available
+- Zebra striping or hover states for row readability
+
+## API Endpoint
+
+GET /api/admin/users
+- Requires admin authentication (existing isAdmin check)
+- Support query params: ?page=1&limit=20&sortBy=createdAt&sortOrder=desc
+- Return: { users: [...], total: number, page: number, totalPages: number }
+
+## File Locations
+- Database schema: shared/schema.ts
+- API routes: server/routes.ts
+- Admin page: likely client/src/pages/Admin.tsx or similar
+```
+
+---
+
+That should do it. Want me to adjust anything before you run it?

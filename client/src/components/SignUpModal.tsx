@@ -53,7 +53,7 @@ export default function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [firstName, setFirstName] = useState("");
-  const [favoriteTeam, setFavoriteTeam] = useState("");
+  const [favoriteNFLTeam, setFavoriteNFLTeam] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   
@@ -97,7 +97,7 @@ export default function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
         email,
         password,
         firstName: firstName || undefined,
-        favoriteTeam: favoriteTeam || undefined,
+        favoriteNFLTeam: favoriteNFLTeam || undefined,
       });
 
       const data = await response.json();
@@ -127,7 +127,7 @@ export default function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
     setPassword("");
     setConfirmPassword("");
     setFirstName("");
-    setFavoriteTeam("");
+    setFavoriteNFLTeam("");
     setError("");
     setTouched({ email: false, password: false, confirmPassword: false });
   };
@@ -256,7 +256,7 @@ export default function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
             <Label htmlFor="signup-team" className="text-slate-300">
               Favorite NFL Team <span className="text-slate-500">(optional)</span>
             </Label>
-            <Select value={favoriteTeam} onValueChange={setFavoriteTeam}>
+            <Select value={favoriteNFLTeam} onValueChange={setFavoriteNFLTeam}>
               <SelectTrigger 
                 className="bg-slate-800 border-slate-600 text-white"
                 data-testid="select-signup-team"
