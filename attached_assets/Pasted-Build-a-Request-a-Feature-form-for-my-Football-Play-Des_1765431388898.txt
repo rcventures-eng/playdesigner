@@ -1,0 +1,80 @@
+Build a "Request a Feature" form for my Football Play Designer app. This form should match the existing visual design of the "Create a Free Account" form (same card styling, input styling, button styling, dark theme).
+
+## Tech Stack Context
+- React + TypeScript
+- Tailwind CSS + shadcn/ui components
+- Wouter for routing
+- Drizzle ORM + PostgreSQL
+- Express backend
+- Resend for email
+
+## Form Requirements
+
+**Route:** /request-feature
+
+**Fields:**
+
+1. **User Type** (required)
+   - Label: "What kind of user are you?"
+   - Type: Select dropdown
+   - Options: "Football Parent", "Amateur Coach", "Professional Coach"
+
+2. **Feature Request** (required)
+   - Label: "What feature would you like to see that isn't currently available?"
+   - Type: Textarea (3-4 rows)
+   - Placeholder: "Describe the feature you'd like..."
+
+3. **Use Case** (required)
+   - Label: "How would you use this feature if it was built?"
+   - Type: Textarea (3-4 rows)
+   - Placeholder: "Help us understand your use case..."
+
+**Submit Button:** "Submit Request" (green, matching existing button style)
+
+## Backend Requirements
+
+### Database Storage
+Create a new `feature_requests` table in shared/schema.ts:
+- id: serial primary key
+- userType: text (required)
+- featureDescription: text (required)
+- useCase: text (required)
+- userId: varchar (nullable, references users.id) — associate if user is logged in
+- createdAt: timestamp with default now()
+
+### Email Notification
+On successful submission, send an email via Resend to ray@raymcarroll.com with:
+- Subject: "New Feature Request from [userType]"
+- Body: formatted version of all three fields
+
+### API Endpoint
+POST /api/feature-requests
+- No authentication required
+- If user IS logged in (session exists), attach their userId to the record
+- Return 201 on success
+
+## Spam Protection (Honeypot)
+
+Add a hidden honeypot field to prevent bot submissions:
+
+**Frontend:**
+- Add a text input field named "website" with label "Website"
+- Hide it using CSS: position it off-screen or use opacity: 0 with pointer-events: none
+- Do NOT use display: none or visibility: hidden (bots detect these)
+- Use something like: `className="absolute -left-[9999px]"` or `aria-hidden="true" tabIndex={-1} autoComplete="off" style={{ position: 'absolute', left: '-9999px' }}`
+
+**Backend:**
+- If the "website" field contains ANY value, silently reject the submission
+- Return 201 success anyway (don't tip off bots that they were caught)
+- Do NOT store the submission or send email when honeypot is triggered
+
+## Post-Submit Behavior
+- Show success toast/message: "Thanks for your feedback! We review every request."
+- Clear the form fields
+- Stay on the same page (no redirect)
+
+## File Locations for Reference
+- Database schema: shared/schema.ts
+- API routes: server/routes.ts
+- Email templates: server/resend.ts
+- Existing form styling: reference the Create Account / Login forms
