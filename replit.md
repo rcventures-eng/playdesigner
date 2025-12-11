@@ -75,6 +75,16 @@ The application features "Offense," "Defense," "Special" (reserved), and "AI Bet
 
 A fixed-width right sidebar provides guided instructions on play creation, including "Pro Tips" and calls-to-action for account creation and feature requests.
 
+### Feature Request System
+
+A user feedback collection system accessible from the right sidebar "Request a Feature" button:
+-   **Database Storage**: `feature_requests` table stores userType, featureDescription, useCase, optional userId, and createdAt timestamp
+-   **API Endpoint**: `POST /api/feature-requests` - no authentication required, accepts submissions from all users
+-   **Spam Protection**: Honeypot field silently rejects bot submissions while returning 201 status
+-   **Input Validation**: Backend validates userType against allowed list, enforces string types, and limits content length to 5000 characters
+-   **Email Notifications**: Sends formatted HTML email to admin via Resend with HTML-escaped content to prevent injection
+-   **Frontend Dialog**: Modal dialog matching login modal styling (dark theme) with user type select, feature description textarea, and use case textarea
+
 ## External Dependencies
 
 -   **UI/Design**: Radix UI, shadcn/ui, Lucide React, class-variance-authority, Tailwind CSS.
