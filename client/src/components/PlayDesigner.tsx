@@ -7,6 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { Download, Copy, Plus, Trash2, Circle as CircleIcon, MoveHorizontal, PenTool, Square as SquareIcon, Type, Hexagon, RotateCcw, Flag, Camera, X, Loader2, Sparkles } from "lucide-react";
 import { toPng } from "html-to-image";
 import { useToast } from "@/hooks/use-toast";
@@ -269,6 +271,14 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   // Suppress the click event that follows a long-press menu opening
   const suppressNextClickRef = useRef(false);
   const { toast } = useToast();
+  
+  // Feature Request Dialog state
+  const [showFeatureRequestDialog, setShowFeatureRequestDialog] = useState(false);
+  const [featureUserType, setFeatureUserType] = useState("");
+  const [featureDescription, setFeatureDescription] = useState("");
+  const [featureUseCase, setFeatureUseCase] = useState("");
+  const [featureHoneypot, setFeatureHoneypot] = useState("");
+  const [isSubmittingFeature, setIsSubmittingFeature] = useState(false);
 
   const { colors: CONFIG_COLORS, labels: CONFIG_LABELS } = FOOTBALL_CONFIG;
   const CONFIG_ROUTES = CONFIG_COLORS.routes;
@@ -1855,6 +1865,63 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
 
   const dismissUploadedImage = () => {
     setUploadedImage(null);
+  };
+
+  // Feature Request form handlers
+  const resetFeatureRequestForm = () => {
+    setFeatureUserType("");
+    setFeatureDescription("");
+    setFeatureUseCase("");
+    setFeatureHoneypot("");
+    setShowFeatureRequestDialog(false);
+  };
+
+  const handleFeatureRequestSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!featureUserType || !featureDescription.trim() || !featureUseCase.trim()) {
+      toast({
+        title: "Missing Fields",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmittingFeature(true);
+
+    try {
+      const response = await fetch("/api/feature-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          userType: featureUserType,
+          featureDescription: featureDescription.trim(),
+          useCase: featureUseCase.trim(),
+          website: featureHoneypot, // Honeypot field
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to submit request");
+      }
+
+      toast({
+        title: "Thanks for your feedback!",
+        description: "We review every request.",
+      });
+
+      resetFeatureRequestForm();
+    } catch (error) {
+      toast({
+        title: "Submission Failed",
+        description: "Please try again later",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmittingFeature(false);
+    }
   };
 
   const handleGeneratePlay = async (imageBase64?: string) => {
@@ -3932,6 +3999,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
               variant="secondary"
               className="w-full bg-green-600 hover:bg-green-700 text-white border-0 text-xs"
               data-testid="button-request-feature"
+              onClick={() => setShowFeatureRequestDialog(true)}
             >
               Request a Feature
             </Button>
@@ -4309,6 +4377,92 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
           </div>
         </div>
       )}
+
+      {/* Feature Request Dialog */}
+      <Dialog open={showFeatureRequestDialog} onOpenChange={(open) => !open && resetFeatureRequestForm()}>
+        <DialogContent className="bg-slate-900 border-slate-700 text-white sm:max-w-md" data-testid="modal-feature-request">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-center text-green-400">
+              Request a Feature
+            </DialogTitle>
+          </DialogHeader>
+          
+          <form onSubmit={handleFeatureRequestSubmit} className="space-y-4 pt-4">
+            {/* Honeypot field - hidden from users, visible to bots */}
+            <input
+              type="text"
+              name="website"
+              value={featureHoneypot}
+              onChange={(e) => setFeatureHoneypot(e.target.value)}
+              tabIndex={-1}
+              autoComplete="off"
+              aria-hidden="true"
+              style={{ position: 'absolute', left: '-9999px' }}
+            />
+            
+            <div className="space-y-2">
+              <Label htmlFor="userType" className="text-slate-300">What kind of user are you?</Label>
+              <Select value={featureUserType} onValueChange={setFeatureUserType}>
+                <SelectTrigger 
+                  className="bg-slate-800 border-slate-600 text-white"
+                  data-testid="select-user-type"
+                >
+                  <SelectValue placeholder="Select user type..." />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-800 border-slate-600">
+                  <SelectItem value="Football Parent" className="text-white hover:bg-slate-700">Football Parent</SelectItem>
+                  <SelectItem value="Amateur Coach" className="text-white hover:bg-slate-700">Amateur Coach</SelectItem>
+                  <SelectItem value="Professional Coach" className="text-white hover:bg-slate-700">Professional Coach</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="featureDescription" className="text-slate-300">
+                What feature would you like to see that isn't currently available?
+              </Label>
+              <Textarea
+                id="featureDescription"
+                value={featureDescription}
+                onChange={(e) => setFeatureDescription(e.target.value)}
+                placeholder="Describe the feature you'd like..."
+                className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500 min-h-[80px]"
+                data-testid="textarea-feature-description"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="useCase" className="text-slate-300">
+                How would you use this feature if it was built?
+              </Label>
+              <Textarea
+                id="useCase"
+                value={featureUseCase}
+                onChange={(e) => setFeatureUseCase(e.target.value)}
+                placeholder="Help us understand your use case..."
+                className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500 min-h-[80px]"
+                data-testid="textarea-use-case"
+              />
+            </div>
+            
+            <Button
+              type="submit"
+              disabled={isSubmittingFeature || !featureUserType || !featureDescription.trim() || !featureUseCase.trim()}
+              className="w-full bg-green-600 hover:bg-green-700 text-white font-bold"
+              data-testid="button-submit-feature"
+            >
+              {isSubmittingFeature ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                "Submit Request"
+              )}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
       </div>
     </div>
   );
