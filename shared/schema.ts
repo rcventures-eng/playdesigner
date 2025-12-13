@@ -87,6 +87,7 @@ export const aiGenerationLogs = pgTable("ai_generation_logs", {
   id: serial("id").primaryKey(),
   prompt: text("prompt"),
   hasImage: boolean("has_image").default(false),
+  uploadedImage: text("uploaded_image"),
   status: text("status").notNull().default("success"),
   timestamp: timestamp("timestamp").defaultNow(),
   previewJson: jsonb("preview_json"),
