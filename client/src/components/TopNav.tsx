@@ -220,7 +220,7 @@ export default function TopNav({ isAdmin, setIsAdmin, showSignUp, setShowSignUp 
               <DropdownMenuContent align="end" className="w-48 bg-white">
                 <DropdownMenuItem 
                   onClick={() => setLocation("/")}
-                  className="cursor-pointer text-black focus:text-black"
+                  className="cursor-pointer text-black hover:bg-orange-100 hover:text-orange-900 focus:bg-orange-100 focus:text-orange-900"
                   data-testid="link-build-plays"
                 >
                   <Dumbbell className="mr-2 h-4 w-4 text-black" />
@@ -228,7 +228,7 @@ export default function TopNav({ isAdmin, setIsAdmin, showSignUp, setShowSignUp 
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={() => setLocation("/plays")}
-                  className="cursor-pointer text-black focus:text-black"
+                  className="cursor-pointer text-black hover:bg-orange-100 hover:text-orange-900 focus:bg-orange-100 focus:text-orange-900"
                   data-testid="link-play-library"
                 >
                   <LayoutGrid className="mr-2 h-4 w-4 text-black" />
@@ -236,7 +236,7 @@ export default function TopNav({ isAdmin, setIsAdmin, showSignUp, setShowSignUp 
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={() => setLocation("/playbooks")}
-                  className="cursor-pointer text-black focus:text-black"
+                  className="cursor-pointer text-black hover:bg-orange-100 hover:text-orange-900 focus:bg-orange-100 focus:text-orange-900"
                   data-testid="link-playbooks"
                 >
                   <BookOpen className="mr-2 h-4 w-4 text-black" />
@@ -245,7 +245,7 @@ export default function TopNav({ isAdmin, setIsAdmin, showSignUp, setShowSignUp 
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
                   onClick={handleLogout}
-                  className="cursor-pointer text-red-500 focus:text-red-500"
+                  className="cursor-pointer text-red-500 hover:bg-red-50 hover:text-red-700 focus:bg-red-50 focus:text-red-700"
                   data-testid="button-logout"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
