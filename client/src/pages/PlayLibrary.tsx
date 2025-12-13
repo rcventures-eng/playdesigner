@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
 import { Play } from "@shared/schema";
 import { PlayPreview } from "@/components/PlayPreview";
+import TopNav from "@/components/TopNav";
 import { Button } from "@/components/ui/button";
 import { 
   Select,
@@ -56,6 +57,8 @@ export default function PlayLibrary() {
   const [sortBy, setSortBy] = useState<SortBy>("createdAt");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [selectedPlays, setSelectedPlays] = useState<Set<number>>(new Set());
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [showSignUp, setShowSignUp] = useState(false);
   
   const { data: user, isLoading: userLoading } = useQuery<{ id: string; email: string; firstName: string } | null>({
     queryKey: ["/api/me"],
@@ -124,38 +127,54 @@ export default function PlayLibrary() {
   
   if (userLoading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="animate-pulse text-gray-500">Loading...</div>
+      <div className="min-h-screen bg-white flex flex-col">
+        <TopNav 
+          isAdmin={isAdmin}
+          setIsAdmin={setIsAdmin}
+          showSignUp={showSignUp}
+          setShowSignUp={setShowSignUp}
+        />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="animate-pulse text-gray-500">Loading...</div>
+        </div>
       </div>
     );
   }
   
   if (!user) {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-8">
-        <div className="max-w-md text-center space-y-6">
-          <LayoutGrid className="w-16 h-16 text-orange-500 mx-auto" />
-          <h1 className="text-3xl font-bold text-gray-900">Play Library</h1>
-          <p className="text-gray-600">
-            Sign in to access your saved plays and manage your playbook.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
-              onClick={() => navigate("/")}
-              className="bg-orange-500 hover:bg-orange-600 text-white"
-              data-testid="button-login-prompt"
-            >
-              <LogIn className="w-4 h-4 mr-2" />
-              Log In
-            </Button>
-            <Button 
-              variant="outline"
-              onClick={() => navigate("/?signup=true")}
-              data-testid="button-signup-prompt"
-            >
-              <UserPlus className="w-4 h-4 mr-2" />
-              Create Account
-            </Button>
+      <div className="min-h-screen bg-white flex flex-col">
+        <TopNav 
+          isAdmin={isAdmin}
+          setIsAdmin={setIsAdmin}
+          showSignUp={showSignUp}
+          setShowSignUp={setShowSignUp}
+        />
+        <div className="flex-1 flex flex-col items-center justify-center p-8">
+          <div className="max-w-md text-center space-y-6">
+            <LayoutGrid className="w-16 h-16 text-orange-500 mx-auto" />
+            <h1 className="text-3xl font-bold text-gray-900">Play Library</h1>
+            <p className="text-gray-600">
+              Sign in to access your saved plays and manage your playbook.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button 
+                onClick={() => navigate("/")}
+                className="bg-orange-500 hover:bg-orange-600 text-white"
+                data-testid="button-login-prompt"
+              >
+                <LogIn className="w-4 h-4 mr-2" />
+                Log In
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => navigate("/?signup=true")}
+                data-testid="button-signup-prompt"
+              >
+                <UserPlus className="w-4 h-4 mr-2" />
+                Create Account
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -163,7 +182,14 @@ export default function PlayLibrary() {
   }
 
   return (
-    <div className="min-h-screen bg-white flex">
+    <div className="min-h-screen bg-white flex flex-col">
+      <TopNav 
+        isAdmin={isAdmin}
+        setIsAdmin={setIsAdmin}
+        showSignUp={showSignUp}
+        setShowSignUp={setShowSignUp}
+      />
+      <div className="flex flex-1 overflow-hidden">
       {/* Sidebar */}
       <aside 
         className={`${sidebarCollapsed ? 'w-16' : 'w-64'} border-r border-gray-200 bg-gray-50 flex flex-col transition-all duration-300`}
@@ -362,6 +388,7 @@ export default function PlayLibrary() {
           )}
         </div>
       </main>
+      </div>
     </div>
   );
 }
