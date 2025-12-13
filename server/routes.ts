@@ -563,6 +563,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await db.insert(aiGenerationLogs).values({
           prompt: prompt || null,
           hasImage: !!image,
+          uploadedImage: image || null,
           status: "success",
           previewJson: playData,
         });
@@ -583,6 +584,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await db.insert(aiGenerationLogs).values({
           prompt: req.body.prompt || null,
           hasImage: !!req.body.image,
+          uploadedImage: req.body.image || null,
           status: "error",
         });
       } catch (logError) {
