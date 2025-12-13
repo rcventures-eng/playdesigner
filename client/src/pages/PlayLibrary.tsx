@@ -16,8 +16,6 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   ChevronLeft, 
   ChevronRight, 
-  Share2, 
-  Download, 
   Plus,
   Folder,
   LayoutGrid,
@@ -247,49 +245,22 @@ export default function PlayLibrary() {
       <main className="flex-1 flex flex-col">
         {/* Header */}
         <header className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold text-gray-900" data-testid="text-page-title">
-              Play Library
-            </h1>
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                onClick={handleShare}
-                disabled={selectedPlays.size === 0}
-                data-testid="button-share"
-              >
-                <Share2 className="w-4 h-4 mr-2" />
-                Share Play
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={handleExport}
-                disabled={selectedPlays.size === 0}
-                data-testid="button-export"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Export Play
-              </Button>
-              <Link href="/">
-                <Button className="bg-orange-500 hover:bg-orange-600 text-white" data-testid="button-new-play">
-                  <Plus className="w-4 h-4 mr-2" />
-                  New Play
-                </Button>
-              </Link>
-            </div>
-          </div>
+          {/* Centered Title */}
+          <h1 className="text-4xl font-bold text-gray-900 text-center mb-4" data-testid="text-page-title">
+            Play Library
+          </h1>
           
-          {/* Play Type Toggle Pills */}
-          <div className="flex items-center justify-between">
+          {/* Centered Play Type Toggle Pills */}
+          <div className="flex justify-center mb-6">
             <div className="flex gap-2" data-testid="play-type-tabs">
               {(["offense", "defense", "special"] as PlayType[]).map((type) => (
                 <button
                   key={type}
                   onClick={() => setPlayType(type)}
-                  className={`px-4 py-2 rounded-full font-medium transition-colors ${
+                  className={`px-6 py-2 rounded-full font-medium transition-colors border ${
                     playType === type
-                      ? 'bg-orange-500 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-orange-500 text-white border-orange-500'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                   }`}
                   data-testid={`tab-${type}`}
                 >
@@ -297,10 +268,13 @@ export default function PlayLibrary() {
                 </button>
               ))}
             </div>
-            
-            {/* Sort Dropdown */}
+          </div>
+          
+          {/* Toolbar Row: GROUP BY on left, Action buttons on right */}
+          <div className="flex items-center justify-between">
+            {/* Group By Dropdown - Left */}
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">Group By:</span>
+              <span className="text-sm font-medium text-gray-700 uppercase tracking-wide">Group By:</span>
               <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortBy)}>
                 <SelectTrigger className="w-40" data-testid="select-sort">
                   <SelectValue />
@@ -312,6 +286,31 @@ export default function PlayLibrary() {
                   <SelectItem value="personnel">Personnel</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            
+            {/* Action Buttons - Right */}
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                onClick={handleShare}
+                disabled={selectedPlays.size === 0}
+                data-testid="button-share"
+              >
+                Share Play
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={handleExport}
+                disabled={selectedPlays.size === 0}
+                data-testid="button-export"
+              >
+                Export Play
+              </Button>
+              <Link href="/">
+                <Button variant="outline" data-testid="button-new-play">
+                  New Play
+                </Button>
+              </Link>
             </div>
           </div>
         </header>
