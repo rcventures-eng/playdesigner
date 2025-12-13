@@ -1,0 +1,55 @@
+"I need to build the Play Library page (/plays), which serves as the user's personal gallery of saved plays.
+
+1. The Layout (Light Theme)
+
+Container: Create a new page layout that uses a White Background (unlike the dark designer).
+
+Header: A simple, clean header centered at the top: 'Play Library'. Below it, add three toggle pills: 'Offense', 'Defense', 'Special' (similar to the Designer tabs but styled for light mode).
+
+2. The Sidebar (Collapsible Filter Menu)
+
+Position: Fixed left sidebar (width ~250px).
+
+Content:
+
+'All Plays (#)': The total count of plays.
+
+Categories: A list of filters: 'Run (#)', 'Pass (#)', 'Play-Action (#)', 'RPO (#)', 'Trick (#)'.
+
+Active State: Clicking a category should filter the grid on the right.
+
+Collapsible: Add a small chevron icon to collapse this sidebar to a thin icon-only strip to give more room to the gallery.
+
+3. The Main Gallery (Grid Area)
+
+Toolbar (Top Right):
+
+'Group By': A dropdown selector (Sorting) with options: 'Play Name', 'Date Created', 'Formation', 'Personnel'.
+
+Action Buttons: Three outline buttons: 'Share Play', 'Export Play', 'New Play' (Redirects to /).
+
+The Grid: A responsive grid (grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6).
+
+The Play Card:
+
+Visual: A clean white card with a subtle gray border and shadow on hover.
+
+Preview: The top 2/3 of the card should be the Mini-Canvas. (Reuse the FieldCanvas component but pass a readOnly={true} prop and a small scale prop so it renders the play preview).
+
+Label: The play name centered below the preview.
+
+4. Data Integration
+
+Fetch: Use useQuery to fetch GET /api/plays.
+
+Client-Side Logic: Implement the filtering (Sidebar) and sorting (Dropdown) in the frontend.
+
+'New Play' Action: Ensure the 'New Play' button links back to the home page (/).
+
+5. Share & Export Stubs
+
+Share: Clicking 'Share' should open a simple alert/toast: 'Link copied to clipboard' (mock logic for now).
+
+Export: Clicking 'Export' should trigger a mock PDF download log.
+
+Please output the full code for pages/PlayLibrary.tsx and any necessary updates to App.tsx to route /plays to this component."

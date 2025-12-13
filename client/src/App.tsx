@@ -9,6 +9,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import AdminDashboard from "@/pages/admin";
 import ResetPasswordPage from "@/pages/reset-password";
+import PlayLibrary from "@/pages/PlayLibrary";
 
 function App() {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -32,6 +33,9 @@ function App() {
           </Route>
           <Route path="/reset-password">
             <ResetPasswordPage />
+          </Route>
+          <Route path="/plays">
+            <PlayLibrary />
           </Route>
           <Route component={NotFound} />
         </Switch>
