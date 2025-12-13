@@ -1842,6 +1842,10 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
       const base64 = reader.result as string;
       // Store base64 for later use with API
       setUploadedImage(base64);
+      // Set default prompt for image uploads (user can modify)
+      if (!specialPrompt.trim()) {
+        setSpecialPrompt("Generate this image exactly");
+      }
       setIsUploading(false);
     };
     reader.onerror = () => {
