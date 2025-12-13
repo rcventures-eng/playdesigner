@@ -361,7 +361,7 @@ export default function PlayLibrary() {
                       playType={play.type as PlayType}
                       playName={play.name}
                       formation={play.formation || undefined}
-                      scale={0.75}
+                      scale={0.6}
                     />
                   </div>
                   
