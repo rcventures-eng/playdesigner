@@ -242,11 +242,11 @@ export default function PlayLibrary() {
       </aside>
       
       {/* Main Content */}
-      <main className="flex-1 flex flex-col">
+      <main className="flex-1 flex flex-col pl-4">
         {/* Header */}
         <header className="p-6 border-b border-gray-200">
           {/* Centered Title */}
-          <h1 className="text-4xl font-bold text-gray-900 text-center mb-4" data-testid="text-page-title">
+          <h1 className="text-5xl font-bold text-gray-900 text-center mb-6" data-testid="text-page-title">
             Play Library
           </h1>
           
@@ -294,6 +294,7 @@ export default function PlayLibrary() {
                 variant="outline" 
                 onClick={handleShare}
                 disabled={selectedPlays.size === 0}
+                className="bg-white text-gray-900 border-gray-300 hover:bg-gray-50"
                 data-testid="button-share"
               >
                 Share Play
@@ -302,12 +303,13 @@ export default function PlayLibrary() {
                 variant="outline" 
                 onClick={handleExport}
                 disabled={selectedPlays.size === 0}
+                className="bg-white text-gray-900 border-gray-300 hover:bg-gray-50"
                 data-testid="button-export"
               >
                 Export Play
               </Button>
               <Link href="/">
-                <Button variant="outline" data-testid="button-new-play">
+                <Button variant="outline" className="bg-white text-gray-900 border-gray-300 hover:bg-gray-50" data-testid="button-new-play">
                   New Play
                 </Button>
               </Link>
