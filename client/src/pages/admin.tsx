@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { 
   Settings, 
   Database, 
@@ -15,12 +16,15 @@ import {
   Mail,
   Send,
   Key,
-  Shield
+  Shield,
+  Star,
+  Eye
 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { PlayPreview } from "@/components/PlayPreview";
 
 type AdminTab = "logic" | "presets" | "logs" | "email";
 type GameFormat = "5v5" | "7v7" | "9v9" | "11v11";
@@ -31,6 +35,9 @@ interface AILog {
   hasImage: boolean;
   timestamp: string;
   status: string;
+  previewJson: any;
+  feedbackNotes: string | null;
+  rating: number;
 }
 
 interface FormationPlayer {
@@ -100,6 +107,10 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
   const [usersSortBy, setUsersSortBy] = useState<SortColumn>("createdAt");
   const [usersSortOrder, setUsersSortOrder] = useState<SortOrder>("desc");
   const [usersPage, setUsersPage] = useState(1);
+  const [selectedLog, setSelectedLog] = useState<AILog | null>(null);
+  const [inspectModalOpen, setInspectModalOpen] = useState(false);
+  const [feedbackRating, setFeedbackRating] = useState(0);
+  const [feedbackNotes, setFeedbackNotes] = useState("");
   const { toast } = useToast();
 
   // Check admin status from server (secure endpoint)
@@ -237,6 +248,49 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
       toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
+
+  // Update feedback mutation for AI logs
+  const updateFeedbackMutation = useMutation({
+    mutationFn: async ({ id, rating, feedbackNotes }: { id: number; rating: number; feedbackNotes: string }) => {
+      const response = await fetch(`/api/admin/logs/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ rating, feedbackNotes }),
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to save feedback");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Feedback saved successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/logs"] });
+      setInspectModalOpen(false);
+      setSelectedLog(null);
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleOpenInspectModal = (log: AILog) => {
+    setSelectedLog(log);
+    setFeedbackRating(log.rating || 0);
+    setFeedbackNotes(log.feedbackNotes || "");
+    setInspectModalOpen(true);
+  };
+
+  const handleSaveFeedback = () => {
+    if (selectedLog) {
+      updateFeedbackMutation.mutate({
+        id: selectedLog.id,
+        rating: feedbackRating,
+        feedbackNotes: feedbackNotes,
+      });
+    }
+  };
 
   useEffect(() => {
     if (configData?.logicDictionary) {
@@ -545,12 +599,14 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
                 <div className="text-slate-400">Loading logs...</div>
               ) : (
                 <div className="bg-slate-900 rounded-lg border border-slate-700 overflow-hidden">
-                  <div className="grid grid-cols-12 gap-4 p-4 bg-slate-800 border-b border-slate-700 text-sm font-medium text-slate-300">
+                  <div className="grid grid-cols-12 gap-2 p-4 bg-slate-800 border-b border-slate-700 text-sm font-medium text-slate-300">
                     <div className="col-span-1">#</div>
-                    <div className="col-span-6">Prompt</div>
-                    <div className="col-span-2">Type</div>
+                    <div className="col-span-4">Prompt</div>
+                    <div className="col-span-1">Type</div>
+                    <div className="col-span-2">Rating</div>
                     <div className="col-span-2">Timestamp</div>
                     <div className="col-span-1">Status</div>
+                    <div className="col-span-1">Action</div>
                   </div>
                   {(!logsData || logsData.length === 0) ? (
                     <div className="p-8 text-center text-slate-500">
@@ -560,15 +616,27 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
                     logsData.map((log, index) => (
                       <div 
                         key={log.id}
-                        className="grid grid-cols-12 gap-4 p-4 border-b border-slate-700/50 text-sm"
+                        className="grid grid-cols-12 gap-2 p-4 border-b border-slate-700/50 text-sm items-center"
                         data-testid={`log-row-${log.id}`}
                       >
                         <div className="col-span-1 text-slate-400" data-testid={`text-log-index-${log.id}`}>{index + 1}</div>
-                        <div className="col-span-6 text-white truncate" title={log.prompt} data-testid={`text-log-prompt-${log.id}`}>
+                        <div className="col-span-4 text-white truncate" title={log.prompt} data-testid={`text-log-prompt-${log.id}`}>
                           {log.prompt || "(image upload)"}
                         </div>
-                        <div className="col-span-2 text-slate-300" data-testid={`text-log-type-${log.id}`}>
+                        <div className="col-span-1 text-slate-300" data-testid={`text-log-type-${log.id}`}>
                           {log.hasImage ? "Image" : "Text"}
+                        </div>
+                        <div className="col-span-2 flex gap-0.5" data-testid={`text-log-rating-${log.id}`}>
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              className={`w-3 h-3 ${
+                                star <= (log.rating || 0)
+                                  ? "fill-yellow-400 text-yellow-400"
+                                  : "text-slate-600"
+                              }`}
+                            />
+                          ))}
                         </div>
                         <div className="col-span-2 text-slate-400 text-xs" data-testid={`text-log-timestamp-${log.id}`}>
                           {new Date(log.timestamp).toLocaleString()}
@@ -581,6 +649,20 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
                           }`}>
                             {log.status}
                           </span>
+                        </div>
+                        <div className="col-span-1">
+                          {log.previewJson && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 px-2 text-orange-400 hover:text-orange-300 hover:bg-orange-500/10"
+                              onClick={() => handleOpenInspectModal(log)}
+                              data-testid={`button-view-log-${log.id}`}
+                            >
+                              <Eye className="w-3 h-3 mr-1" />
+                              View
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))
@@ -840,6 +922,109 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
           )}
         </main>
       </div>
+
+      {/* Inspect Log Modal */}
+      <Dialog open={inspectModalOpen} onOpenChange={setInspectModalOpen}>
+        <DialogContent className="max-w-5xl bg-slate-900 border-slate-700 text-white">
+          <DialogHeader>
+            <DialogTitle className="text-orange-400">Inspect AI Generation</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Review and rate this AI-generated play to improve future generations.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedLog && (
+            <div className="grid grid-cols-2 gap-6">
+              {/* Left Side: Play Preview */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-slate-300">Generated Play Preview</h3>
+                <div className="flex items-center justify-center bg-slate-800 rounded-lg p-4 min-h-[300px]">
+                  {selectedLog.previewJson ? (
+                    <PlayPreview 
+                      playData={selectedLog.previewJson} 
+                      playType="offense" 
+                      scale={0.6}
+                    />
+                  ) : (
+                    <div className="text-slate-500 text-sm">No preview available</div>
+                  )}
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex gap-2">
+                    <span className="text-slate-400">Prompt:</span>
+                    <span className="text-white">{selectedLog.prompt || "(image upload)"}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="text-slate-400">Type:</span>
+                    <span className="text-white">{selectedLog.hasImage ? "Image" : "Text"}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="text-slate-400">Status:</span>
+                    <span className={selectedLog.status === "success" ? "text-green-400" : "text-red-400"}>
+                      {selectedLog.status}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Side: Feedback Form */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-slate-300">Rate This Generation</h3>
+                
+                {/* Star Rating */}
+                <div className="space-y-2">
+                  <label className="text-xs text-slate-400">Quality Rating</label>
+                  <div className="flex gap-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setFeedbackRating(star)}
+                        className="p-1 hover:scale-110 transition-transform"
+                        data-testid={`button-star-${star}`}
+                      >
+                        <Star
+                          className={`w-8 h-8 ${
+                            star <= feedbackRating
+                              ? "fill-yellow-400 text-yellow-400"
+                              : "text-slate-600 hover:text-slate-400"
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    High-rated plays (4-5 stars) will be used as examples to improve future AI generations.
+                  </p>
+                </div>
+
+                {/* Notes */}
+                <div className="space-y-2">
+                  <label className="text-xs text-slate-400">Feedback Notes</label>
+                  <Textarea
+                    value={feedbackNotes}
+                    onChange={(e) => setFeedbackNotes(e.target.value)}
+                    placeholder="What made this generation good or bad? Any specific issues or improvements?"
+                    className="min-h-[150px] bg-slate-800 border-slate-600 text-white"
+                    data-testid="textarea-feedback-notes"
+                  />
+                </div>
+
+                {/* Save Button */}
+                <Button
+                  onClick={handleSaveFeedback}
+                  disabled={updateFeedbackMutation.isPending}
+                  className="w-full bg-orange-500 hover:bg-orange-600"
+                  data-testid="button-save-feedback"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  {updateFeedbackMutation.isPending ? "Saving..." : "Save Feedback"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

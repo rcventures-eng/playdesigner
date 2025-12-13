@@ -353,6 +353,45 @@ IMPORTANT RULES:
 10. Match player labels to their colors as defined in LABEL MAPPINGS`;
 };
 
+// Helper function to get few-shot examples from highly-rated generations
+const getHighRatedExamples = async (): Promise<string> => {
+  try {
+    const examples = await db.select({
+      prompt: aiGenerationLogs.prompt,
+      previewJson: aiGenerationLogs.previewJson,
+      rating: aiGenerationLogs.rating,
+    })
+    .from(aiGenerationLogs)
+    .where(and(
+      gt(aiGenerationLogs.rating, 3),
+      sql`${aiGenerationLogs.previewJson} IS NOT NULL`
+    ))
+    .orderBy(desc(aiGenerationLogs.rating), desc(aiGenerationLogs.timestamp))
+    .limit(3);
+
+    if (examples.length === 0) {
+      return "";
+    }
+
+    let fewShotSection = `\n\n=== FEW-SHOT EXAMPLES OF HIGH-QUALITY PLAYS ===
+The following are examples of plays that received high ratings (4-5 stars) from coaches. 
+Use these as references for the quality and structure expected:\n\n`;
+
+    examples.forEach((ex, i) => {
+      fewShotSection += `Example ${i + 1} (Rating: ${ex.rating}/5):\n`;
+      if (ex.prompt) {
+        fewShotSection += `User Request: "${ex.prompt}"\n`;
+      }
+      fewShotSection += `Generated Output: ${JSON.stringify(ex.previewJson, null, 2)}\n\n`;
+    });
+
+    return fewShotSection;
+  } catch (error) {
+    console.error("Failed to fetch few-shot examples:", error);
+    return "";
+  }
+};
+
 export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/generate-play", async (req, res) => {
     try {
@@ -373,11 +412,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
       });
 
+      // Get few-shot examples from highly-rated generations
+      const fewShotExamples = await getHighRatedExamples();
+
       let result;
 
       if (image) {
         // Use vision-specific prompt for image analysis
-        const visionPrompt = generateVisionSystemPrompt();
+        const visionPrompt = generateVisionSystemPrompt() + fewShotExamples;
         
         // Detect MIME type from base64 header
         let mimeType = "image/png";
@@ -417,8 +459,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           imageData,
         ]);
       } else {
-        // Use standard prompt for text-only generation
-        const systemPrompt = generateSystemPrompt();
+        // Use standard prompt for text-only generation with few-shot examples
+        const systemPrompt = generateSystemPrompt() + fewShotExamples;
         result = await model.generateContent([
           { text: systemPrompt },
           { text: prompt },
@@ -516,12 +558,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         playData.mechanics.preSnapMotion = true;
       }
 
-      // Log the successful generation to database
+      // Log the successful generation to database with preview data
       try {
         await db.insert(aiGenerationLogs).values({
           prompt: prompt || null,
           hasImage: !!image,
           status: "success",
+          previewJson: playData,
         });
       } catch (logError) {
         console.error("Failed to log AI generation:", logError);
@@ -1072,6 +1115,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(logs);
     } catch (error: any) {
       console.error("Failed to fetch logs:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update AI generation log feedback (protected)
+  app.patch("/api/admin/logs/:id", verifyAdmin, async (req, res) => {
+    try {
+      const logId = parseInt(req.params.id);
+      if (isNaN(logId)) {
+        return res.status(400).json({ error: "Invalid log ID" });
+      }
+
+      const { rating, feedbackNotes } = req.body;
+      
+      // Validate rating if provided
+      if (rating !== undefined && (typeof rating !== 'number' || rating < 0 || rating > 5)) {
+        return res.status(400).json({ error: "Rating must be a number between 0 and 5" });
+      }
+
+      const updateData: { rating?: number; feedbackNotes?: string } = {};
+      if (rating !== undefined) updateData.rating = rating;
+      if (feedbackNotes !== undefined) updateData.feedbackNotes = feedbackNotes;
+
+      const [updatedLog] = await db.update(aiGenerationLogs)
+        .set(updateData)
+        .where(eq(aiGenerationLogs.id, logId))
+        .returning();
+
+      if (!updatedLog) {
+        return res.status(404).json({ error: "Log not found" });
+      }
+
+      res.json(updatedLog);
+    } catch (error: any) {
+      console.error("Failed to update log:", error);
       res.status(500).json({ error: error.message });
     }
   });
