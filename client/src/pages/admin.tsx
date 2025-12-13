@@ -954,6 +954,12 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
                   )}
                 </div>
                 
+                {/* Prompt - shown between generated play and uploaded image */}
+                <div className="bg-slate-800/50 rounded-lg p-3 text-sm">
+                  <span className="text-slate-400">Prompt: </span>
+                  <span className="text-white break-words">{selectedLog.prompt || "(image upload)"}</span>
+                </div>
+                
                 {/* Show uploaded image if this was an image generation */}
                 {selectedLog.hasImage && selectedLog.uploadedImage && (
                   <div className="space-y-2">
@@ -970,10 +976,6 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
                 )}
                 
                 <div className="space-y-2 text-sm">
-                  <div className="flex gap-2">
-                    <span className="text-slate-400">Prompt:</span>
-                    <span className="text-white break-words">{selectedLog.prompt || "(image upload)"}</span>
-                  </div>
                   <div className="flex gap-2">
                     <span className="text-slate-400">Type:</span>
                     <span className="text-white">{selectedLog.hasImage ? "Image" : "Text"}</span>
