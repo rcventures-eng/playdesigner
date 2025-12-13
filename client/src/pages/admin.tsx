@@ -367,7 +367,10 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
       {/* Sidebar */}
       <div className="w-64 bg-slate-900 border-r border-slate-700 flex flex-col">
         <div className="p-4 border-b border-slate-700">
-          <h1 className="text-xl font-bold text-orange-400">Admin Dashboard</h1>
+          <h1 className={`text-xl font-bold ${import.meta.env.DEV ? "text-pink-400" : "text-orange-400"}`}>
+            Admin Dashboard
+            {import.meta.env.DEV && <span className="ml-2 text-xs bg-pink-500/20 px-2 py-0.5 rounded">DEV</span>}
+          </h1>
           <p className="text-xs text-slate-400 mt-1">RC Football Configuration</p>
         </div>
         
