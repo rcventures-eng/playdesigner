@@ -33,6 +33,7 @@ interface AILog {
   id: number;
   prompt: string;
   hasImage: boolean;
+  uploadedImage: string | null;
   timestamp: string;
   status: string;
   previewJson: any;
@@ -606,10 +607,10 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
                     <div className="col-span-1">#</div>
                     <div className="col-span-4">Prompt</div>
                     <div className="col-span-1">Type</div>
+                    <div className="col-span-1">Action</div>
                     <div className="col-span-2">Rating</div>
                     <div className="col-span-2">Timestamp</div>
                     <div className="col-span-1">Status</div>
-                    <div className="col-span-1">Action</div>
                   </div>
                   {(!logsData || logsData.length === 0) ? (
                     <div className="p-8 text-center text-slate-500">
@@ -619,39 +620,15 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
                     logsData.map((log, index) => (
                       <div 
                         key={log.id}
-                        className="grid grid-cols-12 gap-2 p-4 border-b border-slate-700/50 text-sm items-center"
+                        className="grid grid-cols-12 gap-2 p-4 border-b border-slate-700/50 text-sm items-start"
                         data-testid={`log-row-${log.id}`}
                       >
                         <div className="col-span-1 text-slate-400" data-testid={`text-log-index-${log.id}`}>{index + 1}</div>
-                        <div className="col-span-4 text-white truncate" title={log.prompt} data-testid={`text-log-prompt-${log.id}`}>
+                        <div className="col-span-4 text-white break-words whitespace-normal" data-testid={`text-log-prompt-${log.id}`}>
                           {log.prompt || "(image upload)"}
                         </div>
                         <div className="col-span-1 text-slate-300" data-testid={`text-log-type-${log.id}`}>
                           {log.hasImage ? "Image" : "Text"}
-                        </div>
-                        <div className="col-span-2 flex gap-0.5" data-testid={`text-log-rating-${log.id}`}>
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <Star
-                              key={star}
-                              className={`w-3 h-3 ${
-                                star <= (log.rating || 0)
-                                  ? "fill-yellow-400 text-yellow-400"
-                                  : "text-slate-600"
-                              }`}
-                            />
-                          ))}
-                        </div>
-                        <div className="col-span-2 text-slate-400 text-xs" data-testid={`text-log-timestamp-${log.id}`}>
-                          {new Date(log.timestamp).toLocaleString()}
-                        </div>
-                        <div className="col-span-1" data-testid={`text-log-status-${log.id}`}>
-                          <span className={`px-2 py-0.5 rounded text-xs ${
-                            log.status === "success" 
-                              ? "bg-green-500/20 text-green-400" 
-                              : "bg-red-500/20 text-red-400"
-                          }`}>
-                            {log.status}
-                          </span>
                         </div>
                         <div className="col-span-1">
                           {log.previewJson && (
@@ -666,6 +643,30 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
                               View
                             </Button>
                           )}
+                        </div>
+                        <div className="col-span-2 flex gap-0.5" data-testid={`text-log-rating-${log.id}`}>
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              className={`w-3 h-3 ${
+                                star <= (log.rating || 0)
+                                  ? "fill-yellow-400 text-yellow-400"
+                                  : "text-slate-600"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <div className="col-span-2 text-slate-400 text-xs break-words whitespace-normal" data-testid={`text-log-timestamp-${log.id}`}>
+                          {new Date(log.timestamp).toLocaleString()}
+                        </div>
+                        <div className="col-span-1" data-testid={`text-log-status-${log.id}`}>
+                          <span className={`px-2 py-0.5 rounded text-xs ${
+                            log.status === "success" 
+                              ? "bg-green-500/20 text-green-400" 
+                              : "bg-red-500/20 text-red-400"
+                          }`}>
+                            {log.status}
+                          </span>
                         </div>
                       </div>
                     ))
@@ -952,10 +953,26 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
                     <div className="text-slate-500 text-sm">No preview available</div>
                   )}
                 </div>
+                
+                {/* Show uploaded image if this was an image generation */}
+                {selectedLog.hasImage && selectedLog.uploadedImage && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium text-slate-300">Uploaded Image</h4>
+                    <div className="bg-slate-800 rounded-lg p-3 flex items-center justify-center">
+                      <img 
+                        src={selectedLog.uploadedImage} 
+                        alt="Uploaded play diagram" 
+                        className="max-w-full max-h-[200px] object-contain rounded"
+                        data-testid="img-uploaded-play"
+                      />
+                    </div>
+                  </div>
+                )}
+                
                 <div className="space-y-2 text-sm">
                   <div className="flex gap-2">
                     <span className="text-slate-400">Prompt:</span>
-                    <span className="text-white">{selectedLog.prompt || "(image upload)"}</span>
+                    <span className="text-white break-words">{selectedLog.prompt || "(image upload)"}</span>
                   </div>
                   <div className="flex gap-2">
                     <span className="text-slate-400">Type:</span>
