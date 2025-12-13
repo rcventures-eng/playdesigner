@@ -81,6 +81,19 @@ The application features "Offense," "Defense," "Special" (reserved), and "AI Bet
 
 A fixed-width right sidebar provides guided instructions on play creation, including "Pro Tips" and calls-to-action for account creation and feature requests.
 
+### Play Library Page
+
+A light-themed page at `/plays` for managing saved plays:
+-   **Layout**: White background with collapsible left sidebar (filters) and main gallery grid
+-   **Authentication**: Requires login; shows login prompt with account creation option for unauthenticated users
+-   **Play Type Tabs**: Offense/Defense/Special toggle pills to filter by play type
+-   **Sidebar Filters**: Categories include All Plays, Run, Pass, Play-Action, RPO, Trick with counts
+-   **Gallery Grid**: Responsive 1-4 column grid with play cards showing mini-canvas previews
+-   **Sorting**: Group By dropdown with options: Play Name, Date Created, Formation, Personnel
+-   **Actions**: Share Play (copies link), Export Play (stub), New Play (redirects to designer)
+-   **Play Cards**: Show static preview using PlayPreview component, play name, formation, personnel, and category badges
+-   **Components**: `PlayPreview.tsx` renders static SVG preview of play data (players, routes, shapes)
+
 ### Feature Request System
 
 A user feedback collection system accessible from the right sidebar "Request a Feature" button:
