@@ -30,7 +30,8 @@ export const teams = pgTable("teams", {
   id: serial("id").primaryKey(),
   ownerId: varchar("owner_id").notNull().references(() => users.id),
   name: text("name").notNull(),
-  logoUrl: text("logo_url"),
+  year: text("year").default("2025"),
+  coverImageUrl: text("cover_image_url"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

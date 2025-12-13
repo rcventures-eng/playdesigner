@@ -887,12 +887,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid input", details: result.error.flatten() });
       }
 
-      const { name, logoUrl } = result.data;
+      const { name, year, coverImageUrl } = result.data;
 
       const [newTeam] = await db.insert(teams).values({
         ownerId: req.session.userId!,
         name,
-        logoUrl,
+        year,
+        coverImageUrl,
       }).returning();
 
       res.status(201).json(newTeam);
