@@ -355,13 +355,13 @@ export default function PlayLibrary() {
                   data-testid={`play-card-${play.id}`}
                 >
                   {/* Play Preview */}
-                  <div className="aspect-video bg-gray-100 flex items-center justify-center">
+                  <div className="h-64 bg-gray-100 flex items-center justify-center">
                     <PlayPreview
                       playData={play.data as any}
                       playType={play.type as PlayType}
                       playName={play.name}
                       formation={play.formation || undefined}
-                      scale={0.35}
+                      scale={0.5}
                     />
                   </div>
                   
