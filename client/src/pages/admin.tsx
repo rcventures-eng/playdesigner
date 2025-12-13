@@ -39,6 +39,7 @@ interface AILog {
   previewJson: any;
   feedbackNotes: string | null;
   rating: number;
+  correctDiagram: string | null;
 }
 
 interface FormationPlayer {
@@ -112,6 +113,7 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
   const [inspectModalOpen, setInspectModalOpen] = useState(false);
   const [feedbackRating, setFeedbackRating] = useState(0);
   const [feedbackNotes, setFeedbackNotes] = useState("");
+  const [correctDiagramUpload, setCorrectDiagramUpload] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Check admin status from server (secure endpoint)
@@ -252,10 +254,10 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
 
   // Update feedback mutation for AI logs
   const updateFeedbackMutation = useMutation({
-    mutationFn: async ({ id, rating, feedbackNotes }: { id: number; rating: number; feedbackNotes: string }) => {
+    mutationFn: async ({ id, rating, feedbackNotes, correctDiagram }: { id: number; rating: number; feedbackNotes: string; correctDiagram?: string | null }) => {
       const response = await fetch(`/api/admin/logs/${id}`, {
         method: "PATCH",
-        body: JSON.stringify({ rating, feedbackNotes }),
+        body: JSON.stringify({ rating, feedbackNotes, correctDiagram }),
         headers: { "Content-Type": "application/json" },
         credentials: "include",
       });
@@ -270,6 +272,7 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
       queryClient.invalidateQueries({ queryKey: ["/api/admin/logs"] });
       setInspectModalOpen(false);
       setSelectedLog(null);
+      setCorrectDiagramUpload(null);
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -280,6 +283,7 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
     setSelectedLog(log);
     setFeedbackRating(log.rating || 0);
     setFeedbackNotes(log.feedbackNotes || "");
+    setCorrectDiagramUpload(log.correctDiagram || null);
     setInspectModalOpen(true);
   };
 
@@ -289,7 +293,30 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
         id: selectedLog.id,
         rating: feedbackRating,
         feedbackNotes: feedbackNotes,
+        correctDiagram: correctDiagramUpload,
       });
+    }
+  };
+
+  const handleCorrectDiagramUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const maxSizeBytes = 2 * 1024 * 1024;
+      if (file.size > maxSizeBytes) {
+        toast({ 
+          title: "File too large", 
+          description: "Please upload an image smaller than 2MB", 
+          variant: "destructive" 
+        });
+        e.target.value = "";
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64 = event.target?.result as string;
+        setCorrectDiagramUpload(base64);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -1042,6 +1069,46 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
                   <Save className="w-4 h-4 mr-2" />
                   {updateFeedbackMutation.isPending ? "Saving..." : "Save Feedback"}
                 </Button>
+
+                {/* Upload Correct Diagram */}
+                <div className="space-y-2 pt-4 border-t border-slate-700">
+                  <label className="text-xs text-slate-400">Upload Correct Diagram</label>
+                  <p className="text-xs text-slate-500">
+                    Upload the correct version of this play diagram for AI training comparison (max 2MB).
+                  </p>
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleCorrectDiagramUpload}
+                    className="bg-slate-800 border-slate-600 text-white file:bg-slate-700 file:text-white file:border-0 file:mr-2"
+                    data-testid="input-correct-diagram"
+                  />
+                  {correctDiagramUpload && (
+                    <div className="mt-2 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-green-400">Correct diagram uploaded</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setCorrectDiagramUpload(null)}
+                          className="text-red-400 hover:text-red-300 h-6 px-2"
+                          data-testid="button-remove-correct-diagram"
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                      <div className="bg-slate-800 rounded-lg p-2 h-[150px] flex items-center justify-center">
+                        <img 
+                          src={correctDiagramUpload} 
+                          alt="Correct diagram" 
+                          className="max-w-full max-h-full object-contain rounded"
+                          data-testid="img-correct-diagram-preview"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}

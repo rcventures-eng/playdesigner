@@ -1133,16 +1133,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid log ID" });
       }
 
-      const { rating, feedbackNotes } = req.body;
+      const { rating, feedbackNotes, correctDiagram } = req.body;
       
       // Validate rating if provided
       if (rating !== undefined && (typeof rating !== 'number' || rating < 0 || rating > 5)) {
         return res.status(400).json({ error: "Rating must be a number between 0 and 5" });
       }
 
-      const updateData: { rating?: number; feedbackNotes?: string } = {};
+      const updateData: { rating?: number; feedbackNotes?: string; correctDiagram?: string | null } = {};
       if (rating !== undefined) updateData.rating = rating;
       if (feedbackNotes !== undefined) updateData.feedbackNotes = feedbackNotes;
+      if (correctDiagram !== undefined) updateData.correctDiagram = correctDiagram;
 
       const [updatedLog] = await db.update(aiGenerationLogs)
         .set(updateData)
