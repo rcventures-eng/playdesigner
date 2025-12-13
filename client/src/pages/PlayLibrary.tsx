@@ -319,7 +319,7 @@ export default function PlayLibrary() {
         </header>
         
         {/* Gallery Grid */}
-        <div className="flex-1 p-6 overflow-auto">
+        <div className="flex-1 p-6 pr-8 overflow-auto">
           {playsLoading ? (
             <div className="flex items-center justify-center h-64">
               <div className="animate-pulse text-gray-500">Loading plays...</div>
@@ -340,7 +340,7 @@ export default function PlayLibrary() {
             </div>
           ) : (
             <div 
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
               data-testid="plays-grid"
             >
               {sortedPlays.map((play) => (
