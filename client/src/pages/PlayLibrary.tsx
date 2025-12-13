@@ -309,7 +309,8 @@ export default function PlayLibrary() {
                 Export Play
               </Button>
               <Link href="/">
-                <Button variant="outline" className="bg-white text-gray-900 border-gray-300 hover:bg-gray-50" data-testid="button-new-play">
+                <Button className="bg-orange-500 hover:bg-orange-600 text-white" data-testid="button-new-play">
+                  <Plus className="w-4 h-4 mr-2" />
                   New Play
                 </Button>
               </Link>
