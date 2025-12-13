@@ -89,6 +89,9 @@ export const aiGenerationLogs = pgTable("ai_generation_logs", {
   hasImage: boolean("has_image").default(false),
   status: text("status").notNull().default("success"),
   timestamp: timestamp("timestamp").defaultNow(),
+  previewJson: jsonb("preview_json"),
+  feedbackNotes: text("feedback_notes"),
+  rating: integer("rating").default(0),
 });
 
 export const insertAiGenerationLogSchema = createInsertSchema(aiGenerationLogs).omit({
