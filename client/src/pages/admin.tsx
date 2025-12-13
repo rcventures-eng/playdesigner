@@ -939,10 +939,10 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
           
           {selectedLog && (
             <div className="grid grid-cols-2 gap-6">
-              {/* Left Side: Play Preview */}
-              <div className="space-y-4">
+              {/* Left Side: Play Preview - scrollable */}
+              <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
                 <h3 className="text-sm font-medium text-slate-300">Generated Play Preview</h3>
-                <div className="flex items-center justify-center bg-slate-800 rounded-lg p-4 min-h-[300px]">
+                <div className="flex items-center justify-center bg-slate-800 rounded-lg p-4 h-[280px]">
                   {selectedLog.previewJson ? (
                     <PlayPreview 
                       playData={selectedLog.previewJson} 
@@ -957,12 +957,12 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
                 {/* Show uploaded image if this was an image generation */}
                 {selectedLog.hasImage && selectedLog.uploadedImage && (
                   <div className="space-y-2">
-                    <h4 className="text-sm font-medium text-slate-300">Uploaded Image</h4>
-                    <div className="bg-slate-800 rounded-lg p-3 flex items-center justify-center">
+                    <h4 className="text-sm font-medium text-slate-300">Original Uploaded Image</h4>
+                    <div className="bg-slate-800 rounded-lg p-4 h-[280px] flex items-center justify-center">
                       <img 
                         src={selectedLog.uploadedImage} 
                         alt="Uploaded play diagram" 
-                        className="max-w-full max-h-[200px] object-contain rounded"
+                        className="max-w-full max-h-full object-contain rounded"
                         data-testid="img-uploaded-play"
                       />
                     </div>
