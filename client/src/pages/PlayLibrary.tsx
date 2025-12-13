@@ -12,6 +12,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { 
   ChevronLeft, 
@@ -20,7 +27,9 @@ import {
   Folder,
   LayoutGrid,
   LogIn,
-  UserPlus
+  UserPlus,
+  Edit,
+  Tag
 } from "lucide-react";
 
 type PlayType = "offense" | "defense" | "special";
@@ -57,6 +66,8 @@ export default function PlayLibrary() {
   const [selectedPlays, setSelectedPlays] = useState<Set<number>>(new Set());
   const [isAdmin, setIsAdmin] = useState(false);
   const [showSignUp, setShowSignUp] = useState(false);
+  const [doubleClickedPlay, setDoubleClickedPlay] = useState<Play | null>(null);
+  const [showPlayDialog, setShowPlayDialog] = useState(false);
   
   const { data: user, isLoading: userLoading } = useQuery<{ id: string; email: string; firstName: string } | null>({
     queryKey: ["/api/me"],
@@ -347,6 +358,10 @@ export default function PlayLibrary() {
                 <div
                   key={play.id}
                   onClick={() => togglePlaySelection(play.id)}
+                  onDoubleClick={() => {
+                    setDoubleClickedPlay(play);
+                    setShowPlayDialog(true);
+                  }}
                   className={`bg-white rounded-lg border ${
                     selectedPlays.has(play.id) 
                       ? 'border-orange-500 ring-2 ring-orange-200' 
@@ -391,6 +406,39 @@ export default function PlayLibrary() {
         </div>
       </main>
       </div>
+
+      {/* Play Actions Dialog */}
+      <Dialog open={showPlayDialog} onOpenChange={setShowPlayDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{doubleClickedPlay?.name}</DialogTitle>
+            <DialogDescription>
+              Choose an action for this play
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 pt-4">
+            <Button
+              onClick={() => {
+                setShowPlayDialog(false);
+                navigate("/");
+              }}
+              className="w-full bg-orange-500 hover:bg-orange-600 text-white justify-start"
+              data-testid="button-go-to-designer"
+            >
+              <Edit className="w-4 h-4 mr-2" />
+              Go to Play Designer
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              data-testid="button-tag-play"
+            >
+              <Tag className="w-4 h-4 mr-2" />
+              Tag Play
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
