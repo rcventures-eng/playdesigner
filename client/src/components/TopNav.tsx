@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { LogOut, ChevronDown, FileText, BookOpen } from "lucide-react";
+import { LogOut, ChevronDown, Dumbbell, LayoutGrid, BookOpen } from "lucide-react";
 import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import SignUpModal from "./SignUpModal";
@@ -219,12 +219,20 @@ export default function TopNav({ isAdmin, setIsAdmin, showSignUp, setShowSignUp 
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48 bg-white">
                 <DropdownMenuItem 
+                  onClick={() => setLocation("/")}
+                  className="cursor-pointer text-black focus:text-black"
+                  data-testid="link-build-plays"
+                >
+                  <Dumbbell className="mr-2 h-4 w-4 text-black" />
+                  Build Plays
+                </DropdownMenuItem>
+                <DropdownMenuItem 
                   onClick={() => setLocation("/plays")}
                   className="cursor-pointer text-black focus:text-black"
-                  data-testid="link-plays"
+                  data-testid="link-play-library"
                 >
-                  <FileText className="mr-2 h-4 w-4 text-black" />
-                  Plays
+                  <LayoutGrid className="mr-2 h-4 w-4 text-black" />
+                  Play Library
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={() => setLocation("/playbooks")}
