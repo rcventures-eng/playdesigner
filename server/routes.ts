@@ -566,8 +566,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           status: "success",
           previewJson: playData,
         });
-      } catch (logError) {
+      } catch (logError: any) {
         console.error("Failed to log AI generation:", logError);
+        console.error("Log error details:", logError?.message, logError?.code);
+        // Add to response so admin knows logging failed
+        playData._loggingFailed = true;
+        playData._loggingError = logError?.message || "Unknown logging error";
       }
 
       res.json(playData);
