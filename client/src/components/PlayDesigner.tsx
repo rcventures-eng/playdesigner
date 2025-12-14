@@ -3077,39 +3077,9 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
 
         <div 
           ref={fieldContainerRef}
-          className="flex-1 h-full relative rounded-2xl bg-slate-900/50 border border-white/5 overflow-hidden flex flex-col items-center justify-center pt-10"
+          className="flex-1 h-full relative rounded-2xl bg-slate-900/50 border border-white/5 overflow-hidden flex flex-col items-center justify-center"
           onClick={handleBackgroundClick}
         >
-          {/* Quick Action Icons Strip */}
-          <div className="absolute top-0 left-0 right-0 h-10 bg-slate-800 flex items-center justify-end px-4 z-30">
-            <div className="flex gap-3">
-              <Save 
-                className="w-5 h-5 text-slate-400 hover:text-white cursor-pointer transition-colors"
-                data-testid="button-quick-save"
-                onClick={() => {
-                  console.log('Save clicked');
-                  toast({ title: "Save", description: "Save play functionality coming soon!" });
-                }}
-              />
-              <Heart 
-                className={`w-5 h-5 cursor-pointer transition-colors ${isFavorite ? 'text-red-500 fill-red-500' : 'text-slate-400 hover:text-white'}`}
-                data-testid="button-quick-favorite"
-                onClick={() => {
-                  setIsFavorite(!isFavorite);
-                  console.log('Favorite toggled:', !isFavorite);
-                  toast({ title: isFavorite ? "Removed from favorites" : "Added to favorites" });
-                }}
-              />
-              <Tag 
-                className="w-5 h-5 text-slate-400 hover:text-white cursor-pointer transition-colors"
-                data-testid="button-quick-tag"
-                onClick={() => {
-                  console.log('Tag clicked');
-                  toast({ title: "Tag", description: "Tag functionality coming soon!" });
-                }}
-              />
-            </div>
-          </div>
           {/* Layer B: AI Play Creator Interface - Fixed size, centered over field (DOES NOT SCALE) */}
           {(playType === "special" || playType === "ai-beta") && (
             <div 
@@ -3264,14 +3234,53 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
               </div>
             </div>
           )}
-          {/* Layer A: Field Wrapper - SCALES to fit available space */}
+          {/* Layer A: Field Wrapper with Strip - SCALES to fit available space */}
           <div 
-            className="bg-background rounded-lg shadow-lg p-2"
+            className="flex flex-col"
             style={{
               transform: `scale(${scale})`,
-              transformOrigin: "top center",
+              transformOrigin: "center center",
             }}
           >
+            {/* Quick Action Icons Strip - Outside canvasRef for export exclusion */}
+            <div 
+              className="h-7 bg-slate-800 flex items-center justify-end px-3 rounded-t-md"
+              style={{ width: FIELD.WIDTH + 16 }}
+              data-testid="quick-action-strip"
+            >
+              <div className="flex gap-3">
+                <Save 
+                  className="w-5 h-5 text-slate-400 hover:text-white cursor-pointer transition-colors"
+                  data-testid="button-quick-save"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    console.log('Save clicked');
+                    toast({ title: "Save", description: "Save play functionality coming soon!" });
+                  }}
+                />
+                <Heart 
+                  className={`w-5 h-5 cursor-pointer transition-colors ${isFavorite ? 'text-red-500 fill-red-500' : 'text-slate-400 hover:text-white'}`}
+                  data-testid="button-quick-favorite"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsFavorite(!isFavorite);
+                    console.log('Favorite toggled:', !isFavorite);
+                    toast({ title: isFavorite ? "Removed from favorites" : "Added to favorites" });
+                  }}
+                />
+                <Tag 
+                  className="w-5 h-5 text-slate-400 hover:text-white cursor-pointer transition-colors"
+                  data-testid="button-quick-tag"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    console.log('Tag clicked');
+                    toast({ title: "Tag", description: "Tag functionality coming soon!" });
+                  }}
+                />
+              </div>
+            </div>
+            {/* Field with padding wrapper */}
+            <div className="bg-background rounded-b-lg shadow-lg p-2">
             <div
               ref={canvasRef}
               className="relative rounded cursor-crosshair overflow-hidden"
@@ -3975,6 +3984,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
               ))}
 
             </div>
+          </div>
           </div>
           
           {/* Under Construction Sign - Special Teams Tab Only - Centered in bottom fourth of screen */}
