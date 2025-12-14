@@ -16,6 +16,7 @@ import { toPng } from "html-to-image";
 import { useToast } from "@/hooks/use-toast";
 import { getQueryFn } from "@/lib/queryClient";
 import underConstructionImage from "@assets/generated_images/under_construction_warning_banner.png";
+import swooshImage from "@assets/Nike_Swoosh_Orange_1765670148973.jpg";
 import { FOOTBALL_CONFIG, FORMATIONS, resolveColorKey, type FormationPlayer } from "../../../shared/football-config";
 import TopNav from "./TopNav";
 
@@ -4015,7 +4016,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
               {isLoggedIn ? (
                 <>
                   <img 
-                    src="/assets/swoosh.png" 
+                    src={swooshImage} 
                     alt="Swoosh" 
                     className="h-14 w-auto mb-2 object-contain"
                   />
