@@ -45,9 +45,10 @@ export const NFL_TEAMS = [
 interface SignUpModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  customMessage?: string;
 }
 
-export default function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
+export default function SignUpModal({ open, onOpenChange, customMessage }: SignUpModalProps) {
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -147,10 +148,10 @@ export default function SignUpModal({ open, onOpenChange }: SignUpModalProps) {
       >
         <DialogHeader className="text-center">
           <DialogTitle className="text-2xl font-bold text-center text-orange-400">
-            Join RC Football
+            {customMessage ? customMessage : "Join RC Football"}
           </DialogTitle>
           <p className="text-slate-400 text-sm mt-1">
-            Design plays, build your playbook, and dominate.
+            {customMessage ? "Create a free account to unlock this feature." : "Design plays, build your playbook, and dominate."}
           </p>
         </DialogHeader>
 

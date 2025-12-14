@@ -293,6 +293,15 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   
   // Quick action state for sidebar
   const [isFavorite, setIsFavorite] = useState(false);
+  const [signUpMessage, setSignUpMessage] = useState("");
+  
+  // Wrapper to clear signUpMessage when modal closes
+  const handleShowSignUpChange = (open: boolean) => {
+    if (!open) {
+      setSignUpMessage("");
+    }
+    setShowSignUp?.(open);
+  };
   
   // Feature Request Dialog state
   const [showFeatureRequestDialog, setShowFeatureRequestDialog] = useState(false);
@@ -2516,7 +2525,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
 
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden">
-      <TopNav isAdmin={isAdmin} setIsAdmin={setIsAdmin} showSignUp={showSignUp} setShowSignUp={setShowSignUp} />
+      <TopNav isAdmin={isAdmin} setIsAdmin={setIsAdmin} showSignUp={showSignUp} setShowSignUp={handleShowSignUpChange} signUpMessage={signUpMessage} />
       <div className={`flex-1 bg-slate-950 px-10 pb-10 pt-3 flex flex-col gap-4 overflow-hidden ${isLongPressHolding || longPressMenuOpen ? "select-none" : ""}`}>
         {(metadata.name || metadata.formation || metadata.concept || metadata.defenseConcept || metadata.personnel) && (
         <div className="bg-gradient-to-r from-[#1a2332] to-[#2a3342] rounded-2xl border border-white/10 px-6 py-3 flex items-center gap-3 flex-wrap">
@@ -3245,7 +3254,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
             {/* Quick Action Icons Strip - Outside canvasRef for export exclusion */}
             <div 
               className="h-7 bg-slate-800 flex items-center justify-end px-3 rounded-t-md"
-              style={{ width: FIELD.WIDTH + 16 }}
+              style={{ width: FIELD.WIDTH }}
               data-testid="quick-action-strip"
             >
               <div className="flex gap-3">
@@ -3254,6 +3263,11 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                   data-testid="button-quick-save"
                   onClick={(e) => {
                     e.stopPropagation();
+                    if (!isLoggedIn) {
+                      setSignUpMessage("Want to Save a Play to your Playbook?");
+                      handleShowSignUpChange(true);
+                      return;
+                    }
                     console.log('Save clicked');
                     toast({ title: "Save", description: "Save play functionality coming soon!" });
                   }}
@@ -3263,6 +3277,11 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                   data-testid="button-quick-favorite"
                   onClick={(e) => {
                     e.stopPropagation();
+                    if (!isLoggedIn) {
+                      setSignUpMessage("Want to Add a Play to Your Favorites?");
+                      handleShowSignUpChange(true);
+                      return;
+                    }
                     setIsFavorite(!isFavorite);
                     console.log('Favorite toggled:', !isFavorite);
                     toast({ title: isFavorite ? "Removed from favorites" : "Added to favorites" });
@@ -3273,14 +3292,19 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                   data-testid="button-quick-tag"
                   onClick={(e) => {
                     e.stopPropagation();
+                    if (!isLoggedIn) {
+                      setSignUpMessage("Want to Tag a Play for Advanced Organization?");
+                      handleShowSignUpChange(true);
+                      return;
+                    }
                     console.log('Tag clicked');
                     toast({ title: "Tag", description: "Tag functionality coming soon!" });
                   }}
                 />
               </div>
             </div>
-            {/* Field with padding wrapper */}
-            <div className="bg-background rounded-b-lg shadow-lg p-2">
+            {/* Field wrapper - no padding to align flush with strip */}
+            <div className="bg-background rounded-b-lg shadow-lg" style={{ width: FIELD.WIDTH }}>
             <div
               ref={canvasRef}
               className="relative rounded cursor-crosshair overflow-hidden"

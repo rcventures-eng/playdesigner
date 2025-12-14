@@ -25,9 +25,10 @@ interface TopNavProps {
   setIsAdmin?: (value: boolean) => void;
   showSignUp?: boolean;
   setShowSignUp?: (value: boolean) => void;
+  signUpMessage?: string;
 }
 
-export default function TopNav({ isAdmin, setIsAdmin, showSignUp, setShowSignUp }: TopNavProps) {
+export default function TopNav({ isAdmin, setIsAdmin, showSignUp, setShowSignUp, signUpMessage }: TopNavProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -472,7 +473,7 @@ export default function TopNav({ isAdmin, setIsAdmin, showSignUp, setShowSignUp 
       </Dialog>
 
       {/* Sign Up Modal */}
-      <SignUpModal open={isSignUpOpen} onOpenChange={handleSignUpChange} />
+      <SignUpModal open={isSignUpOpen} onOpenChange={handleSignUpChange} customMessage={signUpMessage} />
     </>
   );
 }
