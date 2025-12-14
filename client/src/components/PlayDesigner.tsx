@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Download, Copy, Plus, Trash2, Circle as CircleIcon, MoveHorizontal, PenTool, Square as SquareIcon, Type, Hexagon, RotateCcw, Flag, Camera, X, Loader2, Sparkles } from "lucide-react";
 import { toPng } from "html-to-image";
 import { useToast } from "@/hooks/use-toast";
+import { getQueryFn } from "@/lib/queryClient";
 import underConstructionImage from "@assets/generated_images/under_construction_warning_banner.png";
 import { FOOTBALL_CONFIG, FORMATIONS, resolveColorKey, type FormationPlayer } from "../../../shared/football-config";
 import TopNav from "./TopNav";
@@ -271,6 +274,21 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   // Suppress the click event that follows a long-press menu opening
   const suppressNextClickRef = useRef(false);
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
+  
+  // User authentication state
+  interface UserData {
+    id: string;
+    email: string;
+    firstName: string | null;
+    isAdmin: boolean;
+  }
+  const { data: user } = useQuery<UserData | null>({
+    queryKey: ["/api/me"],
+    queryFn: getQueryFn<UserData | null>({ on401: "returnNull" }),
+    retry: false,
+  });
+  const isLoggedIn = !!user;
   
   // Feature Request Dialog state
   const [showFeatureRequestDialog, setShowFeatureRequestDialog] = useState(false);
@@ -3990,13 +4008,26 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
           {/* CTA Buttons - positioned in open space between content and Follow Us */}
           <div className="mt-auto space-y-2 py-4">
             <button
-              onClick={() => setShowSignUp?.(true)}
+              onClick={() => isLoggedIn ? setLocation("/plays") : setShowSignUp?.(true)}
               className="w-full h-32 flex flex-col justify-center items-center bg-orange-500 hover:bg-orange-600 rounded-lg transition-colors"
               data-testid="button-create-account"
             >
-              <Sparkles className="w-8 h-8 text-white mb-2" />
-              <span className="text-2xl font-extrabold text-white">Create Your Free Account</span>
-              <span className="text-sm text-white/90 font-medium mt-1">Save plays & access templates</span>
+              {isLoggedIn ? (
+                <>
+                  <img 
+                    src="/assets/swoosh.png" 
+                    alt="Swoosh" 
+                    className="h-14 w-auto mb-2 object-contain"
+                  />
+                  <span className="text-2xl font-extrabold text-white uppercase tracking-wide">Football is life.</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-8 h-8 text-white mb-2" />
+                  <span className="text-2xl font-extrabold text-white">Create Your Free Account</span>
+                  <span className="text-sm text-white/90 font-medium mt-1">Save plays & access templates</span>
+                </>
+              )}
             </button>
             <Button
               size="sm"
