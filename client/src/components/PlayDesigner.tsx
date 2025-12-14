@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Download, Copy, Plus, Trash2, Circle as CircleIcon, MoveHorizontal, PenTool, Square as SquareIcon, Type, Hexagon, RotateCcw, Flag, Camera, X, Loader2, Sparkles } from "lucide-react";
+import { Download, Copy, Plus, Trash2, Circle as CircleIcon, MoveHorizontal, PenTool, Square as SquareIcon, Type, Hexagon, RotateCcw, Flag, Camera, X, Loader2, Sparkles, Save, Heart, Tag } from "lucide-react";
 import { toPng } from "html-to-image";
 import { useToast } from "@/hooks/use-toast";
 import { getQueryFn } from "@/lib/queryClient";
@@ -290,6 +290,9 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     retry: false,
   });
   const isLoggedIn = !!user;
+  
+  // Quick action state for sidebar
+  const [isFavorite, setIsFavorite] = useState(false);
   
   // Feature Request Dialog state
   const [showFeatureRequestDialog, setShowFeatureRequestDialog] = useState(false);
@@ -3961,7 +3964,36 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
         </div>
 
         <div className="w-96 border-l border-border bg-card p-4 flex flex-col" data-testid="directions-panel">
-          <h3 className="font-semibold text-base text-foreground mb-3">🏈 How to Build Your Play</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-base text-foreground">🏈 How to Build Your Play</h3>
+            <div className="flex gap-3">
+              <Save 
+                className="w-5 h-5 text-slate-400 hover:text-white cursor-pointer transition-colors"
+                data-testid="button-quick-save"
+                onClick={() => {
+                  console.log('Save clicked');
+                  toast({ title: "Save", description: "Save play functionality coming soon!" });
+                }}
+              />
+              <Heart 
+                className={`w-5 h-5 cursor-pointer transition-colors ${isFavorite ? 'text-red-500 fill-red-500' : 'text-slate-400 hover:text-white'}`}
+                data-testid="button-quick-favorite"
+                onClick={() => {
+                  setIsFavorite(!isFavorite);
+                  console.log('Favorite toggled:', !isFavorite);
+                  toast({ title: isFavorite ? "Removed from favorites" : "Added to favorites" });
+                }}
+              />
+              <Tag 
+                className="w-5 h-5 text-slate-400 hover:text-white cursor-pointer transition-colors"
+                data-testid="button-quick-tag"
+                onClick={() => {
+                  console.log('Tag clicked');
+                  toast({ title: "Tag", description: "Tag functionality coming soon!" });
+                }}
+              />
+            </div>
+          </div>
           <div className="space-y-4 text-sm text-muted-foreground flex-1 overflow-y-auto">
             <div>
               <p className="font-semibold text-foreground">1. Add Players</p>
