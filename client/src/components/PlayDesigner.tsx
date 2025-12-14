@@ -3077,9 +3077,39 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
 
         <div 
           ref={fieldContainerRef}
-          className="flex-1 h-full relative rounded-2xl bg-slate-900/50 border border-white/5 overflow-hidden flex flex-col items-center justify-center"
+          className="flex-1 h-full relative rounded-2xl bg-slate-900/50 border border-white/5 overflow-hidden flex flex-col items-center justify-center pt-10"
           onClick={handleBackgroundClick}
         >
+          {/* Quick Action Icons Strip */}
+          <div className="absolute top-0 left-0 right-0 h-10 bg-slate-800 flex items-center justify-end px-4 z-30">
+            <div className="flex gap-3">
+              <Save 
+                className="w-5 h-5 text-slate-400 hover:text-white cursor-pointer transition-colors"
+                data-testid="button-quick-save"
+                onClick={() => {
+                  console.log('Save clicked');
+                  toast({ title: "Save", description: "Save play functionality coming soon!" });
+                }}
+              />
+              <Heart 
+                className={`w-5 h-5 cursor-pointer transition-colors ${isFavorite ? 'text-red-500 fill-red-500' : 'text-slate-400 hover:text-white'}`}
+                data-testid="button-quick-favorite"
+                onClick={() => {
+                  setIsFavorite(!isFavorite);
+                  console.log('Favorite toggled:', !isFavorite);
+                  toast({ title: isFavorite ? "Removed from favorites" : "Added to favorites" });
+                }}
+              />
+              <Tag 
+                className="w-5 h-5 text-slate-400 hover:text-white cursor-pointer transition-colors"
+                data-testid="button-quick-tag"
+                onClick={() => {
+                  console.log('Tag clicked');
+                  toast({ title: "Tag", description: "Tag functionality coming soon!" });
+                }}
+              />
+            </div>
+          </div>
           {/* Layer B: AI Play Creator Interface - Fixed size, centered over field (DOES NOT SCALE) */}
           {(playType === "special" || playType === "ai-beta") && (
             <div 
@@ -3964,36 +3994,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
         </div>
 
         <div className="w-96 border-l border-border bg-card p-4 flex flex-col" data-testid="directions-panel">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-base text-foreground">🏈 How to Build Your Play</h3>
-            <div className="flex gap-3">
-              <Save 
-                className="w-5 h-5 text-slate-400 hover:text-white cursor-pointer transition-colors"
-                data-testid="button-quick-save"
-                onClick={() => {
-                  console.log('Save clicked');
-                  toast({ title: "Save", description: "Save play functionality coming soon!" });
-                }}
-              />
-              <Heart 
-                className={`w-5 h-5 cursor-pointer transition-colors ${isFavorite ? 'text-red-500 fill-red-500' : 'text-slate-400 hover:text-white'}`}
-                data-testid="button-quick-favorite"
-                onClick={() => {
-                  setIsFavorite(!isFavorite);
-                  console.log('Favorite toggled:', !isFavorite);
-                  toast({ title: isFavorite ? "Removed from favorites" : "Added to favorites" });
-                }}
-              />
-              <Tag 
-                className="w-5 h-5 text-slate-400 hover:text-white cursor-pointer transition-colors"
-                data-testid="button-quick-tag"
-                onClick={() => {
-                  console.log('Tag clicked');
-                  toast({ title: "Tag", description: "Tag functionality coming soon!" });
-                }}
-              />
-            </div>
-          </div>
+          <h3 className="font-semibold text-base text-foreground mb-3">🏈 How to Build Your Play</h3>
           <div className="space-y-4 text-sm text-muted-foreground flex-1 overflow-y-auto">
             <div>
               <p className="font-semibold text-foreground">1. Add Players</p>
