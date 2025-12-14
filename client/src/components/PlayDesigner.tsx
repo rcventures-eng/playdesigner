@@ -4116,7 +4116,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
           <div className="pt-4 border-t border-border text-center" data-testid="follow-us-section">
             <p className="text-xs font-semibold text-muted-foreground mb-2">Follow Us</p>
             <div className="flex justify-center gap-4 text-xs text-muted-foreground">
-              <a href="https://twitter.com/rcfootball" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors" data-testid="link-twitter">@Twitter</a>
+              <a href="https://x.com/RC_Football_" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors" data-testid="link-twitter">@RC_Football_</a>
               <a href="https://instagram.com/rcfootball" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors" data-testid="link-instagram">@Instagram</a>
               <a href="https://tiktok.com/@rcfootball" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors" data-testid="link-tiktok">@TikTok</a>
             </div>
