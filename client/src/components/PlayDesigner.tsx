@@ -4075,28 +4075,32 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
           
           {/* CTA Buttons - positioned in open space between content and Follow Us */}
           <div className="mt-auto space-y-2 py-4">
-            <button
-              onClick={() => isLoggedIn ? setLocation("/plays") : setShowSignUp?.(true)}
-              className="w-full h-32 flex flex-col justify-center items-center bg-orange-500 hover:bg-orange-600 rounded-lg transition-colors"
-              data-testid="button-create-account"
-            >
-              {isLoggedIn ? (
-                <>
-                  <img 
-                    src={swooshImage} 
-                    alt="Swoosh" 
-                    className="h-14 w-auto mb-2 object-contain"
-                  />
-                  <span className="text-2xl font-extrabold text-white uppercase tracking-wide">Football is life.</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-8 h-8 text-white mb-2" />
-                  <span className="text-2xl font-extrabold text-white">Create Your Free Account</span>
-                  <span className="text-sm text-white/90 font-medium mt-1">Save plays & access templates</span>
-                </>
-              )}
-            </button>
+            {isLoggedIn ? (
+              <a
+                href="https://www.nike.com/us-football?utm_source=rc-football.com&utm_medium=referral&utm_campaign=play-designer"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full h-32 flex flex-col justify-center items-center bg-orange-500 hover:bg-orange-600 rounded-lg transition-colors"
+                data-testid="link-nike-football"
+              >
+                <img 
+                  src={swooshImage} 
+                  alt="Nike Football" 
+                  className="h-14 w-auto mb-2 object-contain"
+                />
+                <span className="text-2xl font-extrabold text-white uppercase tracking-wide">Football is life.</span>
+              </a>
+            ) : (
+              <button
+                onClick={() => handleShowSignUpChange(true)}
+                className="w-full h-32 flex flex-col justify-center items-center bg-orange-500 hover:bg-orange-600 rounded-lg transition-colors"
+                data-testid="button-create-account"
+              >
+                <Sparkles className="w-8 h-8 text-white mb-2" />
+                <span className="text-2xl font-extrabold text-white">Create Your Free Account</span>
+                <span className="text-sm text-white/90 font-medium mt-1">Save plays & access templates</span>
+              </button>
+            )}
             <Button
               size="sm"
               variant="secondary"
