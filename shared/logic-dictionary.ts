@@ -203,8 +203,8 @@ export const LOGIC_DICTIONARY = {
 };
 
 export const SITUATIONAL_TAGS: Record<string, string[]> = {
-  '5v5': ['No Run Zone (<5 yds)', 'Midfield', 'Backed Up'],
-  '7v7': ['Red Zone (<20)', 'Goal Line (<10)', 'Open Field', 'Backed Up'],
-  '9v9': ['Red Zone (<20)', 'Goal Line (<10)', 'Open Field', 'Backed Up'],
-  '11v11': ['Red Zone', 'Goal Line', '2-Minute', '4-Minute', 'Backed Up']
+  '5v5': ['Open Field', 'Red Zone', 'Goal Line', '2pt Conversion'],
+  '7v7': ['Open Field', 'High Red Zone', 'Low Red Zone', 'Goal Line', '2pt Conversion'],
+  '9v9': ['Open Field', 'High Red Zone', 'Low Red Zone', 'Goal Line', '2pt Conversion'],
+  '11v11': ['Backed Up', 'Coming Out', 'Open Field', 'Midfield', 'Plus Territory', 'High Red Zone', 'Low Red Zone', 'Goal Line', '2pt Conversion']
 };
