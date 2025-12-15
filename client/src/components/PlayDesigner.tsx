@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Download, Copy, Plus, Trash2, Circle as CircleIcon, MoveHorizontal, PenTool, Square as SquareIcon, Type, Hexagon, RotateCcw, Flag, Camera, X, Loader2, Sparkles, Save, Heart, Tag } from "lucide-react";
+import { Download, Copy, Plus, Trash2, Circle as CircleIcon, MoveHorizontal, PenTool, Square as SquareIcon, Type, Hexagon, RotateCcw, Flag, Camera, X, Loader2, Sparkles, Save, Heart, Tag, Magnet } from "lucide-react";
 import { toPng } from "html-to-image";
 import { useToast } from "@/hooks/use-toast";
 import { getQueryFn, apiRequest, queryClient } from "@/lib/queryClient";
@@ -20,6 +20,7 @@ import swooshImage from "@assets/Nike_Swoosh_Orange_1765670148973.jpg";
 import { FOOTBALL_CONFIG, FORMATIONS, resolveColorKey, type FormationPlayer } from "../../../shared/football-config";
 import { SITUATIONAL_TAGS } from "../../../shared/logic-dictionary";
 import { detectGameFormat, getSituationalTags, type GameFormat } from "@/utils/format-logic";
+import { snapPosition, SNAP_THRESHOLD } from "@/utils/snap-math";
 import TopNav from "./TopNav";
 
 const CONFIG_FIELD = FOOTBALL_CONFIG.field;
@@ -242,6 +243,10 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   const [lassoEnd, setLassoEnd] = useState<{ x: number; y: number } | null>(null);
   const [selectedElements, setSelectedElements] = useState<{ players: string[]; routes: string[] }>({ players: [], routes: [] });
   const [isDraggingStraightRoute, setIsDraggingStraightRoute] = useState(false);
+  
+  // Magnetic snap state
+  const [snapEnabled, setSnapEnabled] = useState(true);
+  const [activeSnapLines, setActiveSnapLines] = useState<{ x: number | null; y: number | null }>({ x: null, y: null });
   
   // Long-press menu state (optimized - minimal state, CSS handles hover visuals)
   const [longPressMenuOpen, setLongPressMenuOpen] = useState(false);
@@ -1451,8 +1456,27 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
         const currentPlayer = players.find(p => p.id === dragPlayerId);
         // Use dragOffsetRef for immediate access (state may not be updated yet after cancelLongPress)
         const offset = dragOffsetRef.current;
-        const newX = Math.max(bounds.minX, Math.min(bounds.maxX, (e.clientX - rect.left) / scale - offset.x));
-        const newY = Math.max(bounds.minY, Math.min(bounds.maxY, (e.clientY - rect.top) / scale - offset.y));
+        const rawX = (e.clientX - rect.left) / scale - offset.x;
+        const rawY = (e.clientY - rect.top) / scale - offset.y;
+        
+        // Clamp to bounds first, then apply magnetic snap
+        const clampedX = Math.max(bounds.minX, Math.min(bounds.maxX, rawX));
+        const clampedY = Math.max(bounds.minY, Math.min(bounds.maxY, rawY));
+        
+        // Apply magnetic snap if enabled (on already-clamped positions)
+        const snapResult = snapPosition(clampedX, clampedY, snapEnabled);
+        const newX = snapResult.x.position;
+        const newY = snapResult.y.position;
+        
+        // Update snap guide lines (only show if snap point is within bounds)
+        setActiveSnapLines({
+          x: snapResult.x.snapped && snapResult.x.gridPoint !== undefined && 
+             snapResult.x.gridPoint >= bounds.minX && snapResult.x.gridPoint <= bounds.maxX 
+             ? snapResult.x.gridPoint : null,
+          y: snapResult.y.snapped && snapResult.y.gridPoint !== undefined &&
+             snapResult.y.gridPoint >= bounds.minY && snapResult.y.gridPoint <= bounds.maxY
+             ? snapResult.y.gridPoint : null,
+        });
         
         // Calculate movement delta for route shifting
         const deltaX = currentPlayer ? newX - currentPlayer.x : 0;
@@ -1728,6 +1752,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
       setIsResizingShape(false);
       setResizeHandle(null);
       setResizeStartData(null);
+      setActiveSnapLines({ x: null, y: null });
       return;
     }
     
@@ -1740,6 +1765,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     setIsResizingShape(false);
     setResizeHandle(null);
     setResizeStartData(null);
+    setActiveSnapLines({ x: null, y: null });
     
     if (tool === "select" && lassoStart) {
       if (lassoEnd) {
@@ -2793,6 +2819,17 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                 >
                   Clear All
                 </Button>
+                <Button
+                  size="sm"
+                  variant={snapEnabled ? "default" : "secondary"}
+                  onClick={() => setSnapEnabled(!snapEnabled)}
+                  data-testid="button-snap-toggle"
+                  aria-pressed={snapEnabled}
+                  className="flex justify-center items-center gap-1"
+                >
+                  <Magnet className="h-4 w-4" />
+                  Snap
+                </Button>
                 {playType === "defense" && (
                   <Button
                     size="sm"
@@ -3610,6 +3647,32 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                 
                 {/* Line of scrimmage */}
                 <line x1={FIELD.FIELD_LEFT} y1={FIELD.LOS_Y} x2={FIELD.FIELD_RIGHT} y2={FIELD.LOS_Y} stroke="white" strokeWidth="6" />
+                
+                {/* Magnetic snap guide lines */}
+                {activeSnapLines.x !== null && (
+                  <line 
+                    x1={activeSnapLines.x} 
+                    y1={0} 
+                    x2={activeSnapLines.x} 
+                    y2={FIELD.HEIGHT} 
+                    stroke="#60a5fa" 
+                    strokeWidth="2" 
+                    strokeDasharray="6,4"
+                    opacity="0.8"
+                  />
+                )}
+                {activeSnapLines.y !== null && (
+                  <line 
+                    x1={0} 
+                    y1={activeSnapLines.y} 
+                    x2={FIELD.WIDTH} 
+                    y2={activeSnapLines.y} 
+                    stroke="#60a5fa" 
+                    strokeWidth="2" 
+                    strokeDasharray="6,4"
+                    opacity="0.8"
+                  />
+                )}
               </svg>
 
               <svg className="absolute inset-0 w-full h-full" style={{ pointerEvents: "none", zIndex: 2 }}>
