@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Download, Copy, Plus, Trash2, Circle as CircleIcon, MoveHorizontal, PenTool, Square as SquareIcon, Type, Hexagon, RotateCcw, Flag, Camera, X, Loader2, Sparkles, Save, Heart, Tag } from "lucide-react";
 import { toPng } from "html-to-image";
 import { useToast } from "@/hooks/use-toast";
-import { getQueryFn } from "@/lib/queryClient";
+import { getQueryFn, apiRequest, queryClient } from "@/lib/queryClient";
 import underConstructionImage from "@assets/generated_images/under_construction_warning_banner.png";
 import swooshImage from "@assets/Nike_Swoosh_Orange_1765670148973.jpg";
 import { FOOTBALL_CONFIG, FORMATIONS, resolveColorKey, type FormationPlayer } from "../../../shared/football-config";
@@ -296,6 +296,29 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     retry: false,
   });
   const isLoggedIn = !!user;
+  
+  // Save play mutation
+  const savePlayMutation = useMutation({
+    mutationFn: async (playData: { name: string; type: string; concept?: string; formation?: string; personnel?: string; situation?: string; data: unknown; isFavorite: boolean }) => {
+      const response = await apiRequest("POST", "/api/plays", playData);
+      return response.json();
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/plays"] });
+      const conceptLabel = variables.concept ? ` to ${variables.concept.charAt(0).toUpperCase() + variables.concept.slice(1)} folder` : "";
+      toast({ 
+        title: "Play Saved!", 
+        description: `"${variables.name}" has been saved${conceptLabel}.` 
+      });
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: "Save Failed", 
+        description: error.message || "Could not save play. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
   
   // Quick action state for sidebar
   const [isFavorite, setIsFavorite] = useState(false);
@@ -3302,7 +3325,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
             >
               <div className="flex gap-3">
                 <Save 
-                  className="w-5 h-5 text-slate-400 hover:text-white cursor-pointer transition-colors"
+                  className={`w-5 h-5 cursor-pointer transition-colors ${savePlayMutation.isPending ? 'text-orange-400 animate-pulse' : 'text-slate-400 hover:text-white'}`}
                   data-testid="button-quick-save"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -3311,8 +3334,28 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                       handleShowSignUpChange(true);
                       return;
                     }
-                    console.log('Save clicked');
-                    toast({ title: "Save", description: "Save play functionality coming soon!" });
+                    if (savePlayMutation.isPending) return;
+                    
+                    const playName = metadata.name || "Untitled Play";
+                    const savePlayType = playType === "ai-beta" ? "offense" : playType;
+                    const canvasData = {
+                      players,
+                      routes,
+                      shapes,
+                      footballs,
+                      isPlayAction
+                    };
+                    
+                    savePlayMutation.mutate({
+                      name: playName,
+                      type: savePlayType,
+                      concept: metadata.concept || undefined,
+                      formation: metadata.formation || undefined,
+                      personnel: metadata.personnel || undefined,
+                      situation: metadata.situation || undefined,
+                      data: canvasData,
+                      isFavorite
+                    });
                   }}
                 />
                 <Heart 
