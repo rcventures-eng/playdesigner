@@ -18,6 +18,8 @@ import { getQueryFn } from "@/lib/queryClient";
 import underConstructionImage from "@assets/generated_images/under_construction_warning_banner.png";
 import swooshImage from "@assets/Nike_Swoosh_Orange_1765670148973.jpg";
 import { FOOTBALL_CONFIG, FORMATIONS, resolveColorKey, type FormationPlayer } from "../../../shared/football-config";
+import { SITUATIONAL_TAGS } from "../../../shared/logic-dictionary";
+import { detectGameFormat, getSituationalTags, type GameFormat } from "@/utils/format-logic";
 import TopNav from "./TopNav";
 
 const CONFIG_FIELD = FOOTBALL_CONFIG.field;
@@ -93,6 +95,7 @@ interface PlayMetadata {
   concept: string;
   defenseConcept: string;
   personnel: string;
+  situation: string;
 }
 
 interface Football {
@@ -106,7 +109,7 @@ interface HistoryState {
   routes: Route[];
   shapes: Shape[];
   footballs: Football[];
-  metadata: { name: string; formation: string; concept: string; defenseConcept: string; personnel: string };
+  metadata: { name: string; formation: string; concept: string; defenseConcept: string; personnel: string; situation: string };
 }
 
 interface PlayTypeState {
@@ -123,7 +126,7 @@ const createEmptyPlayTypeState = (): PlayTypeState => ({
   routes: [],
   shapes: [],
   footballs: [],
-  metadata: { name: "", formation: "", concept: "", defenseConcept: "", personnel: "" },
+  metadata: { name: "", formation: "", concept: "", defenseConcept: "", personnel: "", situation: "" },
   history: [],
 });
 
@@ -201,6 +204,8 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   const [showBlocking, setShowBlocking] = useState(true);
   const [includeOffense, setIncludeOffense] = useState(true);
   const [includeDefense, setIncludeDefense] = useState(false);
+  const [isSituational, setIsSituational] = useState(false);
+  const [selectedGameFormat, setSelectedGameFormat] = useState<GameFormat | null>(null);
   const [specialPrompt, setSpecialPrompt] = useState("");
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -212,6 +217,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     concept: "",
     defenseConcept: "",
     personnel: "",
+    situation: "",
   });
   const [exportWidth, setExportWidth] = useState(String(FIELD.WIDTH));
   const [exportHeight, setExportHeight] = useState(String(FIELD.HEIGHT));
@@ -733,7 +739,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     setRoutes([]);
     setShapes([]);
     setFootballs([]);
-    setMetadata({ name: "", formation: "", concept: "", defenseConcept: "", personnel: "" });
+    setMetadata({ name: "", formation: "", concept: "", defenseConcept: "", personnel: "", situation: "" });
     setSelectedPlayer(null);
     setSelectedRoute(null);
     setSelectedShape(null);
@@ -990,6 +996,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   };
 
   const handleGameFormatClick = (format: "5v5" | "7v7" | "9v9" | "11v11") => {
+    setSelectedGameFormat(format);
     if (playType === "defense") {
       loadDefensePreset(format, includeOffense);
     } else if ((playType === "offense" || playType === "ai-beta") && includeDefense) {
@@ -2633,22 +2640,58 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                 {(playType === "offense" || playType === "ai-beta") && (
                   <>
                     <div>
-                      <Label htmlFor="concept" className="text-xs">Concept</Label>
-                      <Select value={metadata.concept} onValueChange={(v) => setMetadata({ ...metadata, concept: v === "clear_selection" ? "" : v })}>
+                      <div className="flex items-center justify-between mb-1">
+                        <Label htmlFor="concept" className="text-xs">Concept</Label>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="checkbox"
+                            id="situational"
+                            checked={isSituational}
+                            onChange={(e) => {
+                              setIsSituational(e.target.checked);
+                              if (!e.target.checked) {
+                                setMetadata({ ...metadata, concept: "" });
+                              }
+                            }}
+                            className="rounded h-3 w-3"
+                            data-testid="checkbox-situational"
+                          />
+                          <Label htmlFor="situational" className="text-xs text-muted-foreground">Situational</Label>
+                        </div>
+                      </div>
+                      <Select 
+                        value={isSituational ? metadata.situation : metadata.concept} 
+                        onValueChange={(v) => {
+                          const value = v === "clear_selection" ? "" : v;
+                          if (isSituational) {
+                            setMetadata({ ...metadata, situation: value, concept: "" });
+                          } else {
+                            setMetadata({ ...metadata, concept: value, situation: "" });
+                          }
+                        }}
+                      >
                         <SelectTrigger id="concept" data-testid="select-concept" className="h-8 text-sm">
-                          <SelectValue placeholder="Select Concept" />
+                          <SelectValue placeholder={isSituational ? "Select Situation" : "Select Concept"} />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="clear_selection">None</SelectItem>
-                          <SelectItem value="outside-run">Outside Run</SelectItem>
-                          <SelectItem value="inside-run">Inside Run</SelectItem>
-                          <SelectItem value="short-pass">Short Pass</SelectItem>
-                          <SelectItem value="medium-pass">Medium Pass</SelectItem>
-                          <SelectItem value="deep-pass">Deep Pass</SelectItem>
-                          <SelectItem value="play-action-pass">Play Action Pass</SelectItem>
-                          <SelectItem value="rpo">RPO</SelectItem>
-                          <SelectItem value="screen-pass">Screen Pass</SelectItem>
-                          <SelectItem value="trick">Trick</SelectItem>
+                          {isSituational ? (
+                            getSituationalTags(selectedGameFormat || detectGameFormat(players.length)).map((tag) => (
+                              <SelectItem key={tag} value={tag}>{tag}</SelectItem>
+                            ))
+                          ) : (
+                            <>
+                              <SelectItem value="outside-run">Outside Run</SelectItem>
+                              <SelectItem value="inside-run">Inside Run</SelectItem>
+                              <SelectItem value="short-pass">Short Pass</SelectItem>
+                              <SelectItem value="medium-pass">Medium Pass</SelectItem>
+                              <SelectItem value="deep-pass">Deep Pass</SelectItem>
+                              <SelectItem value="play-action-pass">Play Action Pass</SelectItem>
+                              <SelectItem value="rpo">RPO</SelectItem>
+                              <SelectItem value="screen-pass">Screen Pass</SelectItem>
+                              <SelectItem value="trick">Trick</SelectItem>
+                            </>
+                          )}
                         </SelectContent>
                       </Select>
                     </div>

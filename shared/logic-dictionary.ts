@@ -201,3 +201,10 @@ export const LOGIC_DICTIONARY = {
     mechanicTriggers: ["play action", "play-action", "pa", "motion", "jet", "rpo", "screen", "draw"]
   }
 };
+
+export const SITUATIONAL_TAGS: Record<string, string[]> = {
+  '5v5': ['No Run Zone (<5 yds)', 'Midfield', 'Backed Up'],
+  '7v7': ['Red Zone (<20)', 'Goal Line (<10)', 'Open Field', 'Backed Up'],
+  '9v9': ['Red Zone (<20)', 'Goal Line (<10)', 'Open Field', 'Backed Up'],
+  '11v11': ['Red Zone', 'Goal Line', '2-Minute', '4-Minute', 'Backed Up']
+};

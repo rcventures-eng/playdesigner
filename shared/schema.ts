@@ -53,6 +53,7 @@ export const plays = pgTable("plays", {
   category: text("category"),
   formation: text("formation"),
   personnel: text("personnel"),
+  situation: text("situation"),
   data: jsonb("data"),
   tags: text("tags").array(),
   isFavorite: boolean("is_favorite").default(false),

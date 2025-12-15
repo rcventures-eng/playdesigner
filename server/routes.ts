@@ -395,10 +395,16 @@ Use these as references for the quality and structure expected:\n\n`;
 export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/generate-play", async (req, res) => {
     try {
-      const { prompt, image } = req.body;
+      const { prompt, image, situation } = req.body;
 
       if (!prompt && !image) {
         return res.status(400).json({ error: "Prompt or image is required" });
+      }
+      
+      // Build situational context if provided
+      let situationalContext = "";
+      if (situation) {
+        situationalContext = `\n\nCONSTRAINT: Design this play specifically for a "${situation}" scenario. Optimize routes, timing, and player positioning for this field position.\n`;
       }
 
       if (!process.env.GEMINI_API_KEY) {
@@ -419,7 +425,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (image) {
         // Use vision-specific prompt for image analysis
-        const visionPrompt = generateVisionSystemPrompt() + fewShotExamples;
+        const visionPrompt = generateVisionSystemPrompt() + fewShotExamples + situationalContext;
         
         // Detect MIME type from base64 header
         let mimeType = "image/png";
@@ -460,7 +466,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ]);
       } else {
         // Use standard prompt for text-only generation with few-shot examples
-        const systemPrompt = generateSystemPrompt() + fewShotExamples;
+        const systemPrompt = generateSystemPrompt() + fewShotExamples + situationalContext;
         result = await model.generateContent([
           { text: systemPrompt },
           { text: prompt },
