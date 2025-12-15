@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
 import { Play } from "@shared/schema";
 import { PlayPreview } from "@/components/PlayPreview";
@@ -20,6 +20,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -31,15 +32,17 @@ import {
   UserPlus,
   Edit,
   Tag,
-  Lock
+  Lock,
+  Heart
 } from "lucide-react";
 
 type PlayType = "offense" | "defense" | "special";
-type Category = "all" | "run" | "pass" | "play-action" | "rpo" | "trick";
+type Category = "all" | "favorites" | "run" | "pass" | "play-action" | "rpo" | "trick";
 type SortBy = "name" | "createdAt" | "formation" | "personnel";
 
 const categoryLabels: Record<Category, string> = {
   all: "All Plays",
+  favorites: "Favorites",
   run: "Run",
   pass: "Pass",
   "play-action": "Play-Action",
@@ -85,7 +88,11 @@ export default function PlayLibrary() {
   
   const playsForType = plays.filter((play) => play.type === playType);
   
-  const filteredPlays = playsForType.filter((play) => category === "all" || play.concept === category);
+  const filteredPlays = playsForType.filter((play) => {
+    if (category === "all") return true;
+    if (category === "favorites") return play.isFavorite === true;
+    return play.concept === category;
+  });
   
   const sortedPlays = [...filteredPlays].sort((a, b) => {
     switch (sortBy) {
@@ -104,11 +111,41 @@ export default function PlayLibrary() {
   
   const categoryCounts = {
     all: playsForType.length,
+    favorites: playsForType.filter((p) => p.isFavorite === true).length,
     run: playsForType.filter((p) => p.concept === "run").length,
     pass: playsForType.filter((p) => p.concept === "pass").length,
     "play-action": playsForType.filter((p) => p.concept === "play-action").length,
     rpo: playsForType.filter((p) => p.concept === "rpo").length,
     trick: playsForType.filter((p) => p.concept === "trick").length,
+  };
+  
+  const toggleFavoriteMutation = useMutation({
+    mutationFn: async ({ playId, isFavorite }: { playId: number; isFavorite: boolean }) => {
+      return apiRequest("PATCH", `/api/plays/${playId}`, { isFavorite });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/plays"] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update favorite status",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const handleToggleFavorite = (e: React.MouseEvent, play: Play) => {
+    e.stopPropagation();
+    toggleFavoriteMutation.mutate({ playId: play.id, isFavorite: !play.isFavorite });
+  };
+  
+  const handleTagClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    toast({
+      title: "Coming Soon",
+      description: "Tag management will be available in a future update.",
+    });
   };
   
   const handleShare = () => {
@@ -247,7 +284,11 @@ export default function PlayLibrary() {
                     }`}
                     data-testid={`filter-${key}`}
                   >
-                    <Folder className="w-3.5 h-3.5 flex-shrink-0" />
+                    {key === "favorites" ? (
+                      <Heart className="w-3.5 h-3.5 flex-shrink-0" />
+                    ) : (
+                      <Folder className="w-3.5 h-3.5 flex-shrink-0" />
+                    )}
                     {!sidebarCollapsed && (
                       <>
                         <span className="flex-1">{label}</span>
@@ -455,9 +496,31 @@ export default function PlayLibrary() {
                     selectedPlays.has(play.id) 
                       ? 'border-orange-500 ring-2 ring-orange-200' 
                       : 'border-gray-200 hover:border-gray-300'
-                  } shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden`}
+                  } shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden relative`}
                   data-testid={`play-card-${play.id}`}
                 >
+                  {/* Quick Action Icons */}
+                  <div className="absolute top-2 right-2 flex gap-1 z-10">
+                    <button
+                      onClick={(e) => handleToggleFavorite(e, play)}
+                      className={`p-1.5 rounded-full transition-colors ${
+                        play.isFavorite
+                          ? 'bg-red-500 text-white'
+                          : 'bg-white/80 text-gray-500 hover:bg-white hover:text-red-500'
+                      }`}
+                      data-testid={`button-favorite-${play.id}`}
+                    >
+                      <Heart className={`w-4 h-4 ${play.isFavorite ? 'fill-current' : ''}`} />
+                    </button>
+                    <button
+                      onClick={handleTagClick}
+                      className="p-1.5 rounded-full bg-white/80 text-gray-500 hover:bg-white hover:text-orange-500 transition-colors"
+                      data-testid={`button-tag-${play.id}`}
+                    >
+                      <Tag className="w-4 h-4" />
+                    </button>
+                  </div>
+                  
                   {/* Play Preview */}
                   <div className="h-64 bg-gray-100 flex items-center justify-center">
                     <PlayPreview

@@ -1043,6 +1043,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update a play (PATCH for partial updates)
+  app.patch("/api/plays/:id", requireAuth, async (req, res) => {
+    try {
+      const playId = parseInt(req.params.id);
+      if (isNaN(playId)) {
+        return res.status(400).json({ error: "Invalid play ID" });
+      }
+
+      // Verify the play belongs to the current user
+      const [existingPlay] = await db.select().from(plays).where(
+        and(
+          eq(plays.id, playId),
+          eq(plays.userId, req.session.userId!)
+        )
+      ).limit(1);
+
+      if (!existingPlay) {
+        return res.status(404).json({ error: "Play not found or access denied" });
+      }
+
+      // Build update object with only provided fields
+      const updateData: Partial<{ isFavorite: boolean; tags: string[] }> = {};
+      
+      if (typeof req.body.isFavorite === "boolean") {
+        updateData.isFavorite = req.body.isFavorite;
+      }
+      if (Array.isArray(req.body.tags)) {
+        updateData.tags = req.body.tags;
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ error: "No valid fields to update" });
+      }
+
+      const [updatedPlay] = await db.update(plays)
+        .set(updateData)
+        .where(eq(plays.id, playId))
+        .returning();
+
+      res.json(updatedPlay);
+    } catch (error: any) {
+      console.error("Update play error:", error);
+      res.status(500).json({ error: error.message || "Failed to update play" });
+    }
+  });
+
   // Admin API Routes
   
   // Check if current user is an admin (secure endpoint)
