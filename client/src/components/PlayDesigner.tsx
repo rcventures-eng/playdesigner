@@ -2606,7 +2606,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
 
           <div className="flex-1 overflow-y-auto pt-2 px-4 pb-2 space-y-2">
             <Card className="p-3 space-y-2">
-              <h3 className="font-semibold text-sm text-foreground">Play Metadata</h3>
+              <h3 className="font-semibold text-sm text-foreground">Play Tag Details</h3>
               <div className="space-y-2">
                 <div>
                   <Label htmlFor="play-name" className="text-xs">Name</Label>
