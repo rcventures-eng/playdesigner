@@ -978,7 +978,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid input", details: result.error.flatten() });
       }
 
-      const { name, type, data, tags, isFavorite, teamId } = result.data;
+      const { name, type, concept, formation, personnel, situation, data, tags, isFavorite, teamId } = result.data;
 
       // If teamId is provided, verify it belongs to the current user
       if (teamId) {
@@ -999,6 +999,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         teamId: teamId || null,
         name,
         type,
+        concept: concept || null,
+        formation: formation || null,
+        personnel: personnel || null,
+        situation: situation || null,
         data,
         tags: tags || null,
         isFavorite: isFavorite ?? false,

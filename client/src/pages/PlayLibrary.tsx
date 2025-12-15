@@ -85,7 +85,7 @@ export default function PlayLibrary() {
   
   const playsForType = plays.filter((play) => play.type === playType);
   
-  const filteredPlays = playsForType.filter((play) => category === "all" || play.category === category);
+  const filteredPlays = playsForType.filter((play) => category === "all" || play.concept === category);
   
   const sortedPlays = [...filteredPlays].sort((a, b) => {
     switch (sortBy) {
@@ -104,11 +104,11 @@ export default function PlayLibrary() {
   
   const categoryCounts = {
     all: playsForType.length,
-    run: playsForType.filter((p) => p.category === "run").length,
-    pass: playsForType.filter((p) => p.category === "pass").length,
-    "play-action": playsForType.filter((p) => p.category === "play-action").length,
-    rpo: playsForType.filter((p) => p.category === "rpo").length,
-    trick: playsForType.filter((p) => p.category === "trick").length,
+    run: playsForType.filter((p) => p.concept === "run").length,
+    pass: playsForType.filter((p) => p.concept === "pass").length,
+    "play-action": playsForType.filter((p) => p.concept === "play-action").length,
+    rpo: playsForType.filter((p) => p.concept === "rpo").length,
+    trick: playsForType.filter((p) => p.concept === "trick").length,
   };
   
   const handleShare = () => {
@@ -481,9 +481,9 @@ export default function PlayLibrary() {
                       {play.personnel && (
                         <span className="bg-gray-100 px-2 py-0.5 rounded">{play.personnel}</span>
                       )}
-                      {play.category && (
+                      {play.concept && (
                         <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded capitalize">
-                          {play.category}
+                          {play.concept}
                         </span>
                       )}
                     </div>

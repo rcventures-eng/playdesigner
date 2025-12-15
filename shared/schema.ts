@@ -50,7 +50,7 @@ export const plays = pgTable("plays", {
   teamId: integer("team_id").references(() => teams.id),
   name: text("name").notNull(),
   type: text("type").notNull(),
-  category: text("category"),
+  concept: text("concept"),
   formation: text("formation"),
   personnel: text("personnel"),
   situation: text("situation"),
