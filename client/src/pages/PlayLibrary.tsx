@@ -23,13 +23,15 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   ChevronLeft, 
   ChevronRight, 
+  ChevronDown,
   Plus,
   Folder,
   LayoutGrid,
   LogIn,
   UserPlus,
   Edit,
-  Tag
+  Tag,
+  Lock
 } from "lucide-react";
 
 type PlayType = "offense" | "defense" | "special";
@@ -68,6 +70,9 @@ export default function PlayLibrary() {
   const [showSignUp, setShowSignUp] = useState(false);
   const [doubleClickedPlay, setDoubleClickedPlay] = useState<Play | null>(null);
   const [showPlayDialog, setShowPlayDialog] = useState(false);
+  const [myPlaysExpanded, setMyPlaysExpanded] = useState(true);
+  const [basicLibraryExpanded, setBasicLibraryExpanded] = useState(false);
+  const [premiumLibraryExpanded, setPremiumLibraryExpanded] = useState(false);
   
   const { data: user, isLoading: userLoading } = useQuery<{ id: string; email: string; firstName: string } | null>({
     queryKey: ["/api/me"],
@@ -218,27 +223,111 @@ export default function PlayLibrary() {
           </Button>
         </div>
         
-        <nav className="flex-1 p-2 space-y-1">
-          {(Object.entries(categoryLabels) as [Category, string][]).map(([key, label]) => (
+        <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
+          {/* My Plays Section */}
+          <div className="space-y-1">
             <button
-              key={key}
-              onClick={() => setCategory(key)}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
-                category === key 
-                  ? 'bg-orange-100 text-orange-700' 
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-              data-testid={`filter-${key}`}
+              onClick={() => setMyPlaysExpanded(!myPlaysExpanded)}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left font-semibold text-gray-900 hover:bg-gray-100 transition-colors"
+              data-testid="section-my-plays"
             >
-              <Folder className="w-4 h-4 flex-shrink-0" />
+              <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${myPlaysExpanded ? '' : '-rotate-90'}`} />
+              {!sidebarCollapsed && <span className="flex-1">My Plays</span>}
+            </button>
+            {myPlaysExpanded && (
+              <div className="ml-2 space-y-1">
+                {(Object.entries(categoryLabels) as [Category, string][]).map(([key, label]) => (
+                  <button
+                    key={key}
+                    onClick={() => setCategory(key)}
+                    className={`w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-left text-sm transition-colors ${
+                      category === key 
+                        ? 'bg-orange-100 text-orange-700' 
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                    data-testid={`filter-${key}`}
+                  >
+                    <Folder className="w-3.5 h-3.5 flex-shrink-0" />
+                    {!sidebarCollapsed && (
+                      <>
+                        <span className="flex-1">{label}</span>
+                        <span className="text-xs text-gray-500">({categoryCounts[key]})</span>
+                      </>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* RC Football Basic Play Library Section */}
+          <div className="space-y-1">
+            <button
+              onClick={() => setBasicLibraryExpanded(!basicLibraryExpanded)}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left font-semibold text-gray-900 hover:bg-gray-100 transition-colors"
+              data-testid="section-basic-library"
+            >
+              <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${basicLibraryExpanded ? '' : '-rotate-90'}`} />
+              {!sidebarCollapsed && <span className="flex-1 text-sm">RC Football Basic Play Library</span>}
+            </button>
+            {basicLibraryExpanded && (
+              <div className="ml-2 space-y-1">
+                {(Object.entries(categoryLabels) as [Category, string][]).map(([key, label]) => (
+                  <button
+                    key={`basic-${key}`}
+                    className="w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-left text-sm text-gray-500 cursor-not-allowed"
+                    disabled
+                    data-testid={`basic-filter-${key}`}
+                  >
+                    <Folder className="w-3.5 h-3.5 flex-shrink-0" />
+                    {!sidebarCollapsed && (
+                      <>
+                        <span className="flex-1">{label}</span>
+                        <span className="text-xs text-gray-400">(0)</span>
+                      </>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* RC Football Premium Play Library Section */}
+          <div className="space-y-1">
+            <button
+              onClick={() => setPremiumLibraryExpanded(!premiumLibraryExpanded)}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left font-semibold text-gray-900 hover:bg-gray-100 transition-colors"
+              data-testid="section-premium-library"
+            >
+              <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${premiumLibraryExpanded ? '' : '-rotate-90'}`} />
               {!sidebarCollapsed && (
                 <>
-                  <span className="flex-1">{label}</span>
-                  <span className="text-sm text-gray-500">({categoryCounts[key]})</span>
+                  <span className="flex-1 text-sm">RC Football Premium Play Library</span>
+                  <Lock className="w-3.5 h-3.5 text-gray-400" />
                 </>
               )}
             </button>
-          ))}
+            {premiumLibraryExpanded && (
+              <div className="ml-2 space-y-1">
+                {(Object.entries(categoryLabels) as [Category, string][]).map(([key, label]) => (
+                  <button
+                    key={`premium-${key}`}
+                    className="w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-left text-sm text-gray-500 cursor-not-allowed"
+                    disabled
+                    data-testid={`premium-filter-${key}`}
+                  >
+                    <Folder className="w-3.5 h-3.5 flex-shrink-0" />
+                    {!sidebarCollapsed && (
+                      <>
+                        <span className="flex-1">{label}</span>
+                        <span className="text-xs text-gray-400">(0)</span>
+                      </>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </nav>
         
         {!sidebarCollapsed && (
