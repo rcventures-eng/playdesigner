@@ -33,7 +33,17 @@ The AI Beta tab features an AI Play Creator powered by Google Gemini 2.0 Flash. 
 
 ### Shared Configuration
 
-A centralized `shared/football-config.ts` acts as a single source of truth for design parameters, game logic, and formation coordinates. The `shared/logic-dictionary.ts` provides a `LOGIC_DICTIONARY` for AI Play Creator, defining offensive/defensive strategies, route patterns, and game mechanics.
+A centralized `shared/football-config.ts` acts as a single source of truth for design parameters, game logic, and formation coordinates. The `shared/logic-dictionary.ts` provides a `LOGIC_DICTIONARY` for AI Play Creator, defining offensive/defensive strategies, route patterns, and game mechanics. It also exports `SITUATIONAL_TAGS` for format-specific situational play tagging.
+
+### Situational Tagging System
+
+The PlayDesigner supports dynamic situational tagging for plays:
+-   **Situational Toggle**: A checkbox next to the Concept label enables situational mode
+-   **Format-Specific Tags**: When enabled, the dropdown shows situation-specific options based on game format (5v5, 7v7, 9v9, 11v11)
+-   **Tag Options**: 5v5 has "No Run Zone", "Midfield", "Backed Up"; 7v7/9v9 have "Red Zone", "Goal Line", "Open Field", "Backed Up"; 11v11 adds "2-Minute" and "4-Minute"
+-   **Auto-Detection**: Uses `detectGameFormat` utility to determine format from player count or explicit selection
+-   **AI Integration**: Situation context is injected into AI prompts for contextual play generation
+-   **Data Storage**: Plays table includes a `situation` column for persisting situational tags
 
 ### Backend
 
