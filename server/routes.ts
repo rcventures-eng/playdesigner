@@ -6,7 +6,7 @@ import { FOOTBALL_CONFIG, FORMATIONS, resolveColorKey } from "../shared/football
 import { LOGIC_DICTIONARY } from "../shared/logic-dictionary";
 import { db } from "./db";
 import { aiGenerationLogs, users, teams, plays, passwordResetTokens, featureRequests, insertUserSchema, insertTeamSchema, insertPlaySchema, insertFeatureRequestSchema } from "@shared/schema";
-import { desc, eq, and, gt, asc, sql } from "drizzle-orm";
+import { desc, eq, and, gt, asc, sql, or } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { sendWelcomeEmail, sendPasswordResetEmail, sendFeatureRequestEmail } from "./resend";
@@ -978,7 +978,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid input", details: result.error.flatten() });
       }
 
-      const { name, type, concept, formation, personnel, situation, data, tags, isFavorite, teamId } = result.data;
+      const { name, type, concept, formation, personnel, situation, data, tags, isFavorite, teamId, isPublic, clonedFromId } = result.data;
 
       // If teamId is provided, verify it belongs to the current user
       if (teamId) {
@@ -994,6 +994,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Only admins can create public plays
+      let finalIsPublic = false;
+      if (isPublic) {
+        const [currentUser] = await db.select({ isAdmin: users.isAdmin })
+          .from(users)
+          .where(eq(users.id, req.session.userId!))
+          .limit(1);
+        
+        if (currentUser?.isAdmin) {
+          finalIsPublic = true;
+        }
+      }
+
       const [newPlay] = await db.insert(plays).values({
         userId: req.session.userId!,
         teamId: teamId || null,
@@ -1006,12 +1019,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         data,
         tags: tags || null,
         isFavorite: isFavorite ?? false,
+        isPublic: finalIsPublic,
+        clonedFromId: clonedFromId || null,
       }).returning();
 
       res.status(201).json(newPlay);
     } catch (error: any) {
       console.error("Create play error:", error);
       res.status(500).json({ error: error.message || "Failed to save play" });
+    }
+  });
+
+  // Get public templates (no auth required)
+  app.get("/api/public/templates", async (req, res) => {
+    try {
+      const publicPlays = await db.select().from(plays).where(
+        eq(plays.isPublic, true)
+      ).orderBy(desc(plays.createdAt));
+
+      res.json(publicPlays);
+    } catch (error: any) {
+      console.error("Get public templates error:", error);
+      res.status(500).json({ error: error.message || "Failed to get templates" });
     }
   });
 
@@ -1030,13 +1059,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           )
         ).orderBy(desc(plays.createdAt));
       } else {
-        // Return all plays for the user
+        // Return all plays for the user (excluding public plays they don't own)
         userPlays = await db.select().from(plays).where(
-          eq(plays.userId, req.session.userId!)
+          and(
+            eq(plays.userId, req.session.userId!),
+            eq(plays.isPublic, false)
+          )
         ).orderBy(desc(plays.createdAt));
       }
 
-      res.json(userPlays);
+      // Also fetch public plays (Global Templates) - separate from user's plays
+      const publicPlays = await db.select().from(plays).where(
+        eq(plays.isPublic, true)
+      ).orderBy(desc(plays.createdAt));
+
+      res.json({ userPlays, publicPlays });
     } catch (error: any) {
       console.error("Get plays error:", error);
       res.status(500).json({ error: error.message || "Failed to get plays" });
@@ -1051,26 +1088,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid play ID" });
       }
 
-      // Verify the play belongs to the current user
+      // First fetch the play to check ownership and public status
       const [existingPlay] = await db.select().from(plays).where(
-        and(
-          eq(plays.id, playId),
-          eq(plays.userId, req.session.userId!)
-        )
+        eq(plays.id, playId)
       ).limit(1);
 
       if (!existingPlay) {
-        return res.status(404).json({ error: "Play not found or access denied" });
+        return res.status(404).json({ error: "Play not found" });
+      }
+
+      // Security check for public plays - only admins can edit
+      if (existingPlay.isPublic) {
+        const [currentUser] = await db.select({ isAdmin: users.isAdmin })
+          .from(users)
+          .where(eq(users.id, req.session.userId!))
+          .limit(1);
+        
+        if (!currentUser?.isAdmin) {
+          return res.status(403).json({ error: "Public plays can only be edited by admins. Clone this play to your library first." });
+        }
+      } else {
+        // For non-public plays, verify ownership
+        if (existingPlay.userId !== req.session.userId) {
+          return res.status(403).json({ error: "Access denied" });
+        }
       }
 
       // Build update object with only provided fields
-      const updateData: Partial<{ isFavorite: boolean; tags: string[] }> = {};
+      const updateData: Partial<{ isFavorite: boolean; tags: string[]; isPublic: boolean }> = {};
       
       if (typeof req.body.isFavorite === "boolean") {
         updateData.isFavorite = req.body.isFavorite;
       }
       if (Array.isArray(req.body.tags)) {
         updateData.tags = req.body.tags;
+      }
+      // Allow admins to toggle isPublic
+      if (typeof req.body.isPublic === "boolean") {
+        // Double-check admin status for isPublic changes
+        const [currentUser] = await db.select({ isAdmin: users.isAdmin })
+          .from(users)
+          .where(eq(users.id, req.session.userId!))
+          .limit(1);
+        
+        if (currentUser?.isAdmin) {
+          updateData.isPublic = req.body.isPublic;
+        }
       }
 
       if (Object.keys(updateData).length === 0) {

@@ -304,16 +304,17 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   
   // Save play mutation
   const savePlayMutation = useMutation({
-    mutationFn: async (playData: { name: string; type: string; concept?: string; formation?: string; personnel?: string; situation?: string; data: unknown; isFavorite: boolean }) => {
+    mutationFn: async (playData: { name: string; type: string; concept?: string; formation?: string; personnel?: string; situation?: string; data: unknown; isFavorite: boolean; isPublic?: boolean; clonedFromId?: number }) => {
       const response = await apiRequest("POST", "/api/plays", playData);
       return response.json();
     },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/plays"] });
-      const conceptLabel = variables.concept ? ` to ${variables.concept.charAt(0).toUpperCase() + variables.concept.slice(1)} folder` : "";
+      const publicLabel = variables.isPublic ? " to the Global Library" : "";
+      const conceptLabel = !variables.isPublic && variables.concept ? ` to ${variables.concept.charAt(0).toUpperCase() + variables.concept.slice(1)} folder` : "";
       toast({ 
-        title: "Play Saved!", 
-        description: `"${variables.name}" has been saved${conceptLabel}.` 
+        title: variables.isPublic ? "Published to Global Library!" : "Play Saved!", 
+        description: `"${variables.name}" has been saved${publicLabel}${conceptLabel}.` 
       });
     },
     onError: (error: Error) => {
@@ -327,6 +328,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   
   // Quick action state for sidebar
   const [isFavorite, setIsFavorite] = useState(false);
+  const [postToGlobalLibrary, setPostToGlobalLibrary] = useState(false);
   const [signUpMessage, setSignUpMessage] = useState("");
   
   // Wrapper to clear signUpMessage when modal closes
@@ -3356,10 +3358,25 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
           >
             {/* Quick Action Icons Strip - Outside canvasRef for export exclusion */}
             <div 
-              className="h-7 bg-slate-800 flex items-center justify-end px-3 rounded-t-md"
+              className="h-7 bg-slate-800 flex items-center justify-between px-3 rounded-t-md"
               style={{ width: FIELD.WIDTH }}
               data-testid="quick-action-strip"
             >
+              {/* Admin-only Global Library checkbox */}
+              <div className="flex items-center gap-2">
+                {user?.isAdmin && (
+                  <label className="flex items-center gap-1.5 cursor-pointer text-xs">
+                    <input
+                      type="checkbox"
+                      checked={postToGlobalLibrary}
+                      onChange={(e) => setPostToGlobalLibrary(e.target.checked)}
+                      className="w-3.5 h-3.5 accent-orange-500"
+                      data-testid="checkbox-global-library"
+                    />
+                    <span className="text-orange-400 font-medium">Post to Global Library</span>
+                  </label>
+                )}
+              </div>
               <div className="flex gap-3">
                 <Save 
                   className={`w-5 h-5 cursor-pointer transition-colors ${savePlayMutation.isPending ? 'text-orange-400 animate-pulse' : 'text-slate-400 hover:text-white'}`}
@@ -3391,7 +3408,8 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                       personnel: metadata.personnel || undefined,
                       situation: metadata.situation || undefined,
                       data: canvasData,
-                      isFavorite
+                      isFavorite,
+                      isPublic: user?.isAdmin ? postToGlobalLibrary : undefined
                     });
                   }}
                 />

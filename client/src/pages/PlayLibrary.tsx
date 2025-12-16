@@ -33,12 +33,20 @@ import {
   Edit,
   Tag,
   Lock,
-  Heart
+  Heart,
+  Globe,
+  Copy
 } from "lucide-react";
 
 type PlayType = "offense" | "defense" | "special";
 type Category = "all" | "favorites" | "run" | "pass" | "play-action" | "rpo" | "trick";
 type SortBy = "name" | "createdAt" | "formation" | "personnel";
+type LibrarySection = "my-plays" | "basic-library";
+
+interface PlaysResponse {
+  userPlays: Play[];
+  publicPlays: Play[];
+}
 
 const categoryLabels: Record<Category, string> = {
   all: "All Plays",
@@ -74,19 +82,33 @@ export default function PlayLibrary() {
   const [doubleClickedPlay, setDoubleClickedPlay] = useState<Play | null>(null);
   const [showPlayDialog, setShowPlayDialog] = useState(false);
   const [myPlaysExpanded, setMyPlaysExpanded] = useState(true);
-  const [basicLibraryExpanded, setBasicLibraryExpanded] = useState(false);
+  const [basicLibraryExpanded, setBasicLibraryExpanded] = useState(true);
   const [premiumLibraryExpanded, setPremiumLibraryExpanded] = useState(false);
+  // Default to basic-library - works for both logged in and logged out users
+  const [activeSection, setActiveSection] = useState<LibrarySection>("basic-library");
   
-  const { data: user, isLoading: userLoading } = useQuery<{ id: string; email: string; firstName: string } | null>({
+  const { data: user, isLoading: userLoading } = useQuery<{ id: string; email: string; firstName: string; isAdmin?: boolean } | null>({
     queryKey: ["/api/me"],
   });
   
-  const { data: plays = [], isLoading: playsLoading } = useQuery<Play[]>({
+  // Fetch user's plays (only when authenticated)
+  const { data: playsData, isLoading: playsLoading } = useQuery<PlaysResponse>({
     queryKey: ["/api/plays"],
     enabled: !!user,
   });
   
-  const playsForType = plays.filter((play) => play.type === playType);
+  // Fetch public templates (always available, no auth required)
+  const { data: publicTemplates = [], isLoading: templatesLoading } = useQuery<Play[]>({
+    queryKey: ["/api/public/templates"],
+  });
+  
+  const userPlays = playsData?.userPlays || [];
+  // Use public templates from dedicated endpoint, which works for all users
+  const publicPlays = publicTemplates;
+  
+  // Choose which plays to display based on active section
+  const activePlays = activeSection === "my-plays" ? userPlays : publicPlays;
+  const playsForType = activePlays.filter((play) => play.type === playType);
   
   const filteredPlays = playsForType.filter((play) => {
     if (category === "all") return true;
@@ -109,15 +131,32 @@ export default function PlayLibrary() {
     }
   });
   
-  const categoryCounts = {
-    all: playsForType.length,
-    favorites: playsForType.filter((p) => p.isFavorite === true).length,
-    run: playsForType.filter((p) => p.concept === "run").length,
-    pass: playsForType.filter((p) => p.concept === "pass").length,
-    "play-action": playsForType.filter((p) => p.concept === "play-action").length,
-    rpo: playsForType.filter((p) => p.concept === "rpo").length,
-    trick: playsForType.filter((p) => p.concept === "trick").length,
+  // Category counts for user's plays
+  const userPlaysForType = userPlays.filter((p) => p.type === playType);
+  const userCategoryCounts = {
+    all: userPlaysForType.length,
+    favorites: userPlaysForType.filter((p) => p.isFavorite === true).length,
+    run: userPlaysForType.filter((p) => p.concept === "run").length,
+    pass: userPlaysForType.filter((p) => p.concept === "pass").length,
+    "play-action": userPlaysForType.filter((p) => p.concept === "play-action").length,
+    rpo: userPlaysForType.filter((p) => p.concept === "rpo").length,
+    trick: userPlaysForType.filter((p) => p.concept === "trick").length,
   };
+  
+  // Category counts for public plays (Basic Library)
+  const publicPlaysForType = publicPlays.filter((p) => p.type === playType);
+  const publicCategoryCounts = {
+    all: publicPlaysForType.length,
+    favorites: 0, // No favorites for public plays
+    run: publicPlaysForType.filter((p) => p.concept === "run").length,
+    pass: publicPlaysForType.filter((p) => p.concept === "pass").length,
+    "play-action": publicPlaysForType.filter((p) => p.concept === "play-action").length,
+    rpo: publicPlaysForType.filter((p) => p.concept === "rpo").length,
+    trick: publicPlaysForType.filter((p) => p.concept === "trick").length,
+  };
+  
+  // Use the counts for the active section
+  const categoryCounts = activeSection === "my-plays" ? userCategoryCounts : publicCategoryCounts;
   
   const toggleFavoriteMutation = useMutation({
     mutationFn: async ({ playId, isFavorite }: { playId: number; isFavorite: boolean }) => {
@@ -130,6 +169,39 @@ export default function PlayLibrary() {
       toast({
         title: "Error",
         description: "Failed to update favorite status",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Clone a public template to user's library
+  const clonePlayMutation = useMutation({
+    mutationFn: async (play: Play) => {
+      return apiRequest("POST", "/api/plays", {
+        name: play.name,
+        type: play.type,
+        concept: play.concept,
+        formation: play.formation,
+        personnel: play.personnel,
+        situation: play.situation,
+        data: play.data,
+        tags: play.tags,
+        isFavorite: false,
+        clonedFromId: play.id,
+      });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/plays"] });
+      toast({
+        title: "Play Added to Library!",
+        description: `"${variables.name}" has been saved to your library. You can now edit it.`,
+      });
+      setActiveSection("my-plays");
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to save play to your library",
         variant: "destructive",
       });
     },
@@ -192,45 +264,8 @@ export default function PlayLibrary() {
     );
   }
   
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-white flex flex-col">
-        <TopNav 
-          isAdmin={isAdmin}
-          setIsAdmin={setIsAdmin}
-          showSignUp={showSignUp}
-          setShowSignUp={setShowSignUp}
-        />
-        <div className="flex-1 flex flex-col items-center justify-center p-8">
-          <div className="max-w-md text-center space-y-6">
-            <LayoutGrid className="w-16 h-16 text-orange-500 mx-auto" />
-            <h1 className="text-3xl font-bold text-gray-900">Play Library</h1>
-            <p className="text-gray-600">
-              Sign in to access your saved plays and manage your playbook.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                onClick={() => navigate("/")}
-                className="bg-orange-500 hover:bg-orange-600 text-white"
-                data-testid="button-login-prompt"
-              >
-                <LogIn className="w-4 h-4 mr-2" />
-                Log In
-              </Button>
-              <Button 
-                variant="outline"
-                onClick={() => navigate("/?signup=true")}
-                data-testid="button-signup-prompt"
-              >
-                <UserPlus className="w-4 h-4 mr-2" />
-                Create Account
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // For unauthenticated users, show the Basic Library section by default
+  // They can browse templates but need to sign in to save them
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
@@ -264,8 +299,16 @@ export default function PlayLibrary() {
           {/* My Plays Section */}
           <div className="space-y-1">
             <button
-              onClick={() => setMyPlaysExpanded(!myPlaysExpanded)}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left font-semibold text-gray-900 hover:bg-gray-100 transition-colors"
+              onClick={() => {
+                setMyPlaysExpanded(!myPlaysExpanded);
+                if (!myPlaysExpanded) {
+                  setActiveSection("my-plays");
+                  setBasicLibraryExpanded(false);
+                }
+              }}
+              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left font-semibold transition-colors ${
+                activeSection === "my-plays" ? 'bg-orange-50 text-orange-700' : 'text-gray-900 hover:bg-gray-100'
+              }`}
               data-testid="section-my-plays"
             >
               <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${myPlaysExpanded ? '' : '-rotate-90'}`} />
@@ -276,9 +319,12 @@ export default function PlayLibrary() {
                 {(Object.entries(categoryLabels) as [Category, string][]).map(([key, label]) => (
                   <button
                     key={key}
-                    onClick={() => setCategory(key)}
+                    onClick={() => {
+                      setActiveSection("my-plays");
+                      setCategory(key);
+                    }}
                     className={`w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-left text-sm transition-colors ${
-                      category === key 
+                      activeSection === "my-plays" && category === key 
                         ? 'bg-orange-100 text-orange-700' 
                         : 'text-gray-700 hover:bg-gray-100'
                     }`}
@@ -292,7 +338,7 @@ export default function PlayLibrary() {
                     {!sidebarCollapsed && (
                       <>
                         <span className="flex-1">{label}</span>
-                        <span className="text-xs text-gray-500">({categoryCounts[key]})</span>
+                        <span className="text-xs text-gray-500">({userCategoryCounts[key]})</span>
                       </>
                     )}
                   </button>
@@ -304,8 +350,16 @@ export default function PlayLibrary() {
           {/* RC Football Basic Play Library Section */}
           <div className="space-y-1">
             <button
-              onClick={() => setBasicLibraryExpanded(!basicLibraryExpanded)}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left font-semibold text-gray-900 hover:bg-gray-100 transition-colors"
+              onClick={() => {
+                setBasicLibraryExpanded(!basicLibraryExpanded);
+                if (!basicLibraryExpanded) {
+                  setActiveSection("basic-library");
+                  setMyPlaysExpanded(false);
+                }
+              }}
+              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left font-semibold transition-colors ${
+                activeSection === "basic-library" ? 'bg-orange-50 text-orange-700' : 'text-gray-900 hover:bg-gray-100'
+              }`}
               data-testid="section-basic-library"
             >
               <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform ${basicLibraryExpanded ? '' : '-rotate-90'}`} />
@@ -313,18 +367,25 @@ export default function PlayLibrary() {
             </button>
             {basicLibraryExpanded && (
               <div className="ml-2 space-y-1">
-                {(Object.entries(categoryLabels) as [Category, string][]).map(([key, label]) => (
+                {(Object.entries(categoryLabels) as [Category, string][]).filter(([key]) => key !== "favorites").map(([key, label]) => (
                   <button
                     key={`basic-${key}`}
-                    className="w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-left text-sm text-gray-500 cursor-not-allowed"
-                    disabled
+                    onClick={() => {
+                      setActiveSection("basic-library");
+                      setCategory(key);
+                    }}
+                    className={`w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-left text-sm transition-colors ${
+                      activeSection === "basic-library" && category === key
+                        ? 'bg-orange-100 text-orange-700' 
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
                     data-testid={`basic-filter-${key}`}
                   >
                     <Folder className="w-3.5 h-3.5 flex-shrink-0" />
                     {!sidebarCollapsed && (
                       <>
                         <span className="flex-1">{label}</span>
-                        <span className="text-xs text-gray-400">(0)</span>
+                        <span className="text-xs text-gray-500">({publicCategoryCounts[key]})</span>
                       </>
                     )}
                   </button>
@@ -499,19 +560,52 @@ export default function PlayLibrary() {
                   } shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden relative`}
                   data-testid={`play-card-${play.id}`}
                 >
+                  {/* Official Template Badge for Public Plays */}
+                  {play.isPublic && (
+                    <div className="absolute top-2 left-2 z-10">
+                      <span className="flex items-center gap-1 bg-blue-600 text-white text-xs font-medium px-2 py-1 rounded-full shadow-sm">
+                        <Globe className="w-3 h-3" />
+                        Official Template
+                      </span>
+                    </div>
+                  )}
+                  
                   {/* Quick Action Icons */}
                   <div className="absolute top-2 right-2 flex gap-1 z-10">
-                    <button
-                      onClick={(e) => handleToggleFavorite(e, play)}
-                      className={`p-1.5 rounded-full transition-colors ${
-                        play.isFavorite
-                          ? 'bg-red-500 text-white'
-                          : 'bg-white/80 text-gray-500 hover:bg-white hover:text-red-500'
-                      }`}
-                      data-testid={`button-favorite-${play.id}`}
-                    >
-                      <Heart className={`w-4 h-4 ${play.isFavorite ? 'fill-current' : ''}`} />
-                    </button>
+                    {!play.isPublic && (
+                      <button
+                        onClick={(e) => handleToggleFavorite(e, play)}
+                        className={`p-1.5 rounded-full transition-colors ${
+                          play.isFavorite
+                            ? 'bg-red-500 text-white'
+                            : 'bg-white/80 text-gray-500 hover:bg-white hover:text-red-500'
+                        }`}
+                        data-testid={`button-favorite-${play.id}`}
+                      >
+                        <Heart className={`w-4 h-4 ${play.isFavorite ? 'fill-current' : ''}`} />
+                      </button>
+                    )}
+                    {play.isPublic && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!user) {
+                            toast({
+                              title: "Sign in required",
+                              description: "Please sign in to save templates to your library.",
+                            });
+                            navigate("/?signup=true");
+                            return;
+                          }
+                          clonePlayMutation.mutate(play);
+                        }}
+                        className="p-1.5 rounded-full bg-white/80 text-gray-500 hover:bg-white hover:text-blue-600 transition-colors"
+                        data-testid={`button-clone-${play.id}`}
+                        title="Add to My Library"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
+                    )}
                     <button
                       onClick={handleTagClick}
                       className="p-1.5 rounded-full bg-white/80 text-gray-500 hover:bg-white hover:text-orange-500 transition-colors"
@@ -537,7 +631,7 @@ export default function PlayLibrary() {
                     <h3 className="font-medium text-gray-900 truncate" data-testid={`text-play-name-${play.id}`}>
                       {play.name}
                     </h3>
-                    <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
+                    <div className="flex items-center gap-2 mt-1 text-xs text-gray-500 flex-wrap">
                       {play.formation && (
                         <span className="bg-gray-100 px-2 py-0.5 rounded">{play.formation}</span>
                       )}
@@ -563,31 +657,78 @@ export default function PlayLibrary() {
       <Dialog open={showPlayDialog} onOpenChange={setShowPlayDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{doubleClickedPlay?.name}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              {doubleClickedPlay?.name}
+              {doubleClickedPlay?.isPublic && (
+                <span className="flex items-center gap-1 bg-blue-600 text-white text-xs font-medium px-2 py-0.5 rounded-full">
+                  <Globe className="w-3 h-3" />
+                  Template
+                </span>
+              )}
+            </DialogTitle>
             <DialogDescription>
-              Choose an action for this play
+              {doubleClickedPlay?.isPublic 
+                ? "Save this template to your library to customize it."
+                : "Choose an action for this play"
+              }
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 pt-4">
-            <Button
-              onClick={() => {
-                setShowPlayDialog(false);
-                navigate("/");
-              }}
-              className="w-full bg-orange-500 hover:bg-orange-600 text-white justify-start"
-              data-testid="button-go-to-designer"
-            >
-              <Edit className="w-4 h-4 mr-2" />
-              Go to Play Designer
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              data-testid="button-tag-play"
-            >
-              <Tag className="w-4 h-4 mr-2" />
-              Tag Play
-            </Button>
+            {doubleClickedPlay?.isPublic ? (
+              <>
+                <Button
+                  onClick={() => {
+                    if (!user) {
+                      toast({
+                        title: "Sign in required",
+                        description: "Please sign in to save templates to your library.",
+                      });
+                      setShowPlayDialog(false);
+                      navigate("/?signup=true");
+                      return;
+                    }
+                    if (doubleClickedPlay) {
+                      clonePlayMutation.mutate(doubleClickedPlay);
+                    }
+                    setShowPlayDialog(false);
+                  }}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white justify-start"
+                  data-testid="button-save-to-library"
+                  disabled={clonePlayMutation.isPending}
+                >
+                  <Copy className="w-4 h-4 mr-2" />
+                  {user ? (clonePlayMutation.isPending ? "Saving..." : "Save to My Library") : "Sign in to Save"}
+                </Button>
+                <p className="text-xs text-gray-500 text-center">
+                  {user 
+                    ? "After saving, you can edit and customize this play in the Play Designer."
+                    : "Sign in to save this template and start customizing it."
+                  }
+                </p>
+              </>
+            ) : (
+              <>
+                <Button
+                  onClick={() => {
+                    setShowPlayDialog(false);
+                    navigate("/");
+                  }}
+                  className="w-full bg-orange-500 hover:bg-orange-600 text-white justify-start"
+                  data-testid="button-go-to-designer"
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Go to Play Designer
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  data-testid="button-tag-play"
+                >
+                  <Tag className="w-4 h-4 mr-2" />
+                  Tag Play
+                </Button>
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>
