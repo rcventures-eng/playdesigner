@@ -177,6 +177,29 @@ export default function PlayLibrary() {
   // Clone a public template to user's library
   const clonePlayMutation = useMutation({
     mutationFn: async (play: Play) => {
+      // Ensure data is a proper object, not a stringified JSON
+      let parsedData = play.data;
+      if (typeof parsedData === "string") {
+        try {
+          parsedData = JSON.parse(parsedData);
+        } catch {
+          parsedData = {};
+        }
+      }
+      
+      // Ensure tags is a proper array
+      let parsedTags = play.tags;
+      if (typeof parsedTags === "string") {
+        try {
+          parsedTags = JSON.parse(parsedTags);
+        } catch {
+          parsedTags = [];
+        }
+      }
+      if (!Array.isArray(parsedTags)) {
+        parsedTags = [];
+      }
+      
       return apiRequest("POST", "/api/plays", {
         name: play.name,
         type: play.type,
@@ -184,8 +207,8 @@ export default function PlayLibrary() {
         formation: play.formation,
         personnel: play.personnel,
         situation: play.situation,
-        data: play.data,
-        tags: play.tags,
+        data: parsedData,
+        tags: parsedTags,
         isFavorite: false,
         clonedFromId: play.id,
       });
