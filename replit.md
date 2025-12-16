@@ -95,14 +95,27 @@ A fixed-width right sidebar provides guided instructions on play creation, inclu
 
 A light-themed page at `/plays` for managing saved plays:
 -   **Layout**: White background with collapsible left sidebar (filters) and main gallery grid
--   **Authentication**: Requires login; shows login prompt with account creation option for unauthenticated users
+-   **Authentication**: Unauthenticated users can browse public templates; saving/cloning requires login
 -   **Play Type Tabs**: Offense/Defense/Special toggle pills to filter by play type
+-   **Library Sections**: "My Library" (user's plays) and "RC Football Basic Play Library" (public templates)
 -   **Sidebar Filters**: Categories include All Plays, Run, Pass, Play-Action, RPO, Trick with counts
 -   **Gallery Grid**: Responsive 1-4 column grid with play cards showing mini-canvas previews
 -   **Sorting**: Group By dropdown with options: Play Name, Date Created, Formation, Personnel
 -   **Actions**: Share Play (copies link), Export Play (stub), New Play (redirects to designer)
 -   **Play Cards**: Show static preview using PlayPreview component, play name, formation, personnel, and category badges
+-   **Official Template Badge**: Globe icon badge displayed on public template plays
+-   **Clone Workflow**: Users can clone public templates to their personal library via Copy button
 -   **Components**: `PlayPreview.tsx` renders static SVG preview of play data (players, routes, shapes)
+
+### Global Template System
+
+Admin-controlled public play library for sharing starter content:
+-   **Database Schema**: `isPublic` boolean and `clonedFromId` integer columns on plays table
+-   **Public API**: `GET /api/public/templates` returns all public plays (no auth required)
+-   **Admin Controls**: "Post to Global Library" checkbox in PlayDesigner save workflow (admin only)
+-   **Security**: Non-admins cannot edit public plays; admins can toggle isPublic on existing plays
+-   **Clone Attribution**: `clonedFromId` tracks which template a cloned play was based on
+-   **Unauthenticated Access**: All users can browse public templates; sign-in required to save copies
 
 ### Feature Request System
 

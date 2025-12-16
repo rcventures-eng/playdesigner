@@ -1007,6 +1007,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Ensure data is a proper object (handle stringified JSON)
+      let parsedData = data;
+      if (typeof parsedData === "string") {
+        try {
+          parsedData = JSON.parse(parsedData);
+        } catch {
+          parsedData = {};
+        }
+      }
+      if (parsedData === null || typeof parsedData !== "object") {
+        parsedData = {};
+      }
+
+      // Ensure tags is a proper array (handle stringified JSON)
+      let parsedTags = tags;
+      if (typeof parsedTags === "string") {
+        try {
+          parsedTags = JSON.parse(parsedTags);
+        } catch {
+          // Try splitting by comma as fallback for legacy data
+          parsedTags = parsedTags.split(",").map((t: string) => t.trim()).filter(Boolean);
+        }
+      }
+      if (!Array.isArray(parsedTags)) {
+        parsedTags = [];
+      }
+
       const [newPlay] = await db.insert(plays).values({
         userId: req.session.userId!,
         teamId: teamId || null,
@@ -1016,8 +1043,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         formation: formation || null,
         personnel: personnel || null,
         situation: situation || null,
-        data,
-        tags: tags || null,
+        data: parsedData,
+        tags: parsedTags.length > 0 ? parsedTags : null,
         isFavorite: isFavorite ?? false,
         isPublic: finalIsPublic,
         clonedFromId: clonedFromId || null,
