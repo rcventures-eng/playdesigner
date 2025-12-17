@@ -29,7 +29,7 @@ interface TopNavProps {
 }
 
 export default function TopNav({ isAdmin, setIsAdmin, showSignUp, setShowSignUp, signUpMessage }: TopNavProps) {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showAdminLogin, setShowAdminLogin] = useState(false);
@@ -70,6 +70,12 @@ export default function TopNav({ isAdmin, setIsAdmin, showSignUp, setShowSignUp,
         credentials: "include",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/me"] });
+      
+      // Redirect to Play Designer if logging out from Play Library or Team Playbooks
+      if (location === "/plays" || location === "/playbooks") {
+        setLocation("/");
+      }
+      
       toast({
         title: "Logged out",
         description: "You've been logged out successfully.",
