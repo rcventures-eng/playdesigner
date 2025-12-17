@@ -391,6 +391,9 @@ export default function TeamPlaybooks() {
                 className="bg-zinc-800 border-zinc-700 text-white placeholder:text-gray-500"
                 data-testid="input-team-cover"
               />
+              <p className="text-xs text-gray-500">
+                Ideal dimensions: 672×192 OR 3.5:1 aspect ratio
+              </p>
             </div>
             <div className="flex justify-end gap-3 pt-4">
               <Button
