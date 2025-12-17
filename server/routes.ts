@@ -1425,6 +1425,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin: Delete a play (public/global template plays)
+  app.delete("/api/admin/plays/:id", verifyAdmin, async (req, res) => {
+    try {
+      const playId = parseInt(req.params.id);
+      if (isNaN(playId)) {
+        return res.status(400).json({ error: "Invalid play ID" });
+      }
+
+      // Find the play first
+      const [existingPlay] = await db.select().from(plays).where(
+        eq(plays.id, playId)
+      ).limit(1);
+
+      if (!existingPlay) {
+        return res.status(404).json({ error: "Play not found" });
+      }
+
+      // Delete the play
+      await db.delete(plays).where(eq(plays.id, playId));
+
+      res.json({ success: true, message: `Play "${existingPlay.name}" deleted successfully` });
+    } catch (error: any) {
+      console.error("Admin delete play error:", error);
+      res.status(500).json({ error: error.message || "Failed to delete play" });
+    }
+  });
+
+  // Admin: Delete a play by name (useful for debugging/cleanup)
+  app.delete("/api/admin/plays/by-name/:name", verifyAdmin, async (req, res) => {
+    try {
+      const playName = decodeURIComponent(req.params.name);
+      
+      // Find all plays with this name that are public
+      const matchingPlays = await db.select().from(plays).where(
+        and(
+          eq(plays.name, playName),
+          eq(plays.isPublic, true)
+        )
+      );
+
+      if (matchingPlays.length === 0) {
+        return res.status(404).json({ error: `No public play found with name "${playName}"` });
+      }
+
+      // Delete all matching plays
+      await db.delete(plays).where(
+        and(
+          eq(plays.name, playName),
+          eq(plays.isPublic, true)
+        )
+      );
+
+      res.json({ 
+        success: true, 
+        message: `Deleted ${matchingPlays.length} play(s) named "${playName}"`,
+        deletedCount: matchingPlays.length 
+      });
+    } catch (error: any) {
+      console.error("Admin delete play by name error:", error);
+      res.status(500).json({ error: error.message || "Failed to delete play" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
