@@ -523,6 +523,20 @@ export default function PlayLibrary() {
             Play Library
           </h1>
           
+          {/* Admin Debug Banner - Only visible to admins */}
+          {user?.isAdmin && (
+            <div className="bg-pink-500 text-white text-center py-2 px-4 rounded-lg mb-4 font-bold" data-testid="admin-debug-banner">
+              ADMIN MODE ACTIVE - Delete controls enabled
+            </div>
+          )}
+          
+          {/* Debug info for troubleshooting */}
+          {user && (
+            <div className="bg-gray-100 text-gray-700 text-xs p-2 rounded mb-4 font-mono" data-testid="debug-user-info">
+              DEBUG: user.isAdmin = {String(user?.isAdmin)} | email = {user?.email}
+            </div>
+          )}
+          
           {/* Centered Play Type Toggle Pills */}
           <div className="flex justify-center mb-6">
             <div className="flex gap-2" data-testid="play-type-tabs">
@@ -677,13 +691,18 @@ export default function PlayLibrary() {
                         <Copy className="w-4 h-4" />
                       </button>
                     )}
-                    {/* Admin-only delete button for public plays */}
-                    {play.isPublic && user?.isAdmin && (
+                    {/* Admin-only delete button for public plays - ALWAYS VISIBLE FOR DEBUG */}
+                    {play.isPublic && (
                       <button
                         onClick={(e) => handleDeletePlay(e, play)}
-                        className="p-1.5 rounded-full bg-white/80 text-gray-500 hover:bg-white hover:text-red-600 transition-colors"
+                        className={`p-1.5 rounded-full transition-colors ${
+                          user?.isAdmin 
+                            ? 'bg-red-500 text-white hover:bg-red-600' 
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-50'
+                        }`}
                         data-testid={`button-delete-${play.id}`}
-                        title="Delete from Library (Admin)"
+                        title={user?.isAdmin ? "Delete from Library (Admin)" : "Admin only - isAdmin: " + String(user?.isAdmin)}
+                        disabled={!user?.isAdmin}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
