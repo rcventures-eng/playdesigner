@@ -94,6 +94,14 @@ export default function PlayLibrary() {
     queryKey: ["/api/me"],
   });
   
+  // Debug logging for admin status
+  console.log("[PlayLibrary] User state:", { 
+    user, 
+    isAdmin: user?.isAdmin, 
+    userLoading,
+    hasUser: !!user 
+  });
+  
   // Fetch user's plays (only when authenticated)
   const { data: playsData, isLoading: playsLoading } = useQuery<PlaysResponse>({
     queryKey: ["/api/plays"],

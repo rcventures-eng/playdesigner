@@ -1181,25 +1181,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Admin API Routes
   
-  // Check if current user is an admin (secure endpoint)
+  // Check if current user is an admin (secure endpoint with debug info)
   app.get("/api/admin/check", async (req, res) => {
     try {
+      console.log("[Admin Check] Session:", { 
+        userId: req.session?.userId,
+        hasSession: !!req.session 
+      });
+      
       if (!req.session?.userId) {
-        return res.json({ isAdmin: false });
+        return res.json({ isAdmin: false, reason: "no_session", userId: null });
       }
       
-      const [user] = await db.select({ isAdmin: users.isAdmin })
+      const [user] = await db.select({ 
+        id: users.id,
+        email: users.email,
+        isAdmin: users.isAdmin 
+      })
         .from(users)
         .where(eq(users.id, req.session.userId))
         .limit(1);
       
-      res.json({ isAdmin: user?.isAdmin === true });
+      console.log("[Admin Check] User found:", user);
+      
+      res.json({ 
+        isAdmin: user?.isAdmin === true,
+        userId: user?.id,
+        email: user?.email,
+        isAdminRaw: user?.isAdmin,
+        reason: user ? (user.isAdmin ? "is_admin" : "not_admin") : "user_not_found"
+      });
     } catch (error: any) {
       console.error("Admin check failed:", error);
-      res.json({ isAdmin: false });
+      res.json({ isAdmin: false, reason: "error", error: error.message });
     }
   });
-
+  
   // Admin authentication middleware - requires session auth AND isAdmin flag
   // NOTE: Define middleware BEFORE routes that use it
   const verifyAdmin = async (req: Request, res: Response, next: NextFunction) => {
