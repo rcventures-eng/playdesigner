@@ -210,6 +210,14 @@ export default function TopNav({ isAdmin, setIsAdmin, showSignUp, setShowSignUp,
                   <span className="text-white text-sm font-medium" data-testid="text-greeting">
                     Hey Coach {getDisplayName()}
                   </span>
+                  {user?.isAdmin && (
+                    <span 
+                      className="bg-pink-500 text-white text-xs font-bold px-2 py-0.5 rounded-md uppercase tracking-wide"
+                      data-testid="badge-admin"
+                    >
+                      Admin
+                    </span>
+                  )}
                   <Avatar className="h-8 w-8 border-2 border-white/30">
                     <AvatarFallback className="bg-white text-orange-600 font-bold text-sm">
                       {getUserInitials()}
