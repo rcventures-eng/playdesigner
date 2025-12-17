@@ -35,7 +35,8 @@ import {
   Lock,
   Heart,
   Globe,
-  Copy
+  Copy,
+  Trash2
 } from "lucide-react";
 
 type PlayType = "offense" | "defense" | "special";
@@ -86,6 +87,8 @@ export default function PlayLibrary() {
   const [premiumLibraryExpanded, setPremiumLibraryExpanded] = useState(false);
   // Default to basic-library - works for both logged in and logged out users
   const [activeSection, setActiveSection] = useState<LibrarySection>("basic-library");
+  const [playToDelete, setPlayToDelete] = useState<Play | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
   const { data: user, isLoading: userLoading } = useQuery<{ id: string; email: string; firstName: string; isAdmin?: boolean } | null>({
     queryKey: ["/api/me"],
@@ -229,6 +232,43 @@ export default function PlayLibrary() {
       });
     },
   });
+  
+  // Admin: Delete a public play
+  const deletePlayMutation = useMutation({
+    mutationFn: async (playId: number) => {
+      return apiRequest("DELETE", `/api/admin/plays/${playId}`);
+    },
+    onSuccess: (_, playId) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/plays"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/public/templates"] });
+      toast({
+        title: "Play Deleted",
+        description: "The play has been removed from the library.",
+      });
+      setShowDeleteConfirm(false);
+      setPlayToDelete(null);
+      setShowPlayDialog(false);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete play. You may not have permission.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeletePlay = (e: React.MouseEvent, play: Play) => {
+    e.stopPropagation();
+    setPlayToDelete(play);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = () => {
+    if (playToDelete) {
+      deletePlayMutation.mutate(playToDelete.id);
+    }
+  };
   
   const handleToggleFavorite = (e: React.MouseEvent, play: Play) => {
     e.stopPropagation();
@@ -629,6 +669,17 @@ export default function PlayLibrary() {
                         <Copy className="w-4 h-4" />
                       </button>
                     )}
+                    {/* Admin-only delete button for public plays */}
+                    {play.isPublic && user?.isAdmin && (
+                      <button
+                        onClick={(e) => handleDeletePlay(e, play)}
+                        className="p-1.5 rounded-full bg-white/80 text-gray-500 hover:bg-white hover:text-red-600 transition-colors"
+                        data-testid={`button-delete-${play.id}`}
+                        title="Delete from Library (Admin)"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                     <button
                       onClick={handleTagClick}
                       className="p-1.5 rounded-full bg-white/80 text-gray-500 hover:bg-white hover:text-orange-500 transition-colors"
@@ -728,6 +779,23 @@ export default function PlayLibrary() {
                     : "Sign in to save this template and start customizing it."
                   }
                 </p>
+                {/* Admin-only delete option for public plays */}
+                {user?.isAdmin && (
+                  <Button
+                    onClick={() => {
+                      if (doubleClickedPlay) {
+                        setPlayToDelete(doubleClickedPlay);
+                        setShowDeleteConfirm(true);
+                      }
+                    }}
+                    variant="destructive"
+                    className="w-full justify-start mt-2"
+                    data-testid="button-admin-delete"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete from Library (Admin)
+                  </Button>
+                )}
               </>
             ) : (
               <>
@@ -752,6 +820,40 @@ export default function PlayLibrary() {
                 </Button>
               </>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-600">Delete Play</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{playToDelete?.name}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDeleteConfirm(false);
+                setPlayToDelete(null);
+              }}
+              className="flex-1"
+              data-testid="button-cancel-delete"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={deletePlayMutation.isPending}
+              className="flex-1"
+              data-testid="button-confirm-delete"
+            >
+              {deletePlayMutation.isPending ? "Deleting..." : "Delete"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
