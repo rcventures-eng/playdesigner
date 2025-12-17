@@ -1142,13 +1142,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Build update object with only provided fields
-      const updateData: Partial<{ isFavorite: boolean; tags: string[]; isPublic: boolean }> = {};
+      const updateData: Partial<{ isFavorite: boolean; tags: string[]; isPublic: boolean; concept: string }> = {};
       
       if (typeof req.body.isFavorite === "boolean") {
         updateData.isFavorite = req.body.isFavorite;
       }
       if (Array.isArray(req.body.tags)) {
         updateData.tags = req.body.tags;
+      }
+      // Allow updating the play concept/category
+      if (typeof req.body.concept === "string") {
+        const validConcepts = ["run", "pass", "play-action", "rpo", "trick"];
+        if (validConcepts.includes(req.body.concept)) {
+          updateData.concept = req.body.concept;
+        }
       }
       // Allow admins to toggle isPublic
       if (typeof req.body.isPublic === "boolean") {

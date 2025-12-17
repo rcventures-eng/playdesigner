@@ -31,13 +31,14 @@ import {
   LogIn,
   UserPlus,
   Edit,
-  Tag,
   Lock,
   Heart,
   Globe,
   Copy,
-  Trash2
+  Trash2,
+  Tag
 } from "lucide-react";
+import { TagPopover } from "@/components/TagPopover";
 
 type PlayType = "offense" | "defense" | "special";
 type Category = "all" | "favorites" | "run" | "pass" | "play-action" | "rpo" | "trick";
@@ -93,14 +94,7 @@ export default function PlayLibrary() {
   const { data: user, isLoading: userLoading } = useQuery<{ id: string; email: string; firstName: string; isAdmin?: boolean } | null>({
     queryKey: ["/api/me"],
   });
-  
-  // Debug logging for admin status
-  console.log("[PlayLibrary] User state:", { 
-    user, 
-    isAdmin: user?.isAdmin, 
-    userLoading,
-    hasUser: !!user 
-  });
+
   
   // Fetch user's plays (only when authenticated)
   const { data: playsData, isLoading: playsLoading } = useQuery<PlaysResponse>({
@@ -283,13 +277,6 @@ export default function PlayLibrary() {
     toggleFavoriteMutation.mutate({ playId: play.id, isFavorite: !play.isFavorite });
   };
   
-  const handleTagClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    toast({
-      title: "Coming Soon",
-      description: "Tag management will be available in a future update.",
-    });
-  };
   
   const handleShare = () => {
     navigator.clipboard.writeText(window.location.href);
@@ -523,19 +510,6 @@ export default function PlayLibrary() {
             Play Library
           </h1>
           
-          {/* Admin Debug Banner - Only visible to admins */}
-          {user?.isAdmin && (
-            <div className="bg-pink-500 text-white text-center py-2 px-4 rounded-lg mb-4 font-bold" data-testid="admin-debug-banner">
-              ADMIN MODE ACTIVE - Delete controls enabled
-            </div>
-          )}
-          
-          {/* Debug info for troubleshooting */}
-          {user && (
-            <div className="bg-gray-100 text-gray-700 text-xs p-2 rounded mb-4 font-mono" data-testid="debug-user-info">
-              DEBUG: user.isAdmin = {String(user?.isAdmin)} | email = {user?.email}
-            </div>
-          )}
           
           {/* Centered Play Type Toggle Pills */}
           <div className="flex justify-center mb-6">
@@ -691,29 +665,25 @@ export default function PlayLibrary() {
                         <Copy className="w-4 h-4" />
                       </button>
                     )}
-                    {/* Admin-only delete button for public plays - ALWAYS VISIBLE FOR DEBUG */}
-                    {play.isPublic && (
+                    {/* Admin-only delete button for public plays */}
+                    {play.isPublic && user?.isAdmin && (
                       <button
                         onClick={(e) => handleDeletePlay(e, play)}
-                        className={`p-1.5 rounded-full transition-colors ${
-                          user?.isAdmin 
-                            ? 'bg-red-500 text-white hover:bg-red-600' 
-                            : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-50'
-                        }`}
+                        className="p-1.5 rounded-full bg-white/80 text-gray-500 hover:bg-white hover:text-red-600 transition-colors"
                         data-testid={`button-delete-${play.id}`}
-                        title={user?.isAdmin ? "Delete from Library (Admin)" : "Admin only - isAdmin: " + String(user?.isAdmin)}
-                        disabled={!user?.isAdmin}
+                        title="Delete from Library (Admin)"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     )}
-                    <button
-                      onClick={handleTagClick}
-                      className="p-1.5 rounded-full bg-white/80 text-gray-500 hover:bg-white hover:text-orange-500 transition-colors"
-                      data-testid={`button-tag-${play.id}`}
-                    >
-                      <Tag className="w-4 h-4" />
-                    </button>
+                    {/* Tag button - only for user's own plays or admin on public plays */}
+                    {(!play.isPublic || user?.isAdmin) && user && (
+                      <TagPopover
+                        playId={play.id}
+                        currentConcept={play.concept}
+                        triggerClassName="p-1.5 rounded-full bg-white/80 text-gray-500 hover:bg-white hover:text-orange-500 transition-colors"
+                      />
+                    )}
                   </div>
                   
                   {/* Play Preview */}
@@ -837,14 +807,15 @@ export default function PlayLibrary() {
                   <Edit className="w-4 h-4 mr-2" />
                   Go to Play Designer
                 </Button>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                  data-testid="button-tag-play"
-                >
-                  <Tag className="w-4 h-4 mr-2" />
-                  Tag Play
-                </Button>
+                {doubleClickedPlay && (
+                  <div className="w-full">
+                    <TagPopover
+                      playId={doubleClickedPlay.id}
+                      currentConcept={doubleClickedPlay.concept}
+                      triggerClassName="w-full flex items-center justify-start gap-2 px-4 py-2 border border-input rounded-md bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
+                    />
+                  </div>
+                )}
               </>
             )}
           </div>
