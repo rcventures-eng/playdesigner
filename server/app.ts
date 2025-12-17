@@ -31,6 +31,11 @@ export function log(message: string, source = "express") {
 
 export const app = express();
 
+// Health check endpoint - must be before any middleware that might delay response
+app.get('/health', (_req, res) => {
+  res.status(200).send('OK');
+});
+
 // Trust proxy for Replit - needed to correctly detect https from X-Forwarded-Proto
 app.set('trust proxy', 1);
 
