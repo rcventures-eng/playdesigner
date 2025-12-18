@@ -18,7 +18,10 @@ import {
   Key,
   Shield,
   Star,
-  Eye
+  Eye,
+  LayoutGrid,
+  Globe,
+  Lock
 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
@@ -26,7 +29,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { PlayPreview } from "@/components/PlayPreview";
 
-type AdminTab = "logic" | "presets" | "logs" | "email";
+type AdminTab = "logic" | "presets" | "logs" | "email" | "plays";
 type GameFormat = "5v5" | "7v7" | "9v9" | "11v11";
 
 interface AILog {
@@ -75,6 +78,28 @@ interface UsersResponse {
 type SortColumn = "email" | "firstName" | "favoriteNFLTeam" | "lastLoginIp" | "createdAt" | "lastLoginAt";
 type SortOrder = "asc" | "desc";
 
+interface AdminPlay {
+  id: number;
+  name: string;
+  type: string;
+  formation: string | null;
+  isPublic: boolean | null;
+  createdAt: string;
+  userId: string;
+  userEmail: string | null;
+  userFirstName: string | null;
+}
+
+interface PlaysResponse {
+  plays: AdminPlay[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
 interface FormationVariant {
   players: FormationPlayer[];
 }
@@ -114,6 +139,7 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
   const [feedbackRating, setFeedbackRating] = useState(0);
   const [feedbackNotes, setFeedbackNotes] = useState("");
   const [correctDiagramUpload, setCorrectDiagramUpload] = useState<string | null>(null);
+  const [playsPage, setPlaysPage] = useState(1);
   const { toast } = useToast();
 
   // Check admin status from server (secure endpoint)
@@ -202,6 +228,45 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
     }
     setUsersPage(1);
   };
+
+  // Fetch plays for management (uses session-based auth)
+  const { data: playsResponse, isLoading: playsLoading, refetch: refetchPlays } = useQuery<PlaysResponse>({
+    queryKey: ["/api/admin/plays", playsPage],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        page: playsPage.toString(),
+        limit: "20",
+      });
+      const response = await fetch(`/api/admin/plays?${params}`, {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch plays");
+      return response.json();
+    },
+    enabled: isAdmin || adminCheck?.isAdmin,
+  });
+
+  // Toggle play public status mutation
+  const togglePlayPublicMutation = useMutation({
+    mutationFn: async (playId: number) => {
+      const response = await fetch(`/api/admin/plays/${playId}/toggle-public`, {
+        method: "PATCH",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to toggle play visibility");
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({ title: "Success", description: data.message });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/plays"], exact: false });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
 
   // Send welcome email mutation (uses session-based auth)
   const sendWelcomeEmailMutation = useMutation({
@@ -451,6 +516,18 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
             <Mail className="w-4 h-4" />
             Email
           </button>
+          <button
+            onClick={() => setActiveTab("plays")}
+            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+              activeTab === "plays" 
+                ? "bg-orange-500/20 text-orange-400" 
+                : "text-slate-300 hover:bg-slate-800"
+            }`}
+            data-testid="tab-plays"
+          >
+            <LayoutGrid className="w-4 h-4" />
+            Plays
+          </button>
         </nav>
 
         <div className="p-4 border-t border-slate-700 space-y-2">
@@ -486,6 +563,7 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
             {activeTab === "presets" && "Formation Presets"}
             {activeTab === "logs" && "AI Generation Logs"}
             {activeTab === "email" && "Email Management"}
+            {activeTab === "plays" && "Play Management"}
           </h2>
           {activeTab === "logic" && (
             <Button 
@@ -940,6 +1018,145 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
                             disabled={usersPage >= usersResponse.totalPages || usersLoading}
                             className="border-slate-600 text-slate-300 hover:bg-slate-700"
                             data-testid="button-next-page"
+                          >
+                            Next
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Plays Tab */}
+          {activeTab === "plays" && (
+            <div className="space-y-6" data-testid="content-plays">
+              <div className="bg-slate-900 rounded-lg border border-slate-700 overflow-hidden">
+                <div className="p-4 border-b border-slate-700 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-white">All Plays</h3>
+                    <p className="text-sm text-slate-400">
+                      {playsResponse ? `${playsResponse.pagination.total} plays total` : "Loading..."}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => refetchPlays()}
+                    className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                    data-testid="button-refresh-plays"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Refresh
+                  </Button>
+                </div>
+                {playsLoading ? (
+                  <div className="p-8 text-center text-slate-400">Loading plays...</div>
+                ) : !playsResponse || playsResponse.plays.length === 0 ? (
+                  <div className="p-8 text-center text-slate-500">No plays found.</div>
+                ) : (
+                  <>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm" data-testid="table-plays">
+                        <thead className="bg-slate-800/50">
+                          <tr>
+                            <th className="text-left p-3 text-slate-400 font-medium">Play Name</th>
+                            <th className="text-left p-3 text-slate-400 font-medium">Type</th>
+                            <th className="text-left p-3 text-slate-400 font-medium">Formation</th>
+                            <th className="text-left p-3 text-slate-400 font-medium">Owner</th>
+                            <th className="text-left p-3 text-slate-400 font-medium">Created</th>
+                            <th className="text-center p-3 text-slate-400 font-medium">Public</th>
+                            <th className="text-right p-3 text-slate-400 font-medium">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-700">
+                          {playsResponse.plays.map((play) => (
+                            <tr key={play.id} className="hover:bg-slate-800/50" data-testid={`row-play-${play.id}`}>
+                              <td className="p-3 text-white font-medium" data-testid={`text-play-name-${play.id}`}>
+                                {play.name}
+                              </td>
+                              <td className="p-3">
+                                <Badge variant="outline" className="capitalize">
+                                  {play.type}
+                                </Badge>
+                              </td>
+                              <td className="p-3 text-slate-300" data-testid={`text-play-formation-${play.id}`}>
+                                {play.formation || "—"}
+                              </td>
+                              <td className="p-3 text-slate-300" data-testid={`text-play-owner-${play.id}`}>
+                                <div className="flex flex-col">
+                                  <span className="text-xs text-slate-400">{play.userEmail || "Unknown"}</span>
+                                  {play.userFirstName && (
+                                    <span className="text-xs text-slate-500">{play.userFirstName}</span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="p-3 text-slate-300" data-testid={`text-play-created-${play.id}`}>
+                                {play.createdAt ? format(new Date(play.createdAt), "MMM d, yyyy") : "—"}
+                              </td>
+                              <td className="p-3 text-center">
+                                {play.isPublic ? (
+                                  <Globe className="w-4 h-4 text-green-400 mx-auto" />
+                                ) : (
+                                  <Lock className="w-4 h-4 text-slate-500 mx-auto" />
+                                )}
+                              </td>
+                              <td className="p-3 text-right">
+                                <Button
+                                  size="sm"
+                                  variant={play.isPublic ? "outline" : "default"}
+                                  onClick={() => togglePlayPublicMutation.mutate(play.id)}
+                                  disabled={togglePlayPublicMutation.isPending}
+                                  className={play.isPublic 
+                                    ? "border-slate-600 text-slate-300 hover:bg-slate-700" 
+                                    : "bg-green-600 hover:bg-green-700"
+                                  }
+                                  data-testid={`button-toggle-public-${play.id}`}
+                                >
+                                  {play.isPublic ? (
+                                    <>
+                                      <Lock className="w-3 h-3 mr-1" />
+                                      Make Private
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Globe className="w-3 h-3 mr-1" />
+                                      Make Public
+                                    </>
+                                  )}
+                                </Button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {/* Pagination Controls */}
+                    {playsResponse.pagination.totalPages > 1 && (
+                      <div className="flex items-center justify-between p-4 border-t border-slate-700">
+                        <div className="text-sm text-slate-400">
+                          Page {playsResponse.pagination.page} of {playsResponse.pagination.totalPages}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setPlaysPage(p => Math.max(1, p - 1))}
+                            disabled={playsPage === 1 || playsLoading}
+                            className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                            data-testid="button-plays-prev-page"
+                          >
+                            Previous
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setPlaysPage(p => Math.min(playsResponse.pagination.totalPages, p + 1))}
+                            disabled={playsPage >= playsResponse.pagination.totalPages || playsLoading}
+                            className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                            data-testid="button-plays-next-page"
                           >
                             Next
                           </Button>

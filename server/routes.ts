@@ -1512,6 +1512,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin: Get all plays with user info for management
+  app.get("/api/admin/plays", verifyAdmin, async (req, res) => {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const offset = (page - 1) * limit;
+
+      const allPlays = await db.select({
+        id: plays.id,
+        name: plays.name,
+        type: plays.type,
+        formation: plays.formation,
+        isPublic: plays.isPublic,
+        createdAt: plays.createdAt,
+        userId: plays.userId,
+        userEmail: users.email,
+        userFirstName: users.firstName
+      })
+        .from(plays)
+        .leftJoin(users, eq(plays.userId, users.id))
+        .orderBy(desc(plays.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(plays);
+
+      res.json({
+        plays: allPlays,
+        pagination: {
+          page,
+          limit,
+          total: Number(count),
+          totalPages: Math.ceil(Number(count) / limit)
+        }
+      });
+    } catch (error: any) {
+      console.error("Admin get plays error:", error);
+      res.status(500).json({ error: error.message || "Failed to fetch plays" });
+    }
+  });
+
+  // Admin: Toggle isPublic flag on a play
+  app.patch("/api/admin/plays/:id/toggle-public", verifyAdmin, async (req, res) => {
+    try {
+      const playId = parseInt(req.params.id);
+      if (isNaN(playId)) {
+        return res.status(400).json({ error: "Invalid play ID" });
+      }
+
+      // Find the play first
+      const [existingPlay] = await db.select().from(plays).where(
+        eq(plays.id, playId)
+      ).limit(1);
+
+      if (!existingPlay) {
+        return res.status(404).json({ error: "Play not found" });
+      }
+
+      // Toggle the isPublic flag
+      const newIsPublic = !existingPlay.isPublic;
+      await db.update(plays)
+        .set({ isPublic: newIsPublic })
+        .where(eq(plays.id, playId));
+
+      res.json({ 
+        success: true, 
+        message: `Play "${existingPlay.name}" is now ${newIsPublic ? 'public' : 'private'}`,
+        isPublic: newIsPublic
+      });
+    } catch (error: any) {
+      console.error("Admin toggle play public error:", error);
+      res.status(500).json({ error: error.message || "Failed to toggle play visibility" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
