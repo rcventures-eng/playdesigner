@@ -576,6 +576,16 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [selectedPlayer, selectedRoute, selectedShape, selectedFootball, editingPlayer, selectedElements, players, routes, shapes, footballs, metadata]);
 
+  // Sync Play-Action checkbox with selected football's hasPlayAction state
+  useEffect(() => {
+    if (selectedFootball) {
+      const football = footballs.find(f => f.id === selectedFootball);
+      if (football) {
+        setIsPlayAction(football.hasPlayAction ?? false);
+      }
+    }
+  }, [selectedFootball, footballs]);
+
   // Handle click-outside to close long-press menu and cancel long-press on window pointerup
   useEffect(() => {
     const handleWindowPointerUp = () => {
@@ -2973,7 +2983,26 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                       type="checkbox"
                       id="play-action"
                       checked={isPlayAction}
-                      onChange={(e) => setIsPlayAction(e.target.checked)}
+                      onChange={(e) => {
+                        const newValue = e.target.checked;
+                        setIsPlayAction(newValue);
+                        
+                        // If a football is selected, toggle its hasPlayAction
+                        if (selectedFootball) {
+                          setHistory(prev => [...prev, {
+                            players: JSON.parse(JSON.stringify(players)),
+                            routes: JSON.parse(JSON.stringify(routes)),
+                            shapes: JSON.parse(JSON.stringify(shapes)),
+                            footballs: JSON.parse(JSON.stringify(footballs)),
+                            metadata: JSON.parse(JSON.stringify(metadata))
+                          }]);
+                          setFootballs(prev => prev.map(f => 
+                            f.id === selectedFootball 
+                              ? { ...f, hasPlayAction: newValue }
+                              : f
+                          ));
+                        }
+                      }}
                       className="rounded"
                       data-testid="checkbox-play-action"
                     />
