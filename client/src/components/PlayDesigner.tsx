@@ -103,6 +103,7 @@ interface Football {
   id: string;
   x: number;
   y: number;
+  hasPlayAction?: boolean;
 }
 
 interface HistoryState {
@@ -728,7 +729,8 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     const newFootball: Football = {
       id: `football-${Date.now()}`,
       x: FIELD.WIDTH / 2,
-      y: FIELD.LOS_Y
+      y: FIELD.LOS_Y,
+      hasPlayAction: isPlayAction
     };
     setFootballs([...footballs, newFootball]);
     setTool("select");
@@ -2086,11 +2088,15 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
       setShapes([]);
       
       // Handle footballs from AI response (or create default at LOS)
+      // Check if AI indicated play action for the footballs
+      const aiHasPlayAction = playData.mechanics?.hasPlayAction === true;
+      
       if (playData.footballs && Array.isArray(playData.footballs) && playData.footballs.length > 0) {
         const validFootballs = playData.footballs.map((f: any) => ({
           id: f.id || `football-${Date.now()}-${Math.random()}`,
           x: f.x || Math.floor(FIELD.WIDTH / 2),
           y: f.y || FIELD.LOS_Y,
+          hasPlayAction: f.hasPlayAction ?? aiHasPlayAction,
         }));
         setFootballs(validFootballs);
       } else {
@@ -2099,6 +2105,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
           id: `football-${Date.now()}`,
           x: Math.floor(FIELD.WIDTH / 2),
           y: FIELD.LOS_Y,
+          hasPlayAction: aiHasPlayAction,
         }]);
       }
       
@@ -4152,7 +4159,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                     <line x1="3.5" y1="23.5" x2="16.5" y2="23.5" stroke="#FFFFFF" strokeWidth="0.6" />
                     <line x1="4.5" y1="27" x2="15.5" y2="27" stroke="#FFFFFF" strokeWidth="0.6" />
                   </svg>
-                  {isPlayAction && (
+                  {football.hasPlayAction && (
                     <svg 
                       width="22" 
                       height="22" 

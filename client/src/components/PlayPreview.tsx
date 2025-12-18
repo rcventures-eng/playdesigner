@@ -32,12 +32,21 @@ interface Shape {
   color: string;
 }
 
+interface Football {
+  id: string;
+  x: number;
+  y: number;
+  hasPlayAction?: boolean;
+}
+
 interface PlayData {
   players?: Player[];
   routes?: Route[];
   shapes?: Shape[];
   football?: { x: number; y: number };
+  footballs?: Football[];
   playAction?: { x: number; y: number };
+  isPlayAction?: boolean;
   overlayPlayers?: Player[];
   overlayRoutes?: Route[];
 }
@@ -98,8 +107,12 @@ export function PlayPreview({ playData, playType, playName, formation, scale = 0
   const shapes = playData?.shapes || [];
   const overlayPlayers = playData?.overlayPlayers || [];
   const overlayRoutes = playData?.overlayRoutes || [];
-  const football = playData?.football;
-  const playAction = playData?.playAction;
+  
+  // Support both new footballs array format and legacy single football format
+  const footballs = playData?.footballs || [];
+  const legacyFootball = playData?.football;
+  const legacyPlayAction = playData?.playAction;
+  const legacyIsPlayAction = playData?.isPlayAction;
   
   const fieldStartY = FIELD.getFieldStartY(playType);
   const losY = FIELD.getLosY(playType);
@@ -173,24 +186,45 @@ export function PlayPreview({ playData, playType, playName, formation, scale = 0
           opacity={0.8}
         />
         
-        {/* Football */}
-        {football && (
-          <ellipse
-            cx={football.x}
-            cy={football.y}
-            rx={10}
-            ry={6}
-            fill="#8B4513"
-            stroke="#5C3317"
-            strokeWidth={1}
-          />
-        )}
+        {/* Footballs - new format with individual PA flags */}
+        {footballs.map((fb) => (
+          <g key={fb.id}>
+            <ellipse
+              cx={fb.x}
+              cy={fb.y}
+              rx={10}
+              ry={6}
+              fill="#8B4513"
+              stroke="#5C3317"
+              strokeWidth={1}
+            />
+            {fb.hasPlayAction && (
+              <g>
+                <circle cx={fb.x} cy={fb.y + 12} r={8} fill="black" />
+                <text x={fb.x} y={fb.y + 16} textAnchor="middle" fill="white" fontSize={10} fontWeight="bold">PA</text>
+              </g>
+            )}
+          </g>
+        ))}
         
-        {/* Play action marker */}
-        {playAction && (
+        {/* Legacy football support - single football with separate playAction */}
+        {legacyFootball && footballs.length === 0 && (
           <g>
-            <circle cx={playAction.x} cy={playAction.y} r={8} fill="#ea580c" opacity={0.8} />
-            <text x={playAction.x} y={playAction.y + 4} textAnchor="middle" fill="white" fontSize={10} fontWeight="bold">PA</text>
+            <ellipse
+              cx={legacyFootball.x}
+              cy={legacyFootball.y}
+              rx={10}
+              ry={6}
+              fill="#8B4513"
+              stroke="#5C3317"
+              strokeWidth={1}
+            />
+            {(legacyPlayAction || legacyIsPlayAction) && (
+              <g>
+                <circle cx={legacyPlayAction?.x || legacyFootball.x} cy={legacyPlayAction?.y || legacyFootball.y + 12} r={8} fill="black" />
+                <text x={legacyPlayAction?.x || legacyFootball.x} y={(legacyPlayAction?.y || legacyFootball.y + 12) + 4} textAnchor="middle" fill="white" fontSize={10} fontWeight="bold">PA</text>
+              </g>
+            )}
           </g>
         )}
         
