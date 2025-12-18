@@ -109,10 +109,16 @@ export function PlayPreview({ playData, playType, playName, formation, scale = 0
   const overlayRoutes = playData?.overlayRoutes || [];
   
   // Support both new footballs array format and legacy single football format
-  const footballs = playData?.footballs || [];
+  const rawFootballs = playData?.footballs || [];
   const legacyFootball = playData?.football;
   const legacyPlayAction = playData?.playAction;
   const legacyIsPlayAction = playData?.isPlayAction;
+  
+  // Migrate footballs that don't have hasPlayAction set - apply global isPlayAction if present
+  const footballs = rawFootballs.map((fb) => ({
+    ...fb,
+    hasPlayAction: fb.hasPlayAction ?? legacyIsPlayAction ?? false
+  }));
   
   const fieldStartY = FIELD.getFieldStartY(playType);
   const losY = FIELD.getLosY(playType);
