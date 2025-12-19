@@ -57,7 +57,19 @@ Drizzle ORM with PostgreSQL manages data, including `users`, `teams`, `plays`, `
 
 **Play API Routes**:
 - `POST /api/plays`: Creates a play for the authenticated user. Requires `name` and `type`; accepts optional `teamId`, `data`, `tags`, and `isFavorite`. If `teamId` is provided, validates the team belongs to the current user.
-- `GET /api/plays`: Returns all plays for the authenticated user, ordered by creation date (newest first). Supports optional `?teamId=` query parameter to filter by team.
+- `GET /api/plays`: Returns all plays for the authenticated user, ordered by creation date (newest first). Supports optional `?teamId=` and `?archived=true` query parameters. Returns `archivedCount` for sidebar badge.
+- `DELETE /api/plays/:id`: Deletes a play. Only the play owner or an admin can delete.
+- `PATCH /api/plays/:id/archive`: Toggles the archive status of a play. Only the play owner or an admin can archive/unarchive.
+- `DELETE /api/teams/:id`: Deletes a team. Only the team owner or an admin can delete.
+
+### Play Archiving System
+
+Plays can be archived instead of deleted to preserve them without cluttering the main library:
+-   **Database Schema**: `isArchived` boolean column on plays table (default false)
+-   **Archive Toggle**: Archive/unarchive buttons on play cards in My Plays section
+-   **Archive Folder**: Dedicated "Archive" folder in PlayLibrary sidebar with count badge
+-   **Filtering**: Archived plays are excluded from normal views and shown only in Archive folder
+-   **Authorization**: Only play owner or admin can archive/unarchive plays
 
 ### Authentication System
 
