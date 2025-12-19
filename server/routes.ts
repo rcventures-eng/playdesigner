@@ -10,6 +10,7 @@ import { desc, eq, and, gt, asc, sql, or } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { sendWelcomeEmail, sendPasswordResetEmail, sendFeatureRequestEmail } from "./resend";
+import { z } from "zod";
 
 // In-memory storage for logic dictionary changes (persisted only in memory for now)
 let customLogicDictionary: typeof LOGIC_DICTIONARY | null = null;
@@ -926,9 +927,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-      res.json({ id: user.id, email: user.email, firstName: user.firstName, isAdmin: user.isAdmin });
+      res.json({ 
+        id: user.id, 
+        email: user.email, 
+        firstName: user.firstName, 
+        isAdmin: user.isAdmin,
+        favoriteNFLTeam: user.favoriteNFLTeam,
+        avatarUrl: user.avatarUrl
+      });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update user profile
+  app.patch("/api/user/profile", requireAuth, async (req, res) => {
+    try {
+      const profileUpdateSchema = z.object({
+        favoriteNFLTeam: z.string().max(100).optional(),
+        avatarUrl: z.string().url().max(500).optional().or(z.literal("")),
+      });
+      
+      const parseResult = profileUpdateSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ error: "Invalid input", details: parseResult.error.flatten() });
+      }
+      
+      const { favoriteNFLTeam, avatarUrl } = parseResult.data;
+      
+      const updateData: { favoriteNFLTeam?: string; avatarUrl?: string | null } = {};
+      
+      if (favoriteNFLTeam !== undefined) {
+        updateData.favoriteNFLTeam = favoriteNFLTeam;
+      }
+      if (avatarUrl !== undefined) {
+        updateData.avatarUrl = avatarUrl || null;
+      }
+      
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ error: "No valid fields to update" });
+      }
+      
+      const [updatedUser] = await db.update(users)
+        .set(updateData)
+        .where(eq(users.id, req.session.userId!))
+        .returning();
+      
+      res.json({ 
+        id: updatedUser.id, 
+        email: updatedUser.email, 
+        firstName: updatedUser.firstName,
+        isAdmin: updatedUser.isAdmin,
+        favoriteNFLTeam: updatedUser.favoriteNFLTeam,
+        avatarUrl: updatedUser.avatarUrl
+      });
+    } catch (error: any) {
+      console.error("Update profile error:", error);
+      res.status(500).json({ error: error.message || "Failed to update profile" });
     }
   });
 

@@ -11,6 +11,7 @@ import AdminDashboard from "@/pages/admin";
 import ResetPasswordPage from "@/pages/reset-password";
 import PlayLibrary from "@/pages/PlayLibrary";
 import TeamPlaybooks from "@/pages/TeamPlaybooks";
+import CoachProfile from "@/pages/CoachProfile";
 
 function App() {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -40,6 +41,9 @@ function App() {
           </Route>
           <Route path="/playbooks">
             <TeamPlaybooks />
+          </Route>
+          <Route path="/profile">
+            <CoachProfile />
           </Route>
           <Route component={NotFound} />
         </Switch>

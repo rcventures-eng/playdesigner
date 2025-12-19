@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { LogOut, ChevronDown, Dumbbell, LayoutGrid, BookOpen } from "lucide-react";
+import { LogOut, ChevronDown, Dumbbell, LayoutGrid, BookOpen, Trophy } from "lucide-react";
 import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import SignUpModal from "./SignUpModal";
@@ -256,6 +256,14 @@ export default function TopNav({ isAdmin, setIsAdmin, showSignUp, setShowSignUp,
                 >
                   <BookOpen className="mr-2 h-4 w-4 text-black" />
                   Team Playbooks
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => setLocation("/profile")}
+                  className="cursor-pointer text-black hover:bg-orange-100 hover:text-orange-900 focus:bg-orange-100 focus:text-orange-900"
+                  data-testid="link-profile"
+                >
+                  <Trophy className="mr-2 h-4 w-4 text-black" />
+                  Coach Profile
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
