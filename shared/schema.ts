@@ -58,6 +58,7 @@ export const plays = pgTable("plays", {
   tags: text("tags").array(),
   isFavorite: boolean("is_favorite").default(false),
   isPublic: boolean("is_public").default(false),
+  isArchived: boolean("is_archived").default(false),
   clonedFromId: integer("cloned_from_id"),
   createdAt: timestamp("created_at").defaultNow(),
 });

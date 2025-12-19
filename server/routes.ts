@@ -968,6 +968,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete a team (owner or admin can delete)
+  app.delete("/api/teams/:id", requireAuth, async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.id);
+      if (isNaN(teamId)) {
+        return res.status(400).json({ error: "Invalid team ID" });
+      }
+
+      // Fetch the team to check ownership
+      const [team] = await db.select().from(teams).where(eq(teams.id, teamId)).limit(1);
+      
+      if (!team) {
+        return res.status(404).json({ error: "Team not found" });
+      }
+
+      // Check if user is owner or admin
+      const [currentUser] = await db.select({ isAdmin: users.isAdmin })
+        .from(users)
+        .where(eq(users.id, req.session.userId!))
+        .limit(1);
+
+      const isOwner = team.ownerId === req.session.userId;
+      const isAdmin = currentUser?.isAdmin === true;
+
+      if (!isOwner && !isAdmin) {
+        return res.status(403).json({ error: "Access denied. Only the team owner or an admin can delete this team." });
+      }
+
+      // Delete the team (plays associated with this team will have their teamId set to null due to foreign key behavior)
+      await db.delete(teams).where(eq(teams.id, teamId));
+
+      res.status(200).json({ message: "Team deleted successfully" });
+    } catch (error: any) {
+      console.error("Delete team error:", error);
+      res.status(500).json({ error: error.message || "Failed to delete team" });
+    }
+  });
+
   // Play Management Routes
 
   // Save a play (requires authentication, teamId is optional)
@@ -1071,26 +1109,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get user's plays (with optional teamId filter)
+  // Get user's plays (with optional teamId filter and archive filter)
   app.get("/api/plays", requireAuth, async (req, res) => {
     try {
       const teamId = req.query.teamId ? parseInt(req.query.teamId as string) : null;
+      const showArchived = req.query.archived === "true";
 
       let userPlays;
-      if (teamId) {
-        // Filter by both userId and teamId
+      if (showArchived) {
+        // Show only archived plays
         userPlays = await db.select().from(plays).where(
           and(
             eq(plays.userId, req.session.userId!),
-            eq(plays.teamId, teamId)
+            eq(plays.isArchived, true)
+          )
+        ).orderBy(desc(plays.createdAt));
+      } else if (teamId) {
+        // Filter by both userId and teamId, exclude archived
+        userPlays = await db.select().from(plays).where(
+          and(
+            eq(plays.userId, req.session.userId!),
+            eq(plays.teamId, teamId),
+            eq(plays.isArchived, false)
           )
         ).orderBy(desc(plays.createdAt));
       } else {
-        // Return all plays for the user (excluding public plays they don't own)
+        // Return all non-archived plays for the user (excluding public plays they don't own)
         userPlays = await db.select().from(plays).where(
           and(
             eq(plays.userId, req.session.userId!),
-            eq(plays.isPublic, false)
+            eq(plays.isPublic, false),
+            eq(plays.isArchived, false)
           )
         ).orderBy(desc(plays.createdAt));
       }
@@ -1100,7 +1149,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         eq(plays.isPublic, true)
       ).orderBy(desc(plays.createdAt));
 
-      res.json({ userPlays, publicPlays });
+      // Get archived count for sidebar
+      const archivedPlays = await db.select().from(plays).where(
+        and(
+          eq(plays.userId, req.session.userId!),
+          eq(plays.isArchived, true)
+        )
+      );
+
+      res.json({ userPlays, publicPlays, archivedCount: archivedPlays.length });
     } catch (error: any) {
       console.error("Get plays error:", error);
       res.status(500).json({ error: error.message || "Failed to get plays" });
@@ -1183,6 +1240,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Update play error:", error);
       res.status(500).json({ error: error.message || "Failed to update play" });
+    }
+  });
+
+  // Delete a play (owner or admin can delete)
+  app.delete("/api/plays/:id", requireAuth, async (req, res) => {
+    try {
+      const playId = parseInt(req.params.id);
+      if (isNaN(playId)) {
+        return res.status(400).json({ error: "Invalid play ID" });
+      }
+
+      // Fetch the play to check ownership
+      const [play] = await db.select().from(plays).where(eq(plays.id, playId)).limit(1);
+      
+      if (!play) {
+        return res.status(404).json({ error: "Play not found" });
+      }
+
+      // Check if user is owner or admin
+      const [currentUser] = await db.select({ isAdmin: users.isAdmin })
+        .from(users)
+        .where(eq(users.id, req.session.userId!))
+        .limit(1);
+
+      const isOwner = play.userId === req.session.userId;
+      const isAdmin = currentUser?.isAdmin === true;
+
+      if (!isOwner && !isAdmin) {
+        return res.status(403).json({ error: "Access denied. Only the play owner or an admin can delete this play." });
+      }
+
+      // Delete the play
+      await db.delete(plays).where(eq(plays.id, playId));
+
+      res.status(200).json({ message: "Play deleted successfully" });
+    } catch (error: any) {
+      console.error("Delete play error:", error);
+      res.status(500).json({ error: error.message || "Failed to delete play" });
+    }
+  });
+
+  // Toggle archive status on a play (owner or admin can archive/unarchive)
+  app.patch("/api/plays/:id/archive", requireAuth, async (req, res) => {
+    try {
+      const playId = parseInt(req.params.id);
+      if (isNaN(playId)) {
+        return res.status(400).json({ error: "Invalid play ID" });
+      }
+
+      // Fetch the play to check ownership
+      const [play] = await db.select().from(plays).where(eq(plays.id, playId)).limit(1);
+      
+      if (!play) {
+        return res.status(404).json({ error: "Play not found" });
+      }
+
+      // Check if user is owner or admin
+      const [currentUser] = await db.select({ isAdmin: users.isAdmin })
+        .from(users)
+        .where(eq(users.id, req.session.userId!))
+        .limit(1);
+
+      const isOwner = play.userId === req.session.userId;
+      const isAdmin = currentUser?.isAdmin === true;
+
+      if (!isOwner && !isAdmin) {
+        return res.status(403).json({ error: "Access denied. Only the play owner or an admin can archive this play." });
+      }
+
+      // Toggle the archive status
+      const newArchiveStatus = !play.isArchived;
+      const [updatedPlay] = await db.update(plays)
+        .set({ isArchived: newArchiveStatus })
+        .where(eq(plays.id, playId))
+        .returning();
+
+      res.json({ 
+        message: newArchiveStatus ? "Play archived" : "Play unarchived",
+        play: updatedPlay 
+      });
+    } catch (error: any) {
+      console.error("Archive play error:", error);
+      res.status(500).json({ error: error.message || "Failed to archive play" });
     }
   });
 

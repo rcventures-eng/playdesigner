@@ -30,6 +30,7 @@ import {
   LogIn,
   UserPlus,
   FolderOpen,
+  Trash2,
 } from "lucide-react";
 
 export default function TeamPlaybooks() {
@@ -86,6 +87,35 @@ export default function TeamPlaybooks() {
       });
     },
   });
+
+  const deleteTeamMutation = useMutation({
+    mutationFn: async (teamId: number) => {
+      return apiRequest("DELETE", `/api/teams/${teamId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+      if (selectedTeamId) {
+        setSelectedTeamId(null);
+      }
+      toast({
+        title: "Team deleted",
+        description: "The team has been removed from your playbooks.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete team",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteTeam = (teamId: number, teamName: string) => {
+    if (window.confirm(`Are you sure you want to delete "${teamName}"? This action cannot be undone.`)) {
+      deleteTeamMutation.mutate(teamId);
+    }
+  };
 
   const handleCreateTeam = () => {
     if (!newTeamName.trim()) {
@@ -202,24 +232,41 @@ export default function TeamPlaybooks() {
               </div>
             ) : (
               teams.map((team) => (
-                <button
+                <div
                   key={team.id}
-                  onClick={() => setSelectedTeamId(team.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
+                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
                     selectedTeamId === team.id
                       ? "bg-orange-100 text-orange-700"
                       : "text-gray-700 hover:bg-gray-100"
                   }`}
                   data-testid={`team-item-${team.id}`}
                 >
-                  <FolderOpen className="w-4 h-4 flex-shrink-0" />
+                  <button
+                    onClick={() => setSelectedTeamId(team.id)}
+                    className="flex-1 flex items-center gap-3 text-left"
+                  >
+                    <FolderOpen className="w-4 h-4 flex-shrink-0" />
+                    {!sidebarCollapsed && (
+                      <>
+                        <span className="flex-1 truncate">{team.name}</span>
+                        <span className="text-xs text-gray-500">{team.year}</span>
+                      </>
+                    )}
+                  </button>
                   {!sidebarCollapsed && (
-                    <>
-                      <span className="flex-1 truncate">{team.name}</span>
-                      <span className="text-xs text-gray-500">{team.year}</span>
-                    </>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteTeam(team.id, team.name);
+                      }}
+                      className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                      title="Delete team"
+                      data-testid={`button-delete-team-${team.id}`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   )}
-                </button>
+                </div>
               ))
             )}
           </nav>

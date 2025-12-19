@@ -36,7 +36,9 @@ import {
   Globe,
   Copy,
   Trash2,
-  Tag
+  Tag,
+  Archive,
+  ArchiveRestore
 } from "lucide-react";
 import { TagPopover } from "@/components/TagPopover";
 
@@ -48,6 +50,7 @@ type LibrarySection = "my-plays" | "basic-library";
 interface PlaysResponse {
   userPlays: Play[];
   publicPlays: Play[];
+  archivedCount: number;
 }
 
 const categoryLabels: Record<Category, string> = {
@@ -90,6 +93,7 @@ export default function PlayLibrary() {
   const [activeSection, setActiveSection] = useState<LibrarySection>("basic-library");
   const [playToDelete, setPlayToDelete] = useState<Play | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
   
   const { data: user, isLoading: userLoading } = useQuery<{ id: string; email: string; firstName: string; isAdmin?: boolean } | null>({
     queryKey: ["/api/me"],
@@ -102,17 +106,33 @@ export default function PlayLibrary() {
     enabled: !!user,
   });
   
+  // Fetch archived plays (only when authenticated and viewing archive)
+  const { data: archivedPlaysData } = useQuery<{ userPlays: Play[]; archivedCount: number }>({
+    queryKey: ["/api/plays", "archived"],
+    queryFn: async () => {
+      const res = await fetch("/api/plays?archived=true", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch archived plays");
+      return res.json();
+    },
+    enabled: !!user && showArchived,
+  });
+  
   // Fetch public templates (always available, no auth required)
   const { data: publicTemplates = [], isLoading: templatesLoading } = useQuery<Play[]>({
     queryKey: ["/api/public/templates"],
   });
   
   const userPlays = playsData?.userPlays || [];
+  const archivedPlays = archivedPlaysData?.userPlays || [];
+  // Use archivedCount from main plays query (always fetched), not from archived query
+  const archivedCount = playsData?.archivedCount ?? 0;
   // Use public templates from dedicated endpoint, which works for all users
   const publicPlays = publicTemplates;
   
-  // Choose which plays to display based on active section
-  const activePlays = activeSection === "my-plays" ? userPlays : publicPlays;
+  // Choose which plays to display based on active section and archive view
+  const activePlays = showArchived 
+    ? archivedPlays 
+    : (activeSection === "my-plays" ? userPlays : publicPlays);
   const playsForType = activePlays.filter((play) => play.type === playType);
   
   const filteredPlays = playsForType.filter((play) => {
@@ -168,7 +188,7 @@ export default function PlayLibrary() {
       return apiRequest("PATCH", `/api/plays/${playId}`, { isFavorite });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/plays"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/plays"], exact: false });
     },
     onError: () => {
       toast({
@@ -219,7 +239,7 @@ export default function PlayLibrary() {
       });
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/plays"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/plays"], exact: false });
       toast({
         title: "Play Added to Library!",
         description: `"${variables.name}" has been saved to your library. You can now edit it.`,
@@ -235,17 +255,17 @@ export default function PlayLibrary() {
     },
   });
   
-  // Admin: Delete a public play
+  // Delete a play (owner or admin can delete)
   const deletePlayMutation = useMutation({
     mutationFn: async (playId: number) => {
-      return apiRequest("DELETE", `/api/admin/plays/${playId}`);
+      return apiRequest("DELETE", `/api/plays/${playId}`);
     },
-    onSuccess: (_, playId) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/plays"] });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/plays"], exact: false });
       queryClient.invalidateQueries({ queryKey: ["/api/public/templates"] });
       toast({
         title: "Play Deleted",
-        description: "The play has been removed from the library.",
+        description: "The play has been permanently removed.",
       });
       setShowDeleteConfirm(false);
       setPlayToDelete(null);
@@ -259,6 +279,34 @@ export default function PlayLibrary() {
       });
     },
   });
+  
+  // Archive/unarchive a play
+  const archivePlayMutation = useMutation({
+    mutationFn: async ({ playId, isArchived }: { playId: number; isArchived: boolean }) => {
+      return apiRequest("PATCH", `/api/plays/${playId}/archive`, { isArchived });
+    },
+    onSuccess: (_, { isArchived }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/plays"], exact: false });
+      toast({
+        title: isArchived ? "Play Archived" : "Play Restored",
+        description: isArchived 
+          ? "The play has been moved to your archive." 
+          : "The play has been restored to your library.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update play archive status.",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const handleArchivePlay = (e: React.MouseEvent, play: Play) => {
+    e.stopPropagation();
+    archivePlayMutation.mutate({ playId: play.id, isArchived: !play.isArchived });
+  };
 
   const handleDeletePlay = (e: React.MouseEvent, play: Play) => {
     e.stopPropagation();
@@ -362,6 +410,7 @@ export default function PlayLibrary() {
                 if (!myPlaysExpanded) {
                   setActiveSection("my-plays");
                   setBasicLibraryExpanded(false);
+                  setShowArchived(false);
                 }
               }}
               className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left font-semibold transition-colors ${
@@ -380,6 +429,7 @@ export default function PlayLibrary() {
                     onClick={() => {
                       setActiveSection("my-plays");
                       setCategory(key);
+                      setShowArchived(false);
                     }}
                     className={`w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-left text-sm transition-colors ${
                       activeSection === "my-plays" && category === key 
@@ -403,6 +453,33 @@ export default function PlayLibrary() {
                 ))}
               </div>
             )}
+            
+            {/* Archive folder - shown only for authenticated users */}
+            {user && (
+              <button
+                onClick={() => {
+                  setShowArchived(!showArchived);
+                  if (!showArchived) {
+                    setActiveSection("my-plays");
+                    setBasicLibraryExpanded(false);
+                  }
+                }}
+                className={`w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-left text-sm transition-colors mt-2 ${
+                  showArchived
+                    ? 'bg-orange-100 text-orange-700' 
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+                data-testid="filter-archive"
+              >
+                <Archive className="w-3.5 h-3.5 flex-shrink-0" />
+                {!sidebarCollapsed && (
+                  <>
+                    <span className="flex-1">Archive</span>
+                    <span className="text-xs text-gray-500">({archivedCount})</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
 
           {/* RC Football Basic Play Library Section */}
@@ -413,6 +490,7 @@ export default function PlayLibrary() {
                 if (!basicLibraryExpanded) {
                   setActiveSection("basic-library");
                   setMyPlaysExpanded(false);
+                  setShowArchived(false);
                 }
               }}
               className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left font-semibold transition-colors ${
@@ -431,6 +509,7 @@ export default function PlayLibrary() {
                     onClick={() => {
                       setActiveSection("basic-library");
                       setCategory(key);
+                      setShowArchived(false);
                     }}
                     className={`w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-left text-sm transition-colors ${
                       activeSection === "basic-library" && category === key
@@ -665,13 +744,28 @@ export default function PlayLibrary() {
                         <Copy className="w-4 h-4" />
                       </button>
                     )}
-                    {/* Admin-only delete button for public plays */}
-                    {play.isPublic && user?.isAdmin && (
+                    {/* Archive button for user's own non-public plays */}
+                    {!play.isPublic && user && (
+                      <button
+                        onClick={(e) => handleArchivePlay(e, play)}
+                        className="p-1.5 rounded-full bg-white/80 text-gray-500 hover:bg-white hover:text-orange-500 transition-colors"
+                        data-testid={`button-archive-${play.id}`}
+                        title={play.isArchived ? "Restore from Archive" : "Move to Archive"}
+                      >
+                        {play.isArchived ? (
+                          <ArchiveRestore className="w-4 h-4" />
+                        ) : (
+                          <Archive className="w-4 h-4" />
+                        )}
+                      </button>
+                    )}
+                    {/* Delete button for user's own plays or admin */}
+                    {(!play.isPublic || user?.isAdmin) && user && (
                       <button
                         onClick={(e) => handleDeletePlay(e, play)}
                         className="p-1.5 rounded-full bg-white/80 text-gray-500 hover:bg-white hover:text-red-600 transition-colors"
                         data-testid={`button-delete-${play.id}`}
-                        title="Delete from Library (Admin)"
+                        title="Delete Play"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
