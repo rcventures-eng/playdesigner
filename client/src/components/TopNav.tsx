@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { LogOut, ChevronDown, Dumbbell, LayoutGrid, BookOpen, Trophy } from "lucide-react";
 import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
@@ -18,6 +18,7 @@ interface UserData {
   email: string;
   firstName: string | null;
   isAdmin: boolean;
+  avatarUrl?: string | null;
 }
 
 interface TopNavProps {
@@ -225,6 +226,9 @@ export default function TopNav({ isAdmin, setIsAdmin, showSignUp, setShowSignUp,
                     </span>
                   )}
                   <Avatar className="h-8 w-8 border-2 border-white/30">
+                    {user?.avatarUrl && (
+                      <AvatarImage src={user.avatarUrl} alt="Profile" />
+                    )}
                     <AvatarFallback className="bg-white text-orange-600 font-bold text-sm">
                       {getUserInitials()}
                     </AvatarFallback>
