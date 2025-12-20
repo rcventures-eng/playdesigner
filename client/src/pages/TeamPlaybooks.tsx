@@ -14,6 +14,12 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -92,9 +98,9 @@ export default function TeamPlaybooks() {
     mutationFn: async (teamId: number) => {
       return apiRequest("DELETE", `/api/teams/${teamId}`);
     },
-    onSuccess: () => {
+    onSuccess: (_data, deletedTeamId) => {
       queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
-      if (selectedTeamId) {
+      if (selectedTeamId === deletedTeamId) {
         setSelectedTeamId(null);
       }
       toast({
@@ -232,41 +238,61 @@ export default function TeamPlaybooks() {
               </div>
             ) : (
               teams.map((team) => (
-                <div
-                  key={team.id}
-                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
-                    selectedTeamId === team.id
-                      ? "bg-orange-100 text-orange-700"
-                      : "text-gray-700 hover:bg-gray-100"
-                  }`}
-                  data-testid={`team-item-${team.id}`}
-                >
-                  <button
-                    onClick={() => setSelectedTeamId(team.id)}
-                    className="flex-1 flex items-center gap-3 text-left"
-                  >
-                    <FolderOpen className="w-4 h-4 flex-shrink-0" />
-                    {!sidebarCollapsed && (
-                      <>
-                        <span className="flex-1 truncate">{team.name}</span>
-                        <span className="text-xs text-gray-500">{team.year}</span>
-                      </>
-                    )}
-                  </button>
-                  {!sidebarCollapsed && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteTeam(team.id, team.name);
-                      }}
-                      className="p-1 text-gray-400 hover:text-red-500 transition-colors"
-                      title="Delete team"
-                      data-testid={`button-delete-team-${team.id}`}
+                <ContextMenu key={team.id}>
+                  <ContextMenuTrigger asChild>
+                    <div
+                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors cursor-pointer ${
+                        selectedTeamId === team.id
+                          ? "bg-orange-100 text-orange-700"
+                          : "text-gray-700 hover:bg-gray-100"
+                      }`}
+                      data-testid={`team-item-${team.id}`}
                     >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
+                      <button
+                        onClick={() => setSelectedTeamId(team.id)}
+                        className="flex-1 flex items-center gap-3 text-left"
+                      >
+                        <FolderOpen className="w-4 h-4 flex-shrink-0" />
+                        {!sidebarCollapsed && (
+                          <>
+                            <span className="flex-1 truncate">{team.name}</span>
+                            <span className="text-xs text-gray-500">{team.year}</span>
+                          </>
+                        )}
+                      </button>
+                      {!sidebarCollapsed && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteTeam(team.id, team.name);
+                          }}
+                          className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                          title="Delete team"
+                          data-testid={`button-delete-team-${team.id}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </ContextMenuTrigger>
+                  <ContextMenuContent className="bg-white border-gray-200">
+                    <ContextMenuItem
+                      onClick={() => setSelectedTeamId(team.id)}
+                      className="cursor-pointer"
+                    >
+                      <FolderOpen className="w-4 h-4 mr-2" />
+                      Open Playbook
+                    </ContextMenuItem>
+                    <ContextMenuItem
+                      onClick={() => handleDeleteTeam(team.id, team.name)}
+                      className="cursor-pointer text-red-600 focus:text-red-600"
+                      data-testid={`context-delete-team-${team.id}`}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete Team
+                    </ContextMenuItem>
+                  </ContextMenuContent>
+                </ContextMenu>
               ))
             )}
           </nav>
@@ -348,13 +374,33 @@ export default function TeamPlaybooks() {
                     </Button>
                   </Link>
                 </div>
-                {selectedTeam.coverImageUrl && (
-                  <div className="mb-6">
+                {selectedTeam.coverImageUrl ? (
+                  <div className="mb-6 relative group max-w-2xl">
                     <img
                       src={selectedTeam.coverImageUrl}
                       alt={`${selectedTeam.name} cover`}
-                      className="w-full max-w-2xl h-48 object-cover rounded-lg"
+                      className="w-full h-48 object-cover rounded-lg"
                     />
+                    <button
+                      onClick={() => handleDeleteTeam(selectedTeam.id, selectedTeam.name)}
+                      className="absolute top-3 right-3 p-2 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Delete team"
+                      data-testid="button-delete-team-cover"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mb-6 relative group max-w-2xl bg-gray-100 h-48 rounded-lg flex items-center justify-center">
+                    <FolderOpen className="w-16 h-16 text-gray-300" />
+                    <button
+                      onClick={() => handleDeleteTeam(selectedTeam.id, selectedTeam.name)}
+                      className="absolute top-3 right-3 p-2 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Delete team"
+                      data-testid="button-delete-team-cover"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 )}
                 <p className="text-gray-600">
