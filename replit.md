@@ -77,9 +77,23 @@ Session-based authentication uses `express-session` with `connect-pg-simple` for
 
 **TopNav Authentication UI**: The TopNav component conditionally renders based on authentication state:
 - **Logged out**: Displays "Log In" and "Sign Up" buttons
-- **Logged in**: Displays personalized greeting "Hey Coach [NAME]" with user avatar and dropdown menu containing logout option
-- User data is fetched via `/api/me` endpoint which returns `id`, `email`, `firstName`, and `isAdmin`
+- **Logged in**: Displays personalized greeting "Hey Coach [NAME]" with user avatar (shows profile picture if set, otherwise initials) and dropdown menu
+- User data is fetched via `/api/me` endpoint which returns `id`, `email`, `firstName`, `isAdmin`, `favoriteNFLTeam`, `favoriteNFLCoach`, `offensiveSchemePreference`, `defensiveSchemePreference`, and `avatarUrl`
 - Admin state is automatically synced from the user data to enable/disable admin features
+
+### Coach Profile Page
+
+A dedicated profile management page at `/profile` accessible via Trophy icon in TopNav dropdown:
+-   **Avatar**: 120x120 centered avatar with camera button to update profile picture URL
+-   **Read-Only Fields**: Name and Email (contact support to change)
+-   **Editable Fields**:
+    - Favorite NFL Team (text input)
+    - Favorite NFL Coach (dropdown with all 30 current NFL head coaches for 2024-2025 season)
+    - Offensive Scheme Preference (dropdown: Run First/Ground Control, Balanced Offense, Pass First/Space and Timing, Athlete-Centric, Simple - Low Install, Misdirection & Deception, Shot Plays/Big Plays)
+    - Defensive Scheme Preference (dropdown: Contain/No Big Plays, Simple Zone/Area Defense, Man Coverage/Match Up, Pressure/Aggressive, Read & React, Athlete-Centric, Bend Don't Break)
+-   **Helper Text**: Scheme preference fields show "For play recommendations in the future"
+-   **API Endpoint**: `PATCH /api/user/profile` with Zod validation for updates
+-   **Styling**: Dark slate theme with orange accents for visibility
 
 ### Admin Dashboard
 

@@ -933,6 +933,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         firstName: user.firstName, 
         isAdmin: user.isAdmin,
         favoriteNFLTeam: user.favoriteNFLTeam,
+        favoriteNFLCoach: user.favoriteNFLCoach,
+        offensiveSchemePreference: user.offensiveSchemePreference,
+        defensiveSchemePreference: user.defensiveSchemePreference,
         avatarUrl: user.avatarUrl
       });
     } catch (error: any) {
@@ -945,6 +948,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const profileUpdateSchema = z.object({
         favoriteNFLTeam: z.string().max(100).optional(),
+        favoriteNFLCoach: z.string().max(100).optional(),
+        offensiveSchemePreference: z.string().max(100).optional(),
+        defensiveSchemePreference: z.string().max(100).optional(),
         avatarUrl: z.string().url().max(500).optional().or(z.literal("")),
       });
       
@@ -953,12 +959,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid input", details: parseResult.error.flatten() });
       }
       
-      const { favoriteNFLTeam, avatarUrl } = parseResult.data;
+      const { favoriteNFLTeam, favoriteNFLCoach, offensiveSchemePreference, defensiveSchemePreference, avatarUrl } = parseResult.data;
       
-      const updateData: { favoriteNFLTeam?: string; avatarUrl?: string | null } = {};
+      const updateData: { 
+        favoriteNFLTeam?: string; 
+        favoriteNFLCoach?: string | null;
+        offensiveSchemePreference?: string | null;
+        defensiveSchemePreference?: string | null;
+        avatarUrl?: string | null;
+      } = {};
       
       if (favoriteNFLTeam !== undefined) {
         updateData.favoriteNFLTeam = favoriteNFLTeam;
+      }
+      if (favoriteNFLCoach !== undefined) {
+        updateData.favoriteNFLCoach = favoriteNFLCoach || null;
+      }
+      if (offensiveSchemePreference !== undefined) {
+        updateData.offensiveSchemePreference = offensiveSchemePreference || null;
+      }
+      if (defensiveSchemePreference !== undefined) {
+        updateData.defensiveSchemePreference = defensiveSchemePreference || null;
       }
       if (avatarUrl !== undefined) {
         updateData.avatarUrl = avatarUrl || null;

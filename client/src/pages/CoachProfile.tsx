@@ -6,10 +6,65 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Camera, Save, ArrowLeft, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
 import TopNav from "@/components/TopNav";
+
+// Current NFL Head Coaches (2024-2025 Season)
+const NFL_HEAD_COACHES = [
+  "Andy Reid (Kansas City Chiefs)",
+  "Ben Johnson (Chicago Bears)",
+  "Brian Schottenheimer (Dallas Cowboys)",
+  "Dan Campbell (Detroit Lions)",
+  "Dan Quinn (Washington Commanders)",
+  "Dave Canales (Carolina Panthers)",
+  "DeMeco Ryans (Houston Texans)",
+  "Jim Harbaugh (Los Angeles Chargers)",
+  "John Harbaugh (Baltimore Ravens)",
+  "Jonathan Gannon (Arizona Cardinals)",
+  "Kellen Moore (New Orleans Saints)",
+  "Kevin O'Connell (Minnesota Vikings)",
+  "Kevin Stefanski (Cleveland Browns)",
+  "Kyle Shanahan (San Francisco 49ers)",
+  "Liam Coen (Jacksonville Jaguars)",
+  "Matt LaFleur (Green Bay Packers)",
+  "Mike Macdonald (Seattle Seahawks)",
+  "Mike McDaniel (Miami Dolphins)",
+  "Mike Tomlin (Pittsburgh Steelers)",
+  "Mike Vrabel (New England Patriots)",
+  "Nick Sirianni (Philadelphia Eagles)",
+  "Pete Carroll (Las Vegas Raiders)",
+  "Raheem Morris (Atlanta Falcons)",
+  "Sean McDermott (Buffalo Bills)",
+  "Sean McVay (Los Angeles Rams)",
+  "Sean Payton (Denver Broncos)",
+  "Shane Steichen (Indianapolis Colts)",
+  "Todd Bowles (Tampa Bay Buccaneers)",
+  "Aaron Glenn (New York Jets)",
+  "Zac Taylor (Cincinnati Bengals)",
+];
+
+const OFFENSIVE_SCHEMES = [
+  "Run First / Ground Control",
+  "Balanced Offense",
+  "Pass First / Space and Timing",
+  "Athlete-Centric",
+  "Simple - Low Install",
+  "Misdirection & Deception",
+  "Shot Plays / Big Plays",
+];
+
+const DEFENSIVE_SCHEMES = [
+  "Contain / No Big Plays",
+  "Simple Zone / Area Defense",
+  "Man Coverage / Match Up",
+  "Pressure / Aggressive",
+  "Read & React (Assignment Rules)",
+  "Athlete-Centric",
+  "Bend Don't Break",
+];
 
 interface UserData {
   id: string;
@@ -17,6 +72,9 @@ interface UserData {
   firstName: string | null;
   isAdmin: boolean;
   favoriteNFLTeam: string | null;
+  favoriteNFLCoach: string | null;
+  offensiveSchemePreference: string | null;
+  defensiveSchemePreference: string | null;
   avatarUrl: string | null;
 }
 
@@ -25,6 +83,9 @@ export default function CoachProfile() {
   const { toast } = useToast();
   
   const [favoriteNFLTeam, setFavoriteNFLTeam] = useState("");
+  const [favoriteNFLCoach, setFavoriteNFLCoach] = useState("");
+  const [offensiveScheme, setOffensiveScheme] = useState("");
+  const [defensiveScheme, setDefensiveScheme] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [showAvatarInput, setShowAvatarInput] = useState(false);
   
@@ -37,6 +98,9 @@ export default function CoachProfile() {
   useEffect(() => {
     if (user) {
       setFavoriteNFLTeam(user.favoriteNFLTeam || "");
+      setFavoriteNFLCoach(user.favoriteNFLCoach || "");
+      setOffensiveScheme(user.offensiveSchemePreference || "");
+      setDefensiveScheme(user.defensiveSchemePreference || "");
       setAvatarUrl(user.avatarUrl || "");
     }
   }, [user]);
@@ -48,7 +112,13 @@ export default function CoachProfile() {
   }, [user, userLoading, navigate]);
   
   const updateProfileMutation = useMutation({
-    mutationFn: async (data: { favoriteNFLTeam?: string; avatarUrl?: string }) => {
+    mutationFn: async (data: { 
+      favoriteNFLTeam?: string; 
+      favoriteNFLCoach?: string;
+      offensiveSchemePreference?: string;
+      defensiveSchemePreference?: string;
+      avatarUrl?: string;
+    }) => {
       return apiRequest("PATCH", "/api/user/profile", data);
     },
     onSuccess: () => {
@@ -70,6 +140,9 @@ export default function CoachProfile() {
   const handleSave = () => {
     updateProfileMutation.mutate({
       favoriteNFLTeam,
+      favoriteNFLCoach: favoriteNFLCoach || undefined,
+      offensiveSchemePreference: offensiveScheme || undefined,
+      defensiveSchemePreference: defensiveScheme || undefined,
       avatarUrl: avatarUrl || undefined,
     });
   };
@@ -204,6 +277,90 @@ export default function CoachProfile() {
                   className="mt-1 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
                   data-testid="input-favorite-team"
                 />
+              </div>
+              
+              <div>
+                <Label htmlFor="favoriteCoach" className="text-sm font-medium text-orange-300">
+                  Favorite NFL Coach
+                </Label>
+                <Select value={favoriteNFLCoach} onValueChange={setFavoriteNFLCoach}>
+                  <SelectTrigger 
+                    id="favoriteCoach"
+                    className="mt-1 bg-slate-700 border-slate-600 text-white"
+                    data-testid="select-favorite-coach"
+                  >
+                    <SelectValue placeholder="Select a coach..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-700 border-slate-600 max-h-60">
+                    {NFL_HEAD_COACHES.map((coach) => (
+                      <SelectItem 
+                        key={coach} 
+                        value={coach}
+                        className="text-white hover:bg-slate-600 focus:bg-slate-600"
+                      >
+                        {coach}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="offensiveScheme" className="text-sm font-medium text-orange-300">
+                  Offensive Scheme Preference
+                </Label>
+                <Select value={offensiveScheme} onValueChange={setOffensiveScheme}>
+                  <SelectTrigger 
+                    id="offensiveScheme"
+                    className="mt-1 bg-slate-700 border-slate-600 text-white"
+                    data-testid="select-offensive-scheme"
+                  >
+                    <SelectValue placeholder="Select a scheme..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-700 border-slate-600">
+                    {OFFENSIVE_SCHEMES.map((scheme) => (
+                      <SelectItem 
+                        key={scheme} 
+                        value={scheme}
+                        className="text-white hover:bg-slate-600 focus:bg-slate-600"
+                      >
+                        {scheme}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-slate-400 mt-1">
+                  For play recommendations in the future
+                </p>
+              </div>
+              
+              <div>
+                <Label htmlFor="defensiveScheme" className="text-sm font-medium text-orange-300">
+                  Defensive Scheme Preference
+                </Label>
+                <Select value={defensiveScheme} onValueChange={setDefensiveScheme}>
+                  <SelectTrigger 
+                    id="defensiveScheme"
+                    className="mt-1 bg-slate-700 border-slate-600 text-white"
+                    data-testid="select-defensive-scheme"
+                  >
+                    <SelectValue placeholder="Select a scheme..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-700 border-slate-600">
+                    {DEFENSIVE_SCHEMES.map((scheme) => (
+                      <SelectItem 
+                        key={scheme} 
+                        value={scheme}
+                        className="text-white hover:bg-slate-600 focus:bg-slate-600"
+                      >
+                        {scheme}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-slate-400 mt-1">
+                  For play recommendations in the future
+                </p>
               </div>
               
               <Button
