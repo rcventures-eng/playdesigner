@@ -110,9 +110,9 @@ export default function CoachProfile() {
           Back to Play Designer
         </button>
         
-        <Card className="shadow-lg">
-          <CardHeader className="text-center border-b">
-            <CardTitle className="text-2xl font-bold text-gray-900">
+        <Card className="shadow-lg bg-slate-800 border-slate-700">
+          <CardHeader className="text-center border-b border-slate-700">
+            <CardTitle className="text-2xl font-bold text-orange-400">
               Coach Profile
             </CardTitle>
           </CardHeader>
@@ -120,7 +120,7 @@ export default function CoachProfile() {
           <CardContent className="pt-8">
             <div className="flex flex-col items-center mb-8">
               <div className="relative group">
-                <Avatar className="h-[120px] w-[120px] border-4 border-orange-200 shadow-lg">
+                <Avatar className="h-[120px] w-[120px] border-4 border-orange-300 shadow-lg">
                   {avatarUrl ? (
                     <AvatarImage src={avatarUrl} alt="Profile picture" />
                   ) : null}
@@ -139,7 +139,7 @@ export default function CoachProfile() {
               
               {showAvatarInput && (
                 <div className="mt-4 w-full max-w-sm">
-                  <Label htmlFor="avatarUrl" className="text-sm text-gray-600">
+                  <Label htmlFor="avatarUrl" className="text-sm font-medium text-orange-300">
                     Profile Picture URL
                   </Label>
                   <Input
@@ -148,10 +148,10 @@ export default function CoachProfile() {
                     placeholder="https://example.com/photo.jpg"
                     value={avatarUrl}
                     onChange={(e) => setAvatarUrl(e.target.value)}
-                    className="mt-1"
+                    className="mt-1 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
                     data-testid="input-avatar-url"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-slate-400 mt-1">
                     Enter a URL to your profile picture
                   </p>
                 </div>
@@ -160,23 +160,23 @@ export default function CoachProfile() {
             
             <div className="space-y-6">
               <div>
-                <Label htmlFor="name" className="text-sm font-medium text-gray-700">
+                <Label htmlFor="name" className="text-sm font-medium text-orange-300">
                   Name
                 </Label>
                 <Input
                   id="name"
                   value={user.firstName || "Coach"}
                   disabled
-                  className="mt-1 bg-gray-100 cursor-not-allowed"
+                  className="mt-1 bg-slate-700/50 border-slate-600 text-slate-300 cursor-not-allowed"
                   data-testid="input-name"
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-slate-400 mt-1">
                   Contact support to change your name
                 </p>
               </div>
               
               <div>
-                <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                <Label htmlFor="email" className="text-sm font-medium text-orange-300">
                   Email
                 </Label>
                 <Input
@@ -184,16 +184,16 @@ export default function CoachProfile() {
                   type="email"
                   value={user.email}
                   disabled
-                  className="mt-1 bg-gray-100 cursor-not-allowed"
+                  className="mt-1 bg-slate-700/50 border-slate-600 text-slate-300 cursor-not-allowed"
                   data-testid="input-email"
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-slate-400 mt-1">
                   Contact support to change your email
                 </p>
               </div>
               
               <div>
-                <Label htmlFor="favoriteTeam" className="text-sm font-medium text-gray-700">
+                <Label htmlFor="favoriteTeam" className="text-sm font-medium text-orange-300">
                   Favorite NFL Team
                 </Label>
                 <Input
@@ -201,7 +201,7 @@ export default function CoachProfile() {
                   placeholder="e.g. Kansas City Chiefs"
                   value={favoriteNFLTeam}
                   onChange={(e) => setFavoriteNFLTeam(e.target.value)}
-                  className="mt-1"
+                  className="mt-1 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
                   data-testid="input-favorite-team"
                 />
               </div>
