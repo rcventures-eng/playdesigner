@@ -1164,7 +1164,8 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
               color: CONFIG_COLORS.offense.receiverX,
             };
             saveToHistory();
-            setRoutes([...routes, newRoute]);
+            // Remove any existing routes for this player (one route per player)
+            setRoutes(prev => [...prev.filter(r => r.playerId !== playerId), newRoute]);
             setPendingRouteSelection(null);
             return;
           }
@@ -1184,7 +1185,8 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                 color: CONFIG_ROUTES.man,
               };
               saveToHistory();
-              setRoutes([...routes, newRoute]);
+              // Remove any existing routes for this player (one route per player)
+              setRoutes(prev => [...prev.filter(r => r.playerId !== playerId), newRoute]);
               setPendingRouteSelection(null);
               return;
             }
@@ -1910,7 +1912,8 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
         priority: makePrimary ? 1 : undefined,
         color: playerColor,
       };
-      setRoutes(prev => [...prev, newRoute]);
+      // Remove any existing routes for this player (one route per player)
+      setRoutes(prev => [...prev.filter(r => r.playerId !== selectedPlayer), newRoute]);
     }
     setIsDrawingRoute(false);
     setCurrentRoutePoints([]);
