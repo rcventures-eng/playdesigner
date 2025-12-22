@@ -602,6 +602,12 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
       // Don't close during confirmation dwell
       if (menuConfirming) return;
       
+      // Don't close during route drawing - menu fades but stays open (draw-through transparency)
+      if (isDrawingRoute) return;
+      
+      // Don't close if there's a pending route selection (user is about to start drawing)
+      if (pendingRouteSelection) return;
+      
       const target = e.target as HTMLElement;
       if (longPressMenuOpen && !target.closest('[data-testid="long-press-menu"]')) {
         closeLongPressMenu();
@@ -615,7 +621,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
       window.removeEventListener("pointerup", handleWindowPointerUp);
       document.removeEventListener("click", handleClickOutside);
     };
-  }, [longPressMenuOpen, menuConfirming]);
+  }, [longPressMenuOpen, menuConfirming, isDrawingRoute, pendingRouteSelection]);
 
   // Dynamic QB positioning based on Formation field (Shotgun/Pistol = deeper, otherwise under center)
   // Only applies to offense - defense formations don't affect QB positioning
@@ -1378,8 +1384,8 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
       primary: type === "blocking" ? false : menuMakePrimary,
     });
     
-    // Close the menu - user will hover over player to start drawing
-    closeLongPressMenu();
+    // Keep menu open - it will fade when drawing starts (draw-through transparency)
+    // Menu closes in finishRoute() when drawing is complete
   };
   
   const executeRouteStart = (type: "pass" | "run" | "blocking", style: "straight" | "curved", player: { x: number; y: number }, playerId: string) => {
@@ -1407,11 +1413,8 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     setCurrentRoutePoints([initialPoint]);
     currentRoutePointsRef.current = [initialPoint];
     
-    // If not in confirming mode (no options selected), close immediately
-    if (!menuConfirming) {
-      closeLongPressMenu();
-    }
-    // Otherwise, let the confirmation timer close the menu
+    // Keep menu open during drawing - it will fade (draw-through transparency)
+    // Menu closes in finishRoute() when drawing is complete
   };
 
   const handlePlayerDoubleClick = (e: React.PointerEvent, playerId: string) => {
@@ -4069,6 +4072,8 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                         cancelLongPress();
                         
                         setTool("route");
+                        // Set isDrawingRoute immediately to trigger menu fade (draw-through transparency)
+                        setIsDrawingRoute(true);
                         
                         requestAnimationFrame(() => {
                           requestAnimationFrame(() => {
@@ -4076,7 +4081,6 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                             setRouteStyle(pending.style);
                             setIsMotion(pending.motion);
                             setMakePrimary(pending.primary);
-                            setIsDrawingRoute(true);
                             setIsDraggingStraightRoute(true);
                             setSelectedPlayer(pId);
                             setSelectedElements({ players: [], routes: [] });
@@ -4356,6 +4360,11 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
             left: longPressMenuPosition.x,
             top: longPressMenuPosition.y,
             animation: "menuEnter 120ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards",
+            // Draw-through transparency: fade when drawing so field is visible
+            // Also disable pointer events when pendingRouteSelection is set so user can hover over player
+            opacity: isDrawingRoute ? 0.15 : 1,
+            pointerEvents: (isDrawingRoute || pendingRouteSelection) ? "none" : "auto",
+            transition: "opacity 100ms ease-out",
           }}
           onClick={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
