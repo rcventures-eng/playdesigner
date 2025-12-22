@@ -19,8 +19,6 @@ The frontend is a React and TypeScript application built with Vite, utilizing sh
 The core play design functionality uses HTML5 Canvas and SVG for rendering. Key features include:
 -   **Field Elements**: Line of scrimmage, yard lines, hash marks, TV-broadcast style yard line numbers, draggable football, and a play-action marker.
 -   **Player & Route Interaction**: Drag-and-drop for players, click-to-draw for routes, and a long-press cascading menu for comprehensive player interactions. Routes shift with players, and advanced route editing is available via double-click, featuring control handles and undo checkpoints.
--   **Draw-Through Transparency**: When a route style is selected from the long-press menu, the menu becomes click-through (pointer-events: none) to allow hovering over the player to start drawing. Once drawing begins, the menu fades to 15% opacity for unobstructed field visibility.
--   **Smart Menu Positioning**: Long-press menu detects backfield players (y > 294) and positions above them to avoid blocking the field. Includes vertical overflow protection.
 -   **Resolution Independence**: A responsive scaling system maintains consistent coordinate handling across various screen sizes, with counter-scaling for player labels and menus.
 -   **Player Rendering**: Offensive players are filled circles, defensive players are X shapes with labels.
 -   **Defensive Assignments**: Supports advanced assignments like Blitz, Man Coverage (dynamically linked to offensive players), and Zone Coverage (resizable shapes with dynamic stem updates).
