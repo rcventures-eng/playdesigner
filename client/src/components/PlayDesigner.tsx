@@ -1270,15 +1270,32 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
           setLongPressPlayerId(playerId);
           pendingDragRef.current = null; // Clear drag intent - menu wins
           
-          // Calculate menu position with max width clamping
+          // Calculate menu position with smart positioning
           // Menu is positioned in screen coordinates, so multiply logical player position by scale
           const rect = canvasRef.current?.getBoundingClientRect();
-          const maxMenuWidth = 380; // Max expanded width
+          const maxMenuWidth = 260; // Max expanded width (compact menu)
+          const menuHeight = 120; // Approximate menu height for positioning
+          const losY = 284; // Line of scrimmage Y coordinate
+          
           if (rect) {
             const menuX = rect.left + player.x * scale;
-            const menuY = rect.top + player.y * scale + 16;
+            const playerScreenY = rect.top + player.y * scale;
+            
+            // Smart vertical positioning:
+            // 1. If player is in backfield (offensive player behind LOS), show menu above
+            // 2. If menu would overflow bottom of screen, show above
+            const isBackfieldPlayer = player.side === "offense" && player.y > losY + 10;
+            const wouldOverflowBottom = playerScreenY + menuHeight + 20 > window.innerHeight;
+            const showAbove = isBackfieldPlayer || wouldOverflowBottom;
+            
+            const menuY = showAbove 
+              ? playerScreenY - menuHeight - 8  // Above player
+              : playerScreenY + 16;              // Below player
+            
             const clampedX = Math.max(8, Math.min(menuX, window.innerWidth - maxMenuWidth - 10));
-            setLongPressMenuPosition({ x: clampedX, y: menuY });
+            // Ensure Y doesn't go off-screen
+            const clampedY = Math.max(8, Math.min(menuY, window.innerHeight - menuHeight - 10));
+            setLongPressMenuPosition({ x: clampedX, y: clampedY });
           } else {
             setLongPressMenuPosition({ x: e.clientX, y: e.clientY + 20 });
           }
@@ -4358,7 +4375,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                 }}
               >
                 {/* Compact animated checkmark */}
-                <div className="relative w-12 h-12 mb-2">
+                <div className="relative w-8 h-8 mb-1">
                   <svg viewBox="0 0 52 52" className="w-full h-full">
                     <circle cx="26" cy="26" r="24" fill="none" stroke="white" strokeWidth="3" opacity="0.3" />
                     <path 
@@ -4372,8 +4389,8 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                     />
                   </svg>
                 </div>
-                <div className="text-white text-base font-bold tracking-wide">APPLIED</div>
-                <div className="text-white/90 text-xs font-medium mt-0.5">
+                <div className="text-white text-sm font-bold tracking-wide">APPLIED</div>
+                <div className="text-white/90 text-[10px] font-medium mt-0.5">
                   {menuMotion && menuMakePrimary ? "Motion + Primary" : menuMotion ? "Motion" : menuMakePrimary ? "Primary" : "Route"}
                 </div>
                 {/* GPU-accelerated progress bar (transform: scaleX instead of width) */}
@@ -4392,14 +4409,14 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                 return (
                   <>
                     {/* Level 1: Assignment Types */}
-                    <div className="flex flex-col" style={{ width: 108, flexShrink: 0 }}>
-                      <div className="px-3 py-1.5 bg-gray-700/50 border-b border-gray-600">
-                        <span className="text-white text-xs font-semibold">Assignment</span>
+                    <div className="flex flex-col" style={{ width: 82, flexShrink: 0 }}>
+                      <div className="px-2 py-1 bg-gray-700/50 border-b border-gray-600">
+                        <span className="text-white text-[10px] font-semibold">Assignment</span>
                       </div>
                       {(["blitz", "man", "zone"] as const).map((action) => (
                         <div
                           key={action}
-                          className="lp-menu-item px-3 py-2 text-sm cursor-pointer flex items-center justify-between text-gray-200"
+                          className="lp-menu-item px-2 py-1.5 text-xs cursor-pointer flex items-center justify-between text-gray-200"
                           data-testid={`menu-defensive-action-${action}`}
                           onMouseEnter={() => {
                             if (!menuConfirming) {
@@ -4423,19 +4440,19 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                       <div 
                         className="flex flex-col border-l border-gray-600" 
                         style={{ 
-                          width: 118, 
+                          width: 78, 
                           flexShrink: 0,
                           animation: "columnSlideIn 100ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards",
                         }}
                       >
-                        <div className="px-3 py-1.5 bg-gray-700/50 border-b border-gray-600">
-                          <span className="text-white text-xs font-semibold">Style</span>
+                        <div className="px-2 py-1 bg-gray-700/50 border-b border-gray-600">
+                          <span className="text-white text-[10px] font-semibold">Style</span>
                         </div>
                         {/* Zone only shows Area (filter out Linear), Blitz/Man show both */}
                         {(hoveredDefensiveAction === "zone" ? ["area"] as const : ["linear", "area"] as const).map((style) => (
                           <div
                             key={style}
-                            className="lp-menu-item px-3 py-2 text-sm cursor-pointer flex items-center justify-between text-gray-200"
+                            className="lp-menu-item px-2 py-1.5 text-xs cursor-pointer flex items-center justify-between text-gray-200"
                             data-testid={`menu-defensive-style-${style}`}
                             onMouseEnter={() => {
                               if (!menuConfirming) {
@@ -4499,18 +4516,18 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                       <div 
                         className="flex flex-col border-l border-gray-600" 
                         style={{ 
-                          width: 110, 
+                          width: 82, 
                           flexShrink: 0,
                           animation: "columnSlideIn 100ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards",
                         }}
                       >
-                        <div className="px-3 py-1.5 bg-gray-700/50 border-b border-gray-600">
-                          <span className="text-white text-xs font-semibold">Shape</span>
+                        <div className="px-2 py-1 bg-gray-700/50 border-b border-gray-600">
+                          <span className="text-white text-[10px] font-semibold">Shape</span>
                         </div>
                         {(["circle", "oval", "rectangle"] as const).map((shape) => (
                           <div
                             key={shape}
-                            className="lp-menu-item px-3 py-2 text-sm cursor-pointer flex items-center justify-between text-gray-200"
+                            className="lp-menu-item px-2 py-1.5 text-xs cursor-pointer flex items-center justify-between text-gray-200"
                             data-testid={`menu-zone-shape-${shape}`}
                             onMouseEnter={() => {
                               if (!menuConfirming) {
@@ -4560,14 +4577,14 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
               return (
                 <>
                   {/* Level 1: Route Types - always visible */}
-                  <div className="flex flex-col" style={{ width: 108, flexShrink: 0 }}>
-                    <div className="px-3 py-1.5 bg-gray-700/50 border-b border-gray-600">
-                      <span className="text-white text-xs font-semibold">Route Type</span>
+                  <div className="flex flex-col" style={{ width: 78, flexShrink: 0 }}>
+                    <div className="px-2 py-1 bg-gray-700/50 border-b border-gray-600">
+                      <span className="text-white text-[10px] font-semibold">Route Type</span>
                     </div>
                     {(["pass", "run", "blocking"] as const).map((type) => (
                       <div
                         key={type}
-                        className="lp-menu-item px-3 py-2 text-sm cursor-pointer flex items-center justify-between text-gray-200"
+                        className="lp-menu-item px-2 py-1.5 text-xs cursor-pointer flex items-center justify-between text-gray-200"
                         data-testid={`menu-route-type-${type}`}
                         onMouseEnter={() => !menuConfirming && setHoveredRouteType(type)}
                         data-active={hoveredRouteType === type}
@@ -4583,18 +4600,18 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                     <div 
                       className="flex flex-col border-l border-gray-600" 
                       style={{ 
-                        width: 118, 
+                        width: 78, 
                         flexShrink: 0,
                         animation: "columnSlideIn 100ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards",
                       }}
                     >
-                      <div className="px-3 py-1.5 bg-gray-700/50 border-b border-gray-600">
-                        <span className="text-white text-xs font-semibold">Style</span>
+                      <div className="px-2 py-1 bg-gray-700/50 border-b border-gray-600">
+                        <span className="text-white text-[10px] font-semibold">Style</span>
                       </div>
                       {(["straight", "curved"] as const).map((style) => (
                         <div
                           key={style}
-                          className="lp-menu-item px-3 py-2 text-sm cursor-pointer flex items-center justify-between text-gray-200"
+                          className="lp-menu-item px-2 py-1.5 text-xs cursor-pointer flex items-center justify-between text-gray-200"
                           data-testid={`menu-route-style-${style}`}
                           onMouseEnter={() => {
                             if (!menuConfirming) {
@@ -4624,16 +4641,16 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                     <div 
                       className="flex flex-col border-l border-gray-600"
                       style={{ 
-                        width: 140, 
+                        width: 88, 
                         flexShrink: 0,
                         animation: "columnSlideIn 100ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards",
                       }}
                     >
-                      <div className="px-3 py-1.5 bg-gray-700/50 border-b border-gray-600">
-                        <span className="text-white text-xs font-semibold">Options</span>
+                      <div className="px-2 py-1 bg-gray-700/50 border-b border-gray-600">
+                        <span className="text-white text-[10px] font-semibold">Options</span>
                       </div>
                       <label
-                        className="lp-checkbox-item flex items-center px-3 py-2 text-sm cursor-pointer text-gray-200"
+                        className="lp-checkbox-item flex items-center px-2 py-1.5 text-xs cursor-pointer text-gray-200"
                         data-testid="menu-motion-checkbox"
                         data-checked={menuMotion}
                         onClick={(e) => e.stopPropagation()}
@@ -4658,7 +4675,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                         <span className="font-medium text-xs">Motion?</span>
                       </label>
                       <label
-                        className="lp-checkbox-item flex items-center px-3 py-2 text-sm cursor-pointer text-gray-200"
+                        className="lp-checkbox-item flex items-center px-2 py-1.5 text-xs cursor-pointer text-gray-200"
                         data-testid="menu-primary-checkbox"
                         data-checked={menuMakePrimary}
                         onClick={(e) => e.stopPropagation()}
