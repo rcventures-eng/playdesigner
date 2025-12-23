@@ -274,6 +274,15 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   // Defensive assignment menu state
   const [hoveredDefensiveAction, setHoveredDefensiveAction] = useState<"blitz" | "man" | "zone" | null>(null);
   const [hoveredZoneShape, setHoveredZoneShape] = useState<"circle" | "oval" | "rectangle" | null>(null);
+  // Prepared routes - stored when menu dismisses, consumed when player clicked
+  const [preparedRoutes, setPreparedRoutes] = useState<Map<string, {
+    type: "pass" | "run" | "blocking" | "assignment";
+    style: "straight" | "curved" | "linear" | "area";
+    motion: boolean;
+    primary: boolean;
+    defensiveAction?: "blitz" | "man" | "zone";
+  }>>(new Map());
+  const menuLeaveDebounceRef = useRef<NodeJS.Timeout | null>(null);
   
   const canvasRef = useRef<HTMLDivElement>(null);
   const fieldContainerRef = useRef<HTMLDivElement>(null);
@@ -1353,6 +1362,68 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     setMenuMotion(false);
     setMenuMakePrimary(false);
     setMenuConfirming(false);
+  };
+
+  // Handle cursor leaving the menu - store selections and dismiss
+  const handleMenuLeave = (e: React.MouseEvent | React.PointerEvent) => {
+    // Clear any existing debounce timer
+    if (menuLeaveDebounceRef.current) {
+      clearTimeout(menuLeaveDebounceRef.current);
+    }
+    
+    // Check if we're actually leaving the menu (not entering a child element)
+    const relatedTarget = e.relatedTarget as Node | null;
+    const menuElement = e.currentTarget as HTMLElement;
+    if (relatedTarget && menuElement.contains(relatedTarget)) {
+      return; // Still inside menu, don't dismiss
+    }
+    
+    // Debounce to prevent accidental dismissals
+    menuLeaveDebounceRef.current = setTimeout(() => {
+      if (!longPressPlayerId) return;
+      
+      // Store selections if at least route type was selected
+      if (hoveredRouteType) {
+        const selection = {
+          type: hoveredRouteType,
+          style: hoveredRouteStyle || "curved" as const, // Default to curved if no style selected
+          motion: hoveredRouteType === "blocking" ? false : menuMotion,
+          primary: hoveredRouteType === "blocking" ? false : menuMakePrimary,
+          ...(hoveredDefensiveAction && { defensiveAction: hoveredDefensiveAction }),
+        };
+        
+        setPreparedRoutes(prev => {
+          const next = new Map(prev);
+          next.set(longPressPlayerId, selection);
+          return next;
+        });
+        
+        // Also set pending route selection for immediate visual feedback
+        setPendingRouteSelection({
+          playerId: longPressPlayerId,
+          ...selection,
+        });
+      }
+      
+      // Close menu but keep player glowing if selections were stored
+      setLongPressMenuOpen(false);
+      setLongPressPlayerId(null);
+      setHoveredRouteType(null);
+      setHoveredRouteStyle(null);
+      setHoveredDefensiveAction(null);
+      setHoveredZoneShape(null);
+      setMenuMotion(false);
+      setMenuMakePrimary(false);
+      setMenuConfirming(false);
+    }, 120); // 120ms debounce
+  };
+  
+  // Cancel menu leave debounce when re-entering menu
+  const handleMenuEnter = () => {
+    if (menuLeaveDebounceRef.current) {
+      clearTimeout(menuLeaveDebounceRef.current);
+      menuLeaveDebounceRef.current = null;
+    }
   };
   
   // Debounce ref to prevent double-clicking
@@ -4359,6 +4430,8 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
           }}
           onClick={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
+          onMouseLeave={handleMenuLeave}
+          onMouseEnter={handleMenuEnter}
         >
           {/* Container - fixed max width, GPU-accelerated */}
           <div 
