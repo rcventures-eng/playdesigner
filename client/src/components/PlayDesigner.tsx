@@ -201,6 +201,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   const [routeType, setRouteType] = useState<"pass" | "run" | "blocking" | "assignment">("pass");
   const [makePrimary, setMakePrimary] = useState(false);
   const [routeStyle, setRouteStyle] = useState<"straight" | "curved" | "linear" | "area">("straight");
+  const routeStyleRef = useRef<"straight" | "curved" | "linear" | "area">("straight");
   const [isMotion, setIsMotion] = useState(false);
   const [isPlayAction, setIsPlayAction] = useState(false);
   const [showBlocking, setShowBlocking] = useState(true);
@@ -1240,6 +1241,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
         // Standard offensive route handling
         setRouteType(pendingRouteSelection.type);
         setRouteStyle(pendingRouteSelection.style);
+        routeStyleRef.current = pendingRouteSelection.style;
         setIsMotion(pendingRouteSelection.motion);
         setMakePrimary(pendingRouteSelection.primary);
         
@@ -1497,6 +1499,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     // Set route options (motion and primary only apply to pass/run, not blocking)
     setRouteType(type);
     setRouteStyle(style);
+    routeStyleRef.current = style;
     if (type === "blocking") {
       setIsMotion(false);
       setMakePrimary(false);
@@ -1794,10 +1797,13 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
         const y = (e.clientY - rect.top) / scale;
         const currentPoint = { x, y };
         
-        if (routeStyle === "straight") {
+        // Use ref for immediate access (avoids stale closure issues)
+        const currentStyle = routeStyleRef.current;
+        
+        if (currentStyle === "straight") {
           // Click-to-place mode: just update preview point, don't add to route
           setStraightRoutePreviewPoint(currentPoint);
-        } else if (routeStyle === "curved") {
+        } else if (currentStyle === "curved") {
           const points = currentRoutePointsRef.current;
           const lastPoint = points[points.length - 1];
           
@@ -1852,7 +1858,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     cancelLongPress();
     
     // For CURVED routes: finish on mouse up (drag-style drawing)
-    if (tool === "route" && isDraggingStraightRoute && isDrawingRoute && routeStyle === "curved" && currentRoutePointsRef.current.length >= 2) {
+    if (tool === "route" && isDraggingStraightRoute && isDrawingRoute && routeStyleRef.current === "curved" && currentRoutePointsRef.current.length >= 2) {
       finishRoute();
       setIsDraggingStraightRoute(false);
       setStraightRoutePreviewPoint(null);
@@ -3285,7 +3291,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                       <Button
                         size="sm"
                         variant={routeStyle === "straight" ? "default" : "outline"}
-                        onClick={() => setRouteStyle("straight")}
+                        onClick={() => { setRouteStyle("straight"); routeStyleRef.current = "straight"; }}
                         data-testid="button-style-straight"
                       >
                         Straight
@@ -3293,7 +3299,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                       <Button
                         size="sm"
                         variant={routeStyle === "curved" ? "default" : "outline"}
-                        onClick={() => setRouteStyle("curved")}
+                        onClick={() => { setRouteStyle("curved"); routeStyleRef.current = "curved"; }}
                         data-testid="button-style-curved"
                       >
                         Curved
@@ -4242,6 +4248,9 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                         cancelLongPress();
                         
                         setTool("route");
+                        
+                        // Set ref immediately for pointer move handler (avoids stale closure)
+                        routeStyleRef.current = pending.style;
                         
                         requestAnimationFrame(() => {
                           requestAnimationFrame(() => {
