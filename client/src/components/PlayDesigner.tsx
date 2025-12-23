@@ -244,6 +244,8 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   const [lassoEnd, setLassoEnd] = useState<{ x: number; y: number } | null>(null);
   const [selectedElements, setSelectedElements] = useState<{ players: string[]; routes: string[] }>({ players: [], routes: [] });
   const [isDraggingStraightRoute, setIsDraggingStraightRoute] = useState(false);
+  // Click-to-place waypoint mode for straight routes
+  const [straightRoutePreviewPoint, setStraightRoutePreviewPoint] = useState<{ x: number; y: number } | null>(null);
   
   // Magnetic snap state
   const [snapEnabled, setSnapEnabled] = useState(true);
@@ -490,6 +492,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     setCurrentRoutePoints([]);
     currentRoutePointsRef.current = [];
     setIsDraggingStraightRoute(false);
+    setStraightRoutePreviewPoint(null);
     setLassoStart(null);
     setLassoEnd(null);
     setIsDrawingShape(false);
@@ -536,6 +539,19 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Escape key cancels route drawing
+      if (e.key === "Escape") {
+        if (isDrawingRoute) {
+          setIsDrawingRoute(false);
+          setCurrentRoutePoints([]);
+          currentRoutePointsRef.current = [];
+          setIsDraggingStraightRoute(false);
+          setStraightRoutePreviewPoint(null);
+          setTool("select");
+          return;
+        }
+      }
+      
       if (e.key === "Delete" || e.key === "Backspace") {
         if (editingPlayer) return;
         
@@ -583,7 +599,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedPlayer, selectedRoute, selectedShape, selectedFootball, editingPlayer, selectedElements, players, routes, shapes, footballs, metadata]);
+  }, [selectedPlayer, selectedRoute, selectedShape, selectedFootball, editingPlayer, selectedElements, players, routes, shapes, footballs, metadata, isDrawingRoute]);
 
   // Sync Play-Action checkbox with selected football's hasPlayAction state
   useEffect(() => {
@@ -1151,6 +1167,13 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   };
 
   const handlePlayerPointerDown = (e: React.PointerEvent, playerId: string) => {
+    // Check if clicking on starting player to finish straight route
+    if (isDrawingRoute && routeStyle === "straight" && selectedPlayer === playerId && currentRoutePointsRef.current.length >= 2) {
+      e.stopPropagation();
+      finishRoute();
+      return;
+    }
+    
     // Check if there's a pending route selection waiting for confirmation
     if (pendingRouteSelection && pendingRouteSelection.playerId === playerId) {
       e.stopPropagation();
@@ -1772,41 +1795,8 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
         const currentPoint = { x, y };
         
         if (routeStyle === "straight") {
-          const points = currentRoutePointsRef.current;
-          const ANGLE_THRESHOLD = 50;
-          const MIN_SEGMENT_LENGTH = 20;
-          
-          if (points.length === 1) {
-            const newPoints = [points[0], currentPoint];
-            setCurrentRoutePoints(newPoints);
-            currentRoutePointsRef.current = newPoints;
-          } else if (points.length >= 2) {
-            const lastVertex = points[points.length - 2];
-            const lastPoint = points[points.length - 1];
-            
-            const segmentLength = Math.sqrt(
-              Math.pow(currentPoint.x - lastVertex.x, 2) + 
-              Math.pow(currentPoint.y - lastVertex.y, 2)
-            );
-            
-            if (segmentLength > MIN_SEGMENT_LENGTH && points.length >= 2) {
-              const angleDiff = calculateAngleDifference(lastVertex, lastPoint, currentPoint);
-              
-              if (angleDiff > ANGLE_THRESHOLD) {
-                const newPoints = [...points.slice(0, -1), lastPoint, currentPoint];
-                setCurrentRoutePoints(newPoints);
-                currentRoutePointsRef.current = newPoints;
-              } else {
-                const newPoints = [...points.slice(0, -1), currentPoint];
-                setCurrentRoutePoints(newPoints);
-                currentRoutePointsRef.current = newPoints;
-              }
-            } else {
-              const newPoints = [...points.slice(0, -1), currentPoint];
-              setCurrentRoutePoints(newPoints);
-              currentRoutePointsRef.current = newPoints;
-            }
-          }
+          // Click-to-place mode: just update preview point, don't add to route
+          setStraightRoutePreviewPoint(currentPoint);
         } else if (routeStyle === "curved") {
           const points = currentRoutePointsRef.current;
           const lastPoint = points[points.length - 1];
@@ -1861,9 +1851,11 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     // Cancel long-press timer if mouse released before 300ms
     cancelLongPress();
     
-    if (tool === "route" && isDraggingStraightRoute && isDrawingRoute && currentRoutePointsRef.current.length >= 2) {
+    // For CURVED routes: finish on mouse up (drag-style drawing)
+    if (tool === "route" && isDraggingStraightRoute && isDrawingRoute && routeStyle === "curved" && currentRoutePointsRef.current.length >= 2) {
       finishRoute();
       setIsDraggingStraightRoute(false);
+      setStraightRoutePreviewPoint(null);
       isDraggingRef.current = false;
       dragOffsetRef.current = { x: 0, y: 0 };
       draggingPlayerRef.current = null;
@@ -1876,6 +1868,8 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
       setActiveSnapLines({ x: null, y: null });
       return;
     }
+    
+    // For STRAIGHT routes: don't finish on mouse up - wait for clicks to add waypoints
     
     isDraggingRef.current = false;
     dragOffsetRef.current = { x: 0, y: 0 };
@@ -1915,10 +1909,36 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     }
   };
 
-  const handleCanvasClick = () => {
+  const handleCanvasClick = (e: React.MouseEvent) => {
+    // Handle click-to-place waypoints for straight routes
+    if (tool === "route" && isDraggingStraightRoute && isDrawingRoute && routeStyle === "straight") {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (rect) {
+        const x = (e.clientX - rect.left) / scale;
+        const y = (e.clientY - rect.top) / scale;
+        const newPoint = { x, y };
+        
+        // Add the clicked point as a new waypoint
+        const newPoints = [...currentRoutePointsRef.current, newPoint];
+        setCurrentRoutePoints(newPoints);
+        currentRoutePointsRef.current = newPoints;
+      }
+    }
   };
 
-  const handleCanvasDoubleClick = () => {
+  const handleCanvasDoubleClick = (e: React.MouseEvent) => {
+    // Finish straight route on double-click
+    if (tool === "route" && isDraggingStraightRoute && isDrawingRoute && routeStyle === "straight") {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Only finish if we have at least 2 points (start + 1 waypoint)
+      if (currentRoutePointsRef.current.length >= 2) {
+        finishRoute();
+        setIsDraggingStraightRoute(false);
+        setStraightRoutePreviewPoint(null);
+      }
+    }
   };
 
   const handleCanvasPointerDown = (e: React.PointerEvent) => {
@@ -2025,6 +2045,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     currentRoutePointsRef.current = [];
     setSelectedElements({ players: [], routes: [] });
     setIsDraggingStraightRoute(false);
+    setStraightRoutePreviewPoint(null);
     setTool("select");
     setMakePrimary(false);
     setIsMotion(false);
@@ -4103,19 +4124,44 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                       }
                       
                       return (
-                        <path
-                          d={getRoutePath({ points: currentRoutePoints, type: routeType, style: routeStyle } as Route)}
-                          stroke={previewColor}
-                          strokeWidth="3.6"
-                          fill="none"
-                          markerEnd={(() => {
-                            if (routeType === "blocking") {
-                              return "url(#arrowhead-blocking)";
-                            }
-                            return `url(#arrowhead-${previewColor.replace('#', '')})`;
-                          })()}
-                          opacity="0.5"
-                        />
+                        <>
+                          <path
+                            d={getRoutePath({ points: currentRoutePoints, type: routeType, style: routeStyle } as Route)}
+                            stroke={previewColor}
+                            strokeWidth="3.6"
+                            fill="none"
+                            markerEnd={(() => {
+                              // Only show arrowhead on main path if no preview line
+                              if (!straightRoutePreviewPoint || routeStyle !== "straight") {
+                                if (routeType === "blocking") {
+                                  return "url(#arrowhead-blocking)";
+                                }
+                                return `url(#arrowhead-${previewColor.replace('#', '')})`;
+                              }
+                              return undefined;
+                            })()}
+                            opacity="0.5"
+                          />
+                          {/* Preview line from last waypoint to cursor for straight routes */}
+                          {routeStyle === "straight" && straightRoutePreviewPoint && currentRoutePoints.length >= 1 && (
+                            <line
+                              x1={currentRoutePoints[currentRoutePoints.length - 1].x}
+                              y1={currentRoutePoints[currentRoutePoints.length - 1].y}
+                              x2={straightRoutePreviewPoint.x}
+                              y2={straightRoutePreviewPoint.y}
+                              stroke={previewColor}
+                              strokeWidth="3.6"
+                              strokeDasharray="8,4"
+                              opacity="0.6"
+                              markerEnd={(() => {
+                                if (routeType === "blocking") {
+                                  return "url(#arrowhead-blocking)";
+                                }
+                                return `url(#arrowhead-${previewColor.replace('#', '')})`;
+                              })()}
+                            />
+                          )}
+                        </>
                       );
                     })()}
                   </g>
