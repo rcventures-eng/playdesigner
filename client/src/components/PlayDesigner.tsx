@@ -1176,6 +1176,12 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
             // Remove any existing routes for this player (one route per player)
             setRoutes(prev => [...prev.filter(r => r.playerId !== playerId), newRoute]);
             setPendingRouteSelection(null);
+            // Clear prepared route for this player
+            setPreparedRoutes(prev => {
+              const next = new Map(prev);
+              next.delete(playerId);
+              return next;
+            });
             return;
           }
           
@@ -1197,6 +1203,12 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
               // Remove any existing routes for this player (one route per player)
               setRoutes(prev => [...prev.filter(r => r.playerId !== playerId), newRoute]);
               setPendingRouteSelection(null);
+              // Clear prepared route for this player
+              setPreparedRoutes(prev => {
+                const next = new Map(prev);
+                next.delete(playerId);
+                return next;
+              });
               return;
             }
           }
@@ -1218,8 +1230,13 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
         setCurrentRoutePoints([initialPoint]);
         currentRoutePointsRef.current = [initialPoint];
         
-        // Clear the pending selection
+        // Clear the pending selection and prepared route
         setPendingRouteSelection(null);
+        setPreparedRoutes(prev => {
+          const next = new Map(prev);
+          next.delete(playerId);
+          return next;
+        });
       }
       return;
     }
@@ -2012,6 +2029,14 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     setMakePrimary(false);
     setIsMotion(false);
     setIsPlayAction(false);
+    // Clear prepared route for this player
+    if (selectedPlayer) {
+      setPreparedRoutes(prev => {
+        const next = new Map(prev);
+        next.delete(selectedPlayer);
+        return next;
+      });
+    }
     // Close the long-press menu when route is completed
     closeLongPressMenu();
   };
