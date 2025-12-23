@@ -4725,6 +4725,39 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                               }
                             }
                           }}
+                          onClick={() => {
+                            // Quick-select: click on style immediately stores and dismisses
+                            if (!hoveredRouteType || !longPressPlayerId || menuConfirming) return;
+                            
+                            const selection = {
+                              type: hoveredRouteType,
+                              style: style,
+                              motion: hoveredRouteType === "blocking" ? false : menuMotion,
+                              primary: hoveredRouteType === "blocking" ? false : menuMakePrimary,
+                            };
+                            
+                            // Store in preparedRoutes for persistence
+                            setPreparedRoutes(prev => {
+                              const next = new Map(prev);
+                              next.set(longPressPlayerId, selection);
+                              return next;
+                            });
+                            
+                            // Set pendingRouteSelection for click-to-draw flow
+                            setPendingRouteSelection({
+                              playerId: longPressPlayerId,
+                              ...selection,
+                            });
+                            
+                            // Close menu immediately
+                            setLongPressMenuOpen(false);
+                            setLongPressPlayerId(null);
+                            setHoveredRouteType(null);
+                            setHoveredRouteStyle(null);
+                            setMenuMotion(false);
+                            setMenuMakePrimary(false);
+                            setMenuConfirming(false);
+                          }}
                           data-active={hoveredRouteStyle === style}
                         >
                           <span className="capitalize font-medium">{style}</span>
