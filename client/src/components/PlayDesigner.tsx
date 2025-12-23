@@ -1918,6 +1918,20 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
         const y = (e.clientY - rect.top) / scale;
         const newPoint = { x, y };
         
+        // Minimum distance check to prevent micro-segments (e.g., from double-click)
+        const MIN_WAYPOINT_DISTANCE = 15;
+        const lastPoint = currentRoutePointsRef.current[currentRoutePointsRef.current.length - 1];
+        if (lastPoint) {
+          const dist = Math.sqrt(
+            Math.pow(newPoint.x - lastPoint.x, 2) + 
+            Math.pow(newPoint.y - lastPoint.y, 2)
+          );
+          if (dist < MIN_WAYPOINT_DISTANCE) {
+            // Ignore clicks too close to the last waypoint
+            return;
+          }
+        }
+        
         // Add the clicked point as a new waypoint
         const newPoints = [...currentRoutePointsRef.current, newPoint];
         setCurrentRoutePoints(newPoints);
@@ -2022,6 +2036,23 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
       
       if (routeStyle === "curved") {
         finalPoints = simplifyPoints(finalPoints, 5);
+      }
+      
+      // Clean up micro-segments at the end (from double-click jitter)
+      // Remove the last point if it's too close to the second-to-last
+      const MIN_SEGMENT_LENGTH = 15;
+      while (finalPoints.length > 2) {
+        const lastPoint = finalPoints[finalPoints.length - 1];
+        const secondLast = finalPoints[finalPoints.length - 2];
+        const dist = Math.sqrt(
+          Math.pow(lastPoint.x - secondLast.x, 2) + 
+          Math.pow(lastPoint.y - secondLast.y, 2)
+        );
+        if (dist < MIN_SEGMENT_LENGTH) {
+          finalPoints.pop();
+        } else {
+          break;
+        }
       }
       
       const player = players.find(p => p.id === selectedPlayer);
