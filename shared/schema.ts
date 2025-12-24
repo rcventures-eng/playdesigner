@@ -15,6 +15,7 @@ export const users = pgTable("users", {
   defensiveSchemePreference: text("defensive_scheme_preference"),
   avatarUrl: text("avatar_url"),
   isAdmin: boolean("is_admin").default(false),
+  googleDriveTokens: jsonb("google_drive_tokens"),
   createdAt: timestamp("created_at").defaultNow(),
   lastLoginAt: timestamp("last_login_at"),
   lastLoginIp: text("last_login_ip"),
