@@ -744,21 +744,6 @@ export default function PlayLibrary() {
                         <Copy className="w-4 h-4" />
                       </button>
                     )}
-                    {/* Archive button for user's own non-public plays */}
-                    {!play.isPublic && user && (
-                      <button
-                        onClick={(e) => handleArchivePlay(e, play)}
-                        className="p-1.5 rounded-full bg-white/80 text-gray-500 hover:bg-white hover:text-orange-500 transition-colors"
-                        data-testid={`button-archive-${play.id}`}
-                        title={play.isArchived ? "Restore from Archive" : "Move to Archive"}
-                      >
-                        {play.isArchived ? (
-                          <ArchiveRestore className="w-4 h-4" />
-                        ) : (
-                          <Archive className="w-4 h-4" />
-                        )}
-                      </button>
-                    )}
                     {/* Delete button for user's own plays or admin */}
                     {(!play.isPublic || user?.isAdmin) && user && (
                       <button
@@ -775,6 +760,10 @@ export default function PlayLibrary() {
                       <TagPopover
                         playId={play.id}
                         currentConcept={play.concept}
+                        isArchived={play.isArchived || false}
+                        onArchiveChange={() => {
+                          queryClient.invalidateQueries({ queryKey: ["/api/plays"] });
+                        }}
                         triggerClassName="p-1.5 rounded-full bg-white/80 text-gray-500 hover:bg-white hover:text-orange-500 transition-colors"
                       />
                     )}

@@ -6,7 +6,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { Tag, Check } from "lucide-react";
+import { Tag, Check, Archive, ArchiveRestore } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
@@ -24,6 +24,8 @@ interface TagPopoverProps {
   playId: number;
   currentConcept?: string | null;
   onConceptChange?: (concept: ConceptType) => void;
+  isArchived?: boolean;
+  onArchiveChange?: () => void;
   triggerClassName?: string;
   disabled?: boolean;
 }
@@ -32,6 +34,8 @@ export function TagPopover({
   playId, 
   currentConcept, 
   onConceptChange,
+  isArchived = false,
+  onArchiveChange,
   triggerClassName,
   disabled = false
 }: TagPopoverProps) {
@@ -62,8 +66,36 @@ export function TagPopover({
     },
   });
 
+  const archiveMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("PATCH", `/api/plays/${playId}/archive`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/plays"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/public/templates"] });
+      toast({
+        title: isArchived ? "Restored" : "Archived",
+        description: isArchived ? "Play restored from archive" : "Play moved to archive",
+      });
+      onArchiveChange?.();
+      setOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to update archive status",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSelect = (concept: ConceptType) => {
     updateConceptMutation.mutate(concept);
+  };
+
+  const handleArchiveToggle = () => {
+    archiveMutation.mutate();
   };
 
   return (
@@ -108,6 +140,20 @@ export function TagPopover({
               )}
             </button>
           ))}
+          <div className="border-t border-gray-600 my-2" />
+          <button
+            onClick={handleArchiveToggle}
+            disabled={archiveMutation.isPending}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-left text-sm font-medium text-gray-300 hover:bg-gray-700 transition-colors"
+            data-testid={`tag-archive-option`}
+          >
+            {isArchived ? (
+              <ArchiveRestore className="w-4 h-4" />
+            ) : (
+              <Archive className="w-4 h-4" />
+            )}
+            <span className="flex-1">{isArchived ? "Restore from Archive" : "Archive"}</span>
+          </button>
         </div>
       </PopoverContent>
     </Popover>
