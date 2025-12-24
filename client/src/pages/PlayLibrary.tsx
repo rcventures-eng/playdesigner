@@ -760,6 +760,8 @@ export default function PlayLibrary() {
                       <TagPopover
                         playId={play.id}
                         currentConcept={play.concept}
+                        currentSituation={play.situation}
+                        playData={play.data}
                         isArchived={play.isArchived || false}
                         onArchiveChange={() => {
                           queryClient.invalidateQueries({ queryKey: ["/api/plays"] });
@@ -795,6 +797,11 @@ export default function PlayLibrary() {
                       {play.concept && (
                         <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded capitalize">
                           {play.concept}
+                        </span>
+                      )}
+                      {play.situation && (
+                        <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                          {play.situation}
                         </span>
                       )}
                     </div>
@@ -895,6 +902,8 @@ export default function PlayLibrary() {
                     <TagPopover
                       playId={doubleClickedPlay.id}
                       currentConcept={doubleClickedPlay.concept}
+                      currentSituation={doubleClickedPlay.situation}
+                      playData={doubleClickedPlay.data}
                       triggerClassName="w-full flex items-center justify-start gap-2 px-4 py-2 border border-input rounded-md bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
                     />
                   </div>

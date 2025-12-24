@@ -1341,7 +1341,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Build update object with only provided fields
-      const updateData: Partial<{ isFavorite: boolean; tags: string[]; isPublic: boolean; concept: string }> = {};
+      const updateData: Partial<{ isFavorite: boolean; tags: string[]; isPublic: boolean; concept: string; situation: string | null }> = {};
       
       if (typeof req.body.isFavorite === "boolean") {
         updateData.isFavorite = req.body.isFavorite;
@@ -1354,6 +1354,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const validConcepts = ["run", "pass", "play-action", "rpo", "trick"];
         if (validConcepts.includes(req.body.concept)) {
           updateData.concept = req.body.concept;
+        }
+      }
+      // Allow updating the play situation
+      if (req.body.situation !== undefined) {
+        // Validate against allowed situational tags (all possible values across formats)
+        const validSituations = [
+          'Open Field', 'Red Zone', 'Goal Line', '2pt Conversion',
+          'High Red Zone', 'Low Red Zone',
+          'Backed Up', 'Coming Out', 'Midfield', 'Plus Territory'
+        ];
+        if (req.body.situation === null || validSituations.includes(req.body.situation)) {
+          updateData.situation = req.body.situation;
         }
       }
       // Allow admins to toggle isPublic
