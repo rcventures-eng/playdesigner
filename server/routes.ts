@@ -1488,6 +1488,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid play ID" });
       }
 
+      // Verify play exists and user owns it or is admin
+      const [play] = await db.select().from(plays).where(eq(plays.id, playId)).limit(1);
+      if (!play) {
+        return res.status(404).json({ error: "Play not found" });
+      }
+
+      const [currentUser] = await db.select({ isAdmin: users.isAdmin })
+        .from(users)
+        .where(eq(users.id, req.session.userId!))
+        .limit(1);
+
+      const isOwner = play.userId === req.session.userId;
+      const isAdmin = currentUser?.isAdmin === true;
+
+      if (!isOwner && !isAdmin) {
+        return res.status(403).json({ error: "Not authorized to view this play's teams" });
+      }
+
       const assignments = await db.select({ teamId: playTeams.teamId })
         .from(playTeams)
         .where(eq(playTeams.playId, playId));
@@ -1509,21 +1527,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid play or team ID" });
       }
 
-      // Verify play exists and user owns it
+      // Verify play exists and user owns it or is admin
       const [play] = await db.select().from(plays).where(eq(plays.id, playId)).limit(1);
       if (!play) {
         return res.status(404).json({ error: "Play not found" });
       }
-      if (play.userId !== req.session.userId) {
+
+      const [currentUser] = await db.select({ isAdmin: users.isAdmin })
+        .from(users)
+        .where(eq(users.id, req.session.userId!))
+        .limit(1);
+
+      const isOwner = play.userId === req.session.userId;
+      const isAdmin = currentUser?.isAdmin === true;
+
+      if (!isOwner && !isAdmin) {
         return res.status(403).json({ error: "Not authorized to modify this play" });
       }
 
-      // Verify team exists and user owns it
+      // Verify team exists and user owns it or is admin
       const [team] = await db.select().from(teams).where(eq(teams.id, teamId)).limit(1);
       if (!team) {
         return res.status(404).json({ error: "Team not found" });
       }
-      if (team.ownerId !== req.session.userId) {
+      if (team.ownerId !== req.session.userId && !isAdmin) {
         return res.status(403).json({ error: "Not authorized to add plays to this team" });
       }
 
@@ -1557,12 +1584,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid play or team ID" });
       }
 
-      // Verify play exists and user owns it
+      // Verify play exists and user owns it or is admin
       const [play] = await db.select().from(plays).where(eq(plays.id, playId)).limit(1);
       if (!play) {
         return res.status(404).json({ error: "Play not found" });
       }
-      if (play.userId !== req.session.userId) {
+
+      const [currentUser] = await db.select({ isAdmin: users.isAdmin })
+        .from(users)
+        .where(eq(users.id, req.session.userId!))
+        .limit(1);
+
+      const isOwner = play.userId === req.session.userId;
+      const isAdmin = currentUser?.isAdmin === true;
+
+      if (!isOwner && !isAdmin) {
         return res.status(403).json({ error: "Not authorized to modify this play" });
       }
 

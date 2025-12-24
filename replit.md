@@ -49,7 +49,15 @@ Drizzle ORM with PostgreSQL manages data for `users`, `teams`, `plays`, `ai_logs
 
 ### Team Playbook Management
 
-Allows users to create, edit, and manage team playbooks, including uploading cover images and associating plays with teams.
+Allows users to create, edit, and manage team playbooks, including uploading cover images and associating plays with teams. The `play_teams` junction table enables many-to-many relationships, allowing a single play to be assigned to multiple team playbooks simultaneously.
+
+### Play-Team Assignment
+
+The TagPopover component includes a "Team Playbooks" section that allows users to:
+-   Assign plays to multiple team playbooks via checkbox toggles
+-   View all their team playbooks with assignment status
+-   "Create your first Team Playbook" link when no playbooks exist
+-   API endpoints: GET/POST/DELETE `/api/plays/:id/teams/:teamId` with owner/admin authorization
 
 ### Play Archiving System
 
