@@ -2899,8 +2899,8 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
             </Badge>
           )}
           {metadata.situation && (
-            <Badge variant="secondary" className="bg-blue-600 text-white font-medium px-3 py-1.5" data-testid="badge-situation">
-              {metadata.situation}
+            <Badge variant="secondary" className="bg-secondary/80 text-secondary-foreground font-medium px-3 py-1.5" data-testid="badge-situation">
+              Situation: {metadata.situation}
             </Badge>
           )}
           {metadata.personnel && (
@@ -3831,10 +3831,10 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                     {metadata.situation && (
                       <div
                         className="px-3 py-1.5 rounded text-white font-medium text-sm"
-                        style={{ backgroundColor: "#2563eb" }}
+                        style={{ backgroundColor: "#374151" }}
                         data-testid="overlay-situation"
                       >
-                        {metadata.situation}
+                        Situation: {metadata.situation}
                       </div>
                     )}
                     {metadata.personnel && (
