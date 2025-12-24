@@ -2049,6 +2049,130 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==========================================
+  // Google Drive Export Routes (Admin Only)
+  // ==========================================
+  
+  // Check Google Drive connection status
+  app.get("/api/admin/google-drive/status", verifyAdmin, async (req, res) => {
+    try {
+      const { isGoogleDriveConnected } = await import("./google-drive");
+      const connected = await isGoogleDriveConnected();
+      res.json({ connected });
+    } catch (error: any) {
+      console.error("Google Drive status check error:", error);
+      res.json({ connected: false, error: error.message });
+    }
+  });
+
+  // Export team playbook to Google Drive
+  app.post("/api/admin/teams/:teamId/export-to-drive", verifyAdmin, async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.teamId);
+      if (isNaN(teamId)) {
+        return res.status(400).json({ error: "Invalid team ID" });
+      }
+
+      const { generateDoc = true, generateSlides = true, playImages = {} } = req.body;
+
+      // Get team info
+      const [team] = await db.select().from(teams).where(eq(teams.id, teamId)).limit(1);
+      if (!team) {
+        return res.status(404).json({ error: "Team not found" });
+      }
+
+      // Get plays assigned to this team
+      const teamPlaysData = await db.select({
+        play: plays,
+      })
+        .from(playTeams)
+        .innerJoin(plays, eq(playTeams.playId, plays.id))
+        .where(eq(playTeams.teamId, teamId))
+        .orderBy(asc(plays.name));
+
+      if (teamPlaysData.length === 0) {
+        return res.status(400).json({ error: "No plays assigned to this team" });
+      }
+
+      // Prepare plays for export with images
+      const playsForExport = teamPlaysData.map(({ play }) => ({
+        id: play.id,
+        name: play.name,
+        type: play.type,
+        concept: play.concept,
+        formation: play.formation,
+        imageBase64: playImages[play.id] || undefined
+      }));
+
+      // Export to Google Drive
+      const { exportPlaybookToGoogleDrive } = await import("./google-drive");
+      const result = await exportPlaybookToGoogleDrive(
+        {
+          id: team.id,
+          name: team.name,
+          year: team.year || undefined,
+          coverImageUrl: team.coverImageUrl
+        },
+        playsForExport,
+        { generateDoc, generateSlides }
+      );
+
+      res.json({
+        success: true,
+        docUrl: result.docUrl,
+        slidesUrl: result.slidesUrl,
+        errors: result.errors,
+        playsExported: playsForExport.length
+      });
+    } catch (error: any) {
+      console.error("Export to Google Drive error:", error);
+      res.status(500).json({ error: error.message || "Failed to export to Google Drive" });
+    }
+  });
+
+  // Get plays for a team (for export modal)
+  app.get("/api/admin/teams/:teamId/plays-for-export", verifyAdmin, async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.teamId);
+      if (isNaN(teamId)) {
+        return res.status(400).json({ error: "Invalid team ID" });
+      }
+
+      // Get team info
+      const [team] = await db.select().from(teams).where(eq(teams.id, teamId)).limit(1);
+      if (!team) {
+        return res.status(404).json({ error: "Team not found" });
+      }
+
+      // Get plays assigned to this team
+      const teamPlaysData = await db.select({
+        id: plays.id,
+        name: plays.name,
+        type: plays.type,
+        concept: plays.concept,
+        formation: plays.formation,
+        data: plays.data,
+      })
+        .from(playTeams)
+        .innerJoin(plays, eq(playTeams.playId, plays.id))
+        .where(eq(playTeams.teamId, teamId))
+        .orderBy(asc(plays.name));
+
+      res.json({
+        team: {
+          id: team.id,
+          name: team.name,
+          year: team.year,
+          coverImageUrl: team.coverImageUrl
+        },
+        plays: teamPlaysData
+      });
+    } catch (error: any) {
+      console.error("Get plays for export error:", error);
+      res.status(500).json({ error: error.message || "Failed to fetch plays" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
