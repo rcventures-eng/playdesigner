@@ -308,7 +308,7 @@ export function TagPopover({
           </p>
           {userTeams.length === 0 ? (
             <Link 
-              href="/team-playbooks"
+              href="/playbooks"
               onClick={() => setOpen(false)}
               className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-left text-sm font-medium text-orange-400 hover:bg-gray-700 transition-colors"
               data-testid="tag-create-playbook"
