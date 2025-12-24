@@ -38,12 +38,50 @@ import {
   Trash2,
   Tag,
   Archive,
-  ArchiveRestore
+  ArchiveRestore,
+  NotebookText,
+  MapPin,
+  Target,
+  Flag,
+  Zap,
+  ArrowUp,
+  ArrowRight,
+  Crosshair,
+  TrendingUp,
 } from "lucide-react";
 import { TagPopover } from "@/components/TagPopover";
+import { SITUATIONAL_TAGS } from "@shared/logic-dictionary";
+
+const CONCEPT_OPTIONS = [
+  { value: "run", label: "Run", color: "bg-green-600" },
+  { value: "pass", label: "Pass", color: "bg-blue-600" },
+  { value: "play-action", label: "Play-Action", color: "bg-purple-600" },
+  { value: "rpo", label: "RPO", color: "bg-orange-600" },
+  { value: "trick", label: "Trick", color: "bg-pink-600" },
+] as const;
+
+const SITUATION_ICONS: Record<string, typeof MapPin> = {
+  "Open Field": MapPin,
+  "Red Zone": Target,
+  "High Red Zone": Target,
+  "Low Red Zone": Target,
+  "Goal Line": Flag,
+  "2pt Conversion": Zap,
+  "Backed Up": ArrowUp,
+  "Coming Out": ArrowRight,
+  "Midfield": Crosshair,
+  "Plus Territory": TrendingUp,
+};
+
+const ALL_SITUATIONS = [
+  'Open Field', 'Red Zone', 'Goal Line', '2pt Conversion',
+  'High Red Zone', 'Low Red Zone',
+  'Backed Up', 'Coming Out', 'Midfield', 'Plus Territory'
+];
 
 type PlayType = "offense" | "defense" | "special";
-type Category = "all" | "favorites" | "run" | "pass" | "play-action" | "rpo" | "trick";
+type ConceptCategory = "run" | "pass" | "play-action" | "rpo" | "trick";
+type FilterType = "all" | "favorites" | "concept" | "situation";
 type SortBy = "name" | "createdAt" | "formation" | "personnel";
 type LibrarySection = "my-plays" | "basic-library";
 
@@ -53,9 +91,7 @@ interface PlaysResponse {
   archivedCount: number;
 }
 
-const categoryLabels: Record<Category, string> = {
-  all: "All Plays",
-  favorites: "Favorites",
+const conceptLabels: Record<ConceptCategory, string> = {
   run: "Run",
   pass: "Pass",
   "play-action": "Play-Action",
@@ -78,7 +114,9 @@ export default function PlayLibrary() {
   const { toast } = useToast();
   
   const [playType, setPlayType] = useState<PlayType>("offense");
-  const [category, setCategory] = useState<Category>("all");
+  const [filterType, setFilterType] = useState<FilterType>("all");
+  const [selectedConcept, setSelectedConcept] = useState<ConceptCategory | null>(null);
+  const [selectedSituation, setSelectedSituation] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortBy>("createdAt");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [selectedPlays, setSelectedPlays] = useState<Set<number>>(new Set());
@@ -87,7 +125,11 @@ export default function PlayLibrary() {
   const [doubleClickedPlay, setDoubleClickedPlay] = useState<Play | null>(null);
   const [showPlayDialog, setShowPlayDialog] = useState(false);
   const [myPlaysExpanded, setMyPlaysExpanded] = useState(true);
+  const [myConceptExpanded, setMyConceptExpanded] = useState(false);
+  const [mySituationalExpanded, setMySituationalExpanded] = useState(false);
   const [basicLibraryExpanded, setBasicLibraryExpanded] = useState(true);
+  const [basicConceptExpanded, setBasicConceptExpanded] = useState(false);
+  const [basicSituationalExpanded, setBasicSituationalExpanded] = useState(false);
   const [premiumLibraryExpanded, setPremiumLibraryExpanded] = useState(false);
   // Default to basic-library - works for both logged in and logged out users
   const [activeSection, setActiveSection] = useState<LibrarySection>("basic-library");
@@ -136,9 +178,11 @@ export default function PlayLibrary() {
   const playsForType = activePlays.filter((play) => play.type === playType);
   
   const filteredPlays = playsForType.filter((play) => {
-    if (category === "all") return true;
-    if (category === "favorites") return play.isFavorite === true;
-    return play.concept === category;
+    if (filterType === "all") return true;
+    if (filterType === "favorites") return play.isFavorite === true;
+    if (filterType === "concept" && selectedConcept) return play.concept === selectedConcept;
+    if (filterType === "situation" && selectedSituation) return play.situation === selectedSituation;
+    return true;
   });
   
   const sortedPlays = [...filteredPlays].sort((a, b) => {
@@ -156,32 +200,50 @@ export default function PlayLibrary() {
     }
   });
   
-  // Category counts for user's plays
+  // Counts for user's plays
   const userPlaysForType = userPlays.filter((p) => p.type === playType);
-  const userCategoryCounts = {
+  const userCounts = {
     all: userPlaysForType.length,
     favorites: userPlaysForType.filter((p) => p.isFavorite === true).length,
-    run: userPlaysForType.filter((p) => p.concept === "run").length,
-    pass: userPlaysForType.filter((p) => p.concept === "pass").length,
-    "play-action": userPlaysForType.filter((p) => p.concept === "play-action").length,
-    rpo: userPlaysForType.filter((p) => p.concept === "rpo").length,
-    trick: userPlaysForType.filter((p) => p.concept === "trick").length,
+    concepts: {
+      run: userPlaysForType.filter((p) => p.concept === "run").length,
+      pass: userPlaysForType.filter((p) => p.concept === "pass").length,
+      "play-action": userPlaysForType.filter((p) => p.concept === "play-action").length,
+      rpo: userPlaysForType.filter((p) => p.concept === "rpo").length,
+      trick: userPlaysForType.filter((p) => p.concept === "trick").length,
+    },
+    situations: ALL_SITUATIONS.reduce((acc, sit) => {
+      acc[sit] = userPlaysForType.filter((p) => p.situation === sit).length;
+      return acc;
+    }, {} as Record<string, number>),
   };
   
-  // Category counts for public plays (Basic Library)
+  // Counts for public plays (Basic Library)
   const publicPlaysForType = publicPlays.filter((p) => p.type === playType);
-  const publicCategoryCounts = {
+  const publicCounts = {
     all: publicPlaysForType.length,
     favorites: 0, // No favorites for public plays
-    run: publicPlaysForType.filter((p) => p.concept === "run").length,
-    pass: publicPlaysForType.filter((p) => p.concept === "pass").length,
-    "play-action": publicPlaysForType.filter((p) => p.concept === "play-action").length,
-    rpo: publicPlaysForType.filter((p) => p.concept === "rpo").length,
-    trick: publicPlaysForType.filter((p) => p.concept === "trick").length,
+    concepts: {
+      run: publicPlaysForType.filter((p) => p.concept === "run").length,
+      pass: publicPlaysForType.filter((p) => p.concept === "pass").length,
+      "play-action": publicPlaysForType.filter((p) => p.concept === "play-action").length,
+      rpo: publicPlaysForType.filter((p) => p.concept === "rpo").length,
+      trick: publicPlaysForType.filter((p) => p.concept === "trick").length,
+    },
+    situations: ALL_SITUATIONS.reduce((acc, sit) => {
+      acc[sit] = publicPlaysForType.filter((p) => p.situation === sit).length;
+      return acc;
+    }, {} as Record<string, number>),
   };
   
   // Use the counts for the active section
-  const categoryCounts = activeSection === "my-plays" ? userCategoryCounts : publicCategoryCounts;
+  const activeCounts = activeSection === "my-plays" ? userCounts : publicCounts;
+  
+  // Get concepts and situations that have at least one play
+  const conceptsWithPlays = (Object.entries(activeCounts.concepts) as [ConceptCategory, number][])
+    .filter(([_, count]) => count > 0);
+  const situationsWithPlays = Object.entries(activeCounts.situations)
+    .filter(([_, count]) => count > 0);
   
   const toggleFavoriteMutation = useMutation({
     mutationFn: async ({ playId, isFavorite }: { playId: number; isFavorite: boolean }) => {
@@ -411,6 +473,9 @@ export default function PlayLibrary() {
                   setActiveSection("my-plays");
                   setBasicLibraryExpanded(false);
                   setShowArchived(false);
+                  setFilterType("all");
+                  setSelectedConcept(null);
+                  setSelectedSituation(null);
                 }
               }}
               className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left font-semibold transition-colors ${
@@ -423,34 +488,151 @@ export default function PlayLibrary() {
             </button>
             {myPlaysExpanded && (
               <div className="ml-2 space-y-1">
-                {(Object.entries(categoryLabels) as [Category, string][]).map(([key, label]) => (
-                  <button
-                    key={key}
-                    onClick={() => {
-                      setActiveSection("my-plays");
-                      setCategory(key);
-                      setShowArchived(false);
-                    }}
-                    className={`w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-left text-sm transition-colors ${
-                      activeSection === "my-plays" && category === key 
-                        ? 'bg-orange-100 text-orange-700' 
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                    data-testid={`filter-${key}`}
-                  >
-                    {key === "favorites" ? (
-                      <Heart className="w-3.5 h-3.5 flex-shrink-0" />
-                    ) : (
+                {/* All Plays */}
+                <button
+                  onClick={() => {
+                    setActiveSection("my-plays");
+                    setFilterType("all");
+                    setSelectedConcept(null);
+                    setSelectedSituation(null);
+                    setShowArchived(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-left text-sm transition-colors ${
+                    activeSection === "my-plays" && filterType === "all" && !showArchived
+                      ? 'bg-orange-100 text-orange-700' 
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                  data-testid="filter-all"
+                >
+                  <NotebookText className="w-3.5 h-3.5 flex-shrink-0" />
+                  {!sidebarCollapsed && (
+                    <>
+                      <span className="flex-1">All Plays</span>
+                      <span className="text-xs text-gray-500">({userCounts.all})</span>
+                    </>
+                  )}
+                </button>
+
+                {/* Favorites */}
+                <button
+                  onClick={() => {
+                    setActiveSection("my-plays");
+                    setFilterType("favorites");
+                    setSelectedConcept(null);
+                    setSelectedSituation(null);
+                    setShowArchived(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-left text-sm transition-colors ${
+                    activeSection === "my-plays" && filterType === "favorites" && !showArchived
+                      ? 'bg-orange-100 text-orange-700' 
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                  data-testid="filter-favorites"
+                >
+                  <Heart className="w-3.5 h-3.5 flex-shrink-0" />
+                  {!sidebarCollapsed && (
+                    <>
+                      <span className="flex-1">Favorites</span>
+                      <span className="text-xs text-gray-500">({userCounts.favorites})</span>
+                    </>
+                  )}
+                </button>
+
+                {/* Concept Folder - only show if there are concepts with plays */}
+                {conceptsWithPlays.length > 0 && (
+                  <div className="space-y-1">
+                    <button
+                      onClick={() => setMyConceptExpanded(!myConceptExpanded)}
+                      className="w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-left text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                      data-testid="folder-concept"
+                    >
+                      <ChevronDown className={`w-3 h-3 flex-shrink-0 transition-transform ${myConceptExpanded ? '' : '-rotate-90'}`} />
                       <Folder className="w-3.5 h-3.5 flex-shrink-0" />
+                      {!sidebarCollapsed && <span className="flex-1">Concept</span>}
+                    </button>
+                    {myConceptExpanded && (
+                      <div className="ml-4 space-y-1">
+                        {conceptsWithPlays.map(([concept, count]) => {
+                          const option = CONCEPT_OPTIONS.find(o => o.value === concept);
+                          return (
+                            <button
+                              key={concept}
+                              onClick={() => {
+                                setActiveSection("my-plays");
+                                setFilterType("concept");
+                                setSelectedConcept(concept);
+                                setSelectedSituation(null);
+                                setShowArchived(false);
+                              }}
+                              className={`w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-left text-sm transition-colors ${
+                                activeSection === "my-plays" && filterType === "concept" && selectedConcept === concept
+                                  ? 'bg-orange-100 text-orange-700' 
+                                  : 'text-gray-700 hover:bg-gray-100'
+                              }`}
+                              data-testid={`filter-concept-${concept}`}
+                            >
+                              <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${option?.color || 'bg-gray-400'}`} />
+                              {!sidebarCollapsed && (
+                                <>
+                                  <span className="flex-1">{option?.label || concept}</span>
+                                  <span className="text-xs text-gray-500">({count})</span>
+                                </>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
                     )}
-                    {!sidebarCollapsed && (
-                      <>
-                        <span className="flex-1">{label}</span>
-                        <span className="text-xs text-gray-500">({userCategoryCounts[key]})</span>
-                      </>
+                  </div>
+                )}
+
+                {/* Situational Folder - only show if there are situations with plays */}
+                {situationsWithPlays.length > 0 && (
+                  <div className="space-y-1">
+                    <button
+                      onClick={() => setMySituationalExpanded(!mySituationalExpanded)}
+                      className="w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-left text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                      data-testid="folder-situational"
+                    >
+                      <ChevronDown className={`w-3 h-3 flex-shrink-0 transition-transform ${mySituationalExpanded ? '' : '-rotate-90'}`} />
+                      <Folder className="w-3.5 h-3.5 flex-shrink-0" />
+                      {!sidebarCollapsed && <span className="flex-1">Situational</span>}
+                    </button>
+                    {mySituationalExpanded && (
+                      <div className="ml-4 space-y-1">
+                        {situationsWithPlays.map(([situation, count]) => {
+                          const SituationIcon = SITUATION_ICONS[situation] || MapPin;
+                          return (
+                            <button
+                              key={situation}
+                              onClick={() => {
+                                setActiveSection("my-plays");
+                                setFilterType("situation");
+                                setSelectedSituation(situation);
+                                setSelectedConcept(null);
+                                setShowArchived(false);
+                              }}
+                              className={`w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-left text-sm transition-colors ${
+                                activeSection === "my-plays" && filterType === "situation" && selectedSituation === situation
+                                  ? 'bg-orange-100 text-orange-700' 
+                                  : 'text-gray-700 hover:bg-gray-100'
+                              }`}
+                              data-testid={`filter-situation-${situation.replace(/\s+/g, '-').toLowerCase()}`}
+                            >
+                              <SituationIcon className="w-3.5 h-3.5 flex-shrink-0" />
+                              {!sidebarCollapsed && (
+                                <>
+                                  <span className="flex-1">{situation}</span>
+                                  <span className="text-xs text-gray-500">({count})</span>
+                                </>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
                     )}
-                  </button>
-                ))}
+                  </div>
+                )}
                 
                 {/* Archive folder - shown only for authenticated users */}
                 {user && (
@@ -491,6 +673,9 @@ export default function PlayLibrary() {
                   setActiveSection("basic-library");
                   setMyPlaysExpanded(false);
                   setShowArchived(false);
+                  setFilterType("all");
+                  setSelectedConcept(null);
+                  setSelectedSituation(null);
                 }
               }}
               className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left font-semibold transition-colors ${
@@ -503,30 +688,130 @@ export default function PlayLibrary() {
             </button>
             {basicLibraryExpanded && (
               <div className="ml-2 space-y-1">
-                {(Object.entries(categoryLabels) as [Category, string][]).filter(([key]) => key !== "favorites").map(([key, label]) => (
-                  <button
-                    key={`basic-${key}`}
-                    onClick={() => {
-                      setActiveSection("basic-library");
-                      setCategory(key);
-                      setShowArchived(false);
-                    }}
-                    className={`w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-left text-sm transition-colors ${
-                      activeSection === "basic-library" && category === key
-                        ? 'bg-orange-100 text-orange-700' 
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                    data-testid={`basic-filter-${key}`}
-                  >
-                    <Folder className="w-3.5 h-3.5 flex-shrink-0" />
-                    {!sidebarCollapsed && (
-                      <>
-                        <span className="flex-1">{label}</span>
-                        <span className="text-xs text-gray-500">({publicCategoryCounts[key]})</span>
-                      </>
+                {/* All Plays */}
+                <button
+                  onClick={() => {
+                    setActiveSection("basic-library");
+                    setFilterType("all");
+                    setSelectedConcept(null);
+                    setSelectedSituation(null);
+                    setShowArchived(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-left text-sm transition-colors ${
+                    activeSection === "basic-library" && filterType === "all"
+                      ? 'bg-orange-100 text-orange-700' 
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                  data-testid="basic-filter-all"
+                >
+                  <NotebookText className="w-3.5 h-3.5 flex-shrink-0" />
+                  {!sidebarCollapsed && (
+                    <>
+                      <span className="flex-1">All Plays</span>
+                      <span className="text-xs text-gray-500">({publicCounts.all})</span>
+                    </>
+                  )}
+                </button>
+
+                {/* Concept Folder for Basic Library */}
+                {(Object.entries(publicCounts.concepts) as [ConceptCategory, number][]).filter(([_, count]) => count > 0).length > 0 && (
+                  <div className="space-y-1">
+                    <button
+                      onClick={() => setBasicConceptExpanded(!basicConceptExpanded)}
+                      className="w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-left text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                      data-testid="basic-folder-concept"
+                    >
+                      <ChevronDown className={`w-3 h-3 flex-shrink-0 transition-transform ${basicConceptExpanded ? '' : '-rotate-90'}`} />
+                      <Folder className="w-3.5 h-3.5 flex-shrink-0" />
+                      {!sidebarCollapsed && <span className="flex-1">Concept</span>}
+                    </button>
+                    {basicConceptExpanded && (
+                      <div className="ml-4 space-y-1">
+                        {(Object.entries(publicCounts.concepts) as [ConceptCategory, number][])
+                          .filter(([_, count]) => count > 0)
+                          .map(([concept, count]) => {
+                            const option = CONCEPT_OPTIONS.find(o => o.value === concept);
+                            return (
+                              <button
+                                key={`basic-${concept}`}
+                                onClick={() => {
+                                  setActiveSection("basic-library");
+                                  setFilterType("concept");
+                                  setSelectedConcept(concept);
+                                  setSelectedSituation(null);
+                                  setShowArchived(false);
+                                }}
+                                className={`w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-left text-sm transition-colors ${
+                                  activeSection === "basic-library" && filterType === "concept" && selectedConcept === concept
+                                    ? 'bg-orange-100 text-orange-700' 
+                                    : 'text-gray-700 hover:bg-gray-100'
+                                }`}
+                                data-testid={`basic-filter-concept-${concept}`}
+                              >
+                                <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${option?.color || 'bg-gray-400'}`} />
+                                {!sidebarCollapsed && (
+                                  <>
+                                    <span className="flex-1">{option?.label || concept}</span>
+                                    <span className="text-xs text-gray-500">({count})</span>
+                                  </>
+                                )}
+                              </button>
+                            );
+                          })}
+                      </div>
                     )}
-                  </button>
-                ))}
+                  </div>
+                )}
+
+                {/* Situational Folder for Basic Library */}
+                {Object.entries(publicCounts.situations).filter(([_, count]) => count > 0).length > 0 && (
+                  <div className="space-y-1">
+                    <button
+                      onClick={() => setBasicSituationalExpanded(!basicSituationalExpanded)}
+                      className="w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-left text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                      data-testid="basic-folder-situational"
+                    >
+                      <ChevronDown className={`w-3 h-3 flex-shrink-0 transition-transform ${basicSituationalExpanded ? '' : '-rotate-90'}`} />
+                      <Folder className="w-3.5 h-3.5 flex-shrink-0" />
+                      {!sidebarCollapsed && <span className="flex-1">Situational</span>}
+                    </button>
+                    {basicSituationalExpanded && (
+                      <div className="ml-4 space-y-1">
+                        {Object.entries(publicCounts.situations)
+                          .filter(([_, count]) => count > 0)
+                          .map(([situation, count]) => {
+                            const SituationIcon = SITUATION_ICONS[situation] || MapPin;
+                            return (
+                              <button
+                                key={`basic-${situation}`}
+                                onClick={() => {
+                                  setActiveSection("basic-library");
+                                  setFilterType("situation");
+                                  setSelectedSituation(situation);
+                                  setSelectedConcept(null);
+                                  setShowArchived(false);
+                                }}
+                                className={`w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-left text-sm transition-colors ${
+                                  activeSection === "basic-library" && filterType === "situation" && selectedSituation === situation
+                                    ? 'bg-orange-100 text-orange-700' 
+                                    : 'text-gray-700 hover:bg-gray-100'
+                                }`}
+                                data-testid={`basic-filter-situation-${situation.replace(/\s+/g, '-').toLowerCase()}`}
+                              >
+                                <SituationIcon className="w-3.5 h-3.5 flex-shrink-0" />
+                                {!sidebarCollapsed && (
+                                  <>
+                                    <span className="flex-1">{situation}</span>
+                                    <span className="text-xs text-gray-500">({count})</span>
+                                  </>
+                                )}
+                              </button>
+                            );
+                          })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -548,22 +833,45 @@ export default function PlayLibrary() {
             </button>
             {premiumLibraryExpanded && (
               <div className="ml-2 space-y-1">
-                {(Object.entries(categoryLabels) as [Category, string][]).map(([key, label]) => (
-                  <button
-                    key={`premium-${key}`}
-                    className="w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-left text-sm text-gray-500 cursor-not-allowed"
-                    disabled
-                    data-testid={`premium-filter-${key}`}
-                  >
-                    <Folder className="w-3.5 h-3.5 flex-shrink-0" />
-                    {!sidebarCollapsed && (
-                      <>
-                        <span className="flex-1">{label}</span>
-                        <span className="text-xs text-gray-400">(0)</span>
-                      </>
-                    )}
-                  </button>
-                ))}
+                <button
+                  className="w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-left text-sm text-gray-500 cursor-not-allowed"
+                  disabled
+                  data-testid="premium-filter-all"
+                >
+                  <NotebookText className="w-3.5 h-3.5 flex-shrink-0" />
+                  {!sidebarCollapsed && (
+                    <>
+                      <span className="flex-1">All Plays</span>
+                      <span className="text-xs text-gray-400">(0)</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  className="w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-left text-sm text-gray-500 cursor-not-allowed"
+                  disabled
+                  data-testid="premium-folder-concept"
+                >
+                  <Folder className="w-3.5 h-3.5 flex-shrink-0" />
+                  {!sidebarCollapsed && (
+                    <>
+                      <span className="flex-1">Concept</span>
+                      <span className="text-xs text-gray-400">(0)</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  className="w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-left text-sm text-gray-500 cursor-not-allowed"
+                  disabled
+                  data-testid="premium-folder-situational"
+                >
+                  <Folder className="w-3.5 h-3.5 flex-shrink-0" />
+                  {!sidebarCollapsed && (
+                    <>
+                      <span className="flex-1">Situational</span>
+                      <span className="text-xs text-gray-400">(0)</span>
+                    </>
+                  )}
+                </button>
               </div>
             )}
           </div>
