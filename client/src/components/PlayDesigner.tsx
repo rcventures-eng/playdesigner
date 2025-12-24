@@ -2045,19 +2045,21 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
       }
       
       // Clean up micro-segments at the end (from double-click jitter)
-      // Remove the last point if it's too close to the second-to-last
-      const MIN_SEGMENT_LENGTH = 15;
-      while (finalPoints.length > 2) {
-        const lastPoint = finalPoints[finalPoints.length - 1];
-        const secondLast = finalPoints[finalPoints.length - 2];
-        const dist = Math.sqrt(
-          Math.pow(lastPoint.x - secondLast.x, 2) + 
-          Math.pow(lastPoint.y - secondLast.y, 2)
-        );
-        if (dist < MIN_SEGMENT_LENGTH) {
-          finalPoints.pop();
-        } else {
-          break;
+      // Only apply to straight routes - curved routes need their dense points preserved
+      if (routeStyle === "straight") {
+        const MIN_SEGMENT_LENGTH = 15;
+        while (finalPoints.length > 2) {
+          const lastPoint = finalPoints[finalPoints.length - 1];
+          const secondLast = finalPoints[finalPoints.length - 2];
+          const dist = Math.sqrt(
+            Math.pow(lastPoint.x - secondLast.x, 2) + 
+            Math.pow(lastPoint.y - secondLast.y, 2)
+          );
+          if (dist < MIN_SEGMENT_LENGTH) {
+            finalPoints.pop();
+          } else {
+            break;
+          }
         }
       }
       
