@@ -5,7 +5,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { FOOTBALL_CONFIG, FORMATIONS, resolveColorKey } from "../shared/football-config";
 import { LOGIC_DICTIONARY } from "../shared/logic-dictionary";
 import { db } from "./db";
-import { aiGenerationLogs, users, teams, plays, passwordResetTokens, featureRequests, insertUserSchema, insertTeamSchema, insertPlaySchema, insertFeatureRequestSchema } from "@shared/schema";
+import { aiGenerationLogs, users, teams, plays, passwordResetTokens, featureRequests, playTeams, insertUserSchema, insertTeamSchema, insertPlaySchema, insertFeatureRequestSchema } from "@shared/schema";
 import { desc, eq, and, gt, asc, sql, or } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
@@ -1477,6 +1477,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Archive play error:", error);
       res.status(500).json({ error: error.message || "Failed to archive play" });
+    }
+  });
+
+  // Get teams a play is assigned to
+  app.get("/api/plays/:id/teams", requireAuth, async (req, res) => {
+    try {
+      const playId = parseInt(req.params.id);
+      if (isNaN(playId)) {
+        return res.status(400).json({ error: "Invalid play ID" });
+      }
+
+      const assignments = await db.select({ teamId: playTeams.teamId })
+        .from(playTeams)
+        .where(eq(playTeams.playId, playId));
+
+      res.json(assignments.map(a => a.teamId));
+    } catch (error: any) {
+      console.error("Get play teams error:", error);
+      res.status(500).json({ error: error.message || "Failed to get play teams" });
+    }
+  });
+
+  // Assign play to a team
+  app.post("/api/plays/:id/teams/:teamId", requireAuth, async (req, res) => {
+    try {
+      const playId = parseInt(req.params.id);
+      const teamId = parseInt(req.params.teamId);
+      
+      if (isNaN(playId) || isNaN(teamId)) {
+        return res.status(400).json({ error: "Invalid play or team ID" });
+      }
+
+      // Verify play exists and user owns it
+      const [play] = await db.select().from(plays).where(eq(plays.id, playId)).limit(1);
+      if (!play) {
+        return res.status(404).json({ error: "Play not found" });
+      }
+      if (play.userId !== req.session.userId) {
+        return res.status(403).json({ error: "Not authorized to modify this play" });
+      }
+
+      // Verify team exists and user owns it
+      const [team] = await db.select().from(teams).where(eq(teams.id, teamId)).limit(1);
+      if (!team) {
+        return res.status(404).json({ error: "Team not found" });
+      }
+      if (team.ownerId !== req.session.userId) {
+        return res.status(403).json({ error: "Not authorized to add plays to this team" });
+      }
+
+      // Check if assignment already exists
+      const [existing] = await db.select()
+        .from(playTeams)
+        .where(and(eq(playTeams.playId, playId), eq(playTeams.teamId, teamId)))
+        .limit(1);
+
+      if (existing) {
+        return res.json({ message: "Play already assigned to team" });
+      }
+
+      // Create the assignment
+      await db.insert(playTeams).values({ playId, teamId });
+
+      res.json({ message: "Play assigned to team" });
+    } catch (error: any) {
+      console.error("Assign play to team error:", error);
+      res.status(500).json({ error: error.message || "Failed to assign play to team" });
+    }
+  });
+
+  // Remove play from a team
+  app.delete("/api/plays/:id/teams/:teamId", requireAuth, async (req, res) => {
+    try {
+      const playId = parseInt(req.params.id);
+      const teamId = parseInt(req.params.teamId);
+      
+      if (isNaN(playId) || isNaN(teamId)) {
+        return res.status(400).json({ error: "Invalid play or team ID" });
+      }
+
+      // Verify play exists and user owns it
+      const [play] = await db.select().from(plays).where(eq(plays.id, playId)).limit(1);
+      if (!play) {
+        return res.status(404).json({ error: "Play not found" });
+      }
+      if (play.userId !== req.session.userId) {
+        return res.status(403).json({ error: "Not authorized to modify this play" });
+      }
+
+      // Delete the assignment
+      await db.delete(playTeams)
+        .where(and(eq(playTeams.playId, playId), eq(playTeams.teamId, teamId)));
+
+      res.json({ message: "Play removed from team" });
+    } catch (error: any) {
+      console.error("Remove play from team error:", error);
+      res.status(500).json({ error: error.message || "Failed to remove play from team" });
     }
   });
 

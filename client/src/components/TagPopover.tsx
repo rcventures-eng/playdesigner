@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Popover,
   PopoverContent,
@@ -19,11 +19,17 @@ import {
   ArrowRight,
   Crosshair,
   TrendingUp,
-  Goal
+  Goal,
+  Book,
+  Square,
+  CheckSquare,
+  Plus
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { SITUATIONAL_TAGS } from "@shared/logic-dictionary";
+import { Link } from "wouter";
+import type { Team } from "@shared/schema";
 
 const CONCEPT_OPTIONS = [
   { value: "run", label: "Run", color: "bg-green-600" },
@@ -91,6 +97,45 @@ export function TagPopover({
   
   const gameFormat = getGameFormatFromPlayerCount(playData);
   const situationalOptions = SITUATIONAL_TAGS[gameFormat] || SITUATIONAL_TAGS["5v5"];
+
+  // Fetch user's teams
+  const { data: userTeams = [] } = useQuery<Team[]>({
+    queryKey: ["/api/teams"],
+    enabled: open,
+  });
+
+  // Fetch which teams this play is assigned to
+  const { data: assignedTeamIds = [] } = useQuery<number[]>({
+    queryKey: ["/api/plays", playId, "teams"],
+    enabled: open,
+  });
+
+  // Toggle team assignment mutation
+  const toggleTeamMutation = useMutation({
+    mutationFn: async ({ teamId, isAssigned }: { teamId: number; isAssigned: boolean }) => {
+      if (isAssigned) {
+        await apiRequest("DELETE", `/api/plays/${playId}/teams/${teamId}`);
+      } else {
+        await apiRequest("POST", `/api/plays/${playId}/teams/${teamId}`);
+      }
+    },
+    onSuccess: (_, { teamId, isAssigned }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/plays", playId, "teams"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+      const team = userTeams.find(t => t.id === teamId);
+      toast({
+        title: isAssigned ? "Removed from playbook" : "Added to playbook",
+        description: team ? `Play ${isAssigned ? "removed from" : "added to"} "${team.name}"` : undefined,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to update playbook",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   const updateConceptMutation = useMutation({
     mutationFn: async (concept: ConceptType) => {
@@ -254,6 +299,48 @@ export function TagPopover({
               </button>
             );
           })}
+          
+          <div className="border-t border-gray-600 my-2" />
+          
+          {/* Team Playbooks Section */}
+          <p className="text-xs text-gray-500 px-2 pt-1 font-medium">
+            Team Playbooks
+          </p>
+          {userTeams.length === 0 ? (
+            <Link 
+              href="/team-playbooks"
+              onClick={() => setOpen(false)}
+              className="w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-left text-sm font-medium text-orange-400 hover:bg-gray-700 transition-colors"
+              data-testid="tag-create-playbook"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span className="flex-1">Create your first Team Playbook</span>
+            </Link>
+          ) : (
+            userTeams.map((team) => {
+              const isAssigned = assignedTeamIds.includes(team.id);
+              return (
+                <button
+                  key={team.id}
+                  onClick={() => toggleTeamMutation.mutate({ teamId: team.id, isAssigned })}
+                  disabled={toggleTeamMutation.isPending}
+                  className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-left text-sm font-medium transition-colors ${
+                    isAssigned
+                      ? "bg-orange-600/20 text-orange-400"
+                      : "text-gray-300 hover:bg-gray-700"
+                  }`}
+                  data-testid={`tag-team-${team.id}`}
+                >
+                  {isAssigned ? (
+                    <CheckSquare className="w-3.5 h-3.5" />
+                  ) : (
+                    <Square className="w-3.5 h-3.5" />
+                  )}
+                  <span className="flex-1 truncate">{team.name}</span>
+                </button>
+              );
+            })
+          )}
           
           <div className="border-t border-gray-600 my-2" />
           

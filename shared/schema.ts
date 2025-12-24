@@ -139,3 +139,19 @@ export const insertFeatureRequestSchema = createInsertSchema(featureRequests).om
 
 export type InsertFeatureRequest = z.infer<typeof insertFeatureRequestSchema>;
 export type FeatureRequest = typeof featureRequests.$inferSelect;
+
+// Junction table for many-to-many play-team relationships
+export const playTeams = pgTable("play_teams", {
+  id: serial("id").primaryKey(),
+  playId: integer("play_id").notNull().references(() => plays.id, { onDelete: 'cascade' }),
+  teamId: integer("team_id").notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertPlayTeamSchema = createInsertSchema(playTeams).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertPlayTeam = z.infer<typeof insertPlayTeamSchema>;
+export type PlayTeam = typeof playTeams.$inferSelect;
