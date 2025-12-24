@@ -451,34 +451,34 @@ export default function PlayLibrary() {
                     )}
                   </button>
                 ))}
-              </div>
-            )}
-            
-            {/* Archive folder - shown only for authenticated users */}
-            {user && (
-              <button
-                onClick={() => {
-                  setShowArchived(!showArchived);
-                  if (!showArchived) {
-                    setActiveSection("my-plays");
-                    setBasicLibraryExpanded(false);
-                  }
-                }}
-                className={`w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-left text-sm transition-colors mt-2 ${
-                  showArchived
-                    ? 'bg-orange-100 text-orange-700' 
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-                data-testid="filter-archive"
-              >
-                <Archive className="w-3.5 h-3.5 flex-shrink-0" />
-                {!sidebarCollapsed && (
-                  <>
-                    <span className="flex-1">Archive</span>
-                    <span className="text-xs text-gray-500">({archivedCount})</span>
-                  </>
+                
+                {/* Archive folder - shown only for authenticated users */}
+                {user && (
+                  <button
+                    onClick={() => {
+                      setShowArchived(!showArchived);
+                      if (!showArchived) {
+                        setActiveSection("my-plays");
+                        setBasicLibraryExpanded(false);
+                      }
+                    }}
+                    className={`w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-left text-sm transition-colors ${
+                      showArchived
+                        ? 'bg-orange-100 text-orange-700' 
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                    data-testid="filter-archive"
+                  >
+                    <Archive className="w-3.5 h-3.5 flex-shrink-0" />
+                    {!sidebarCollapsed && (
+                      <>
+                        <span className="flex-1">Archive</span>
+                        <span className="text-xs text-gray-500">({archivedCount})</span>
+                      </>
+                    )}
+                  </button>
                 )}
-              </button>
+              </div>
             )}
           </div>
 
