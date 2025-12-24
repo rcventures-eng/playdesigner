@@ -2073,7 +2073,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid team ID" });
       }
 
-      const { generateDoc = true, generateSlides = true, playImages = {} } = req.body;
+      const { generateDoc = true, generateSlides = true, playIds = [], playImages = {} } = req.body;
+
+      // Validate at least one format is selected
+      if (!generateDoc && !generateSlides) {
+        return res.status(400).json({ error: "Please select at least one export format" });
+      }
 
       // Get team info
       const [team] = await db.select().from(teams).where(eq(teams.id, teamId)).limit(1);
@@ -2094,8 +2099,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "No plays assigned to this team" });
       }
 
+      // Filter to selected plays if playIds provided
+      let filteredPlays = teamPlaysData;
+      if (playIds && Array.isArray(playIds) && playIds.length > 0) {
+        const playIdSet = new Set(playIds);
+        filteredPlays = teamPlaysData.filter(({ play }) => playIdSet.has(play.id));
+      }
+
+      if (filteredPlays.length === 0) {
+        return res.status(400).json({ error: "No valid plays selected for export" });
+      }
+
       // Prepare plays for export with images
-      const playsForExport = teamPlaysData.map(({ play }) => ({
+      const playsForExport = filteredPlays.map(({ play }) => ({
         id: play.id,
         name: play.name,
         type: play.type,

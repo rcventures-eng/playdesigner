@@ -111,11 +111,11 @@ export default function GoogleDriveExportModal({
   // Export mutation
   const exportMutation = useMutation({
     mutationFn: async () => {
-      // For now, we don't generate images on the client side
-      // The server will create documents without play images
+      // Send selected play IDs to the server
       const response = await apiRequest("POST", `/api/admin/teams/${teamId}/export-to-drive`, {
         generateDoc,
         generateSlides,
+        playIds: selectedPlays,
         playImages: {}, // Empty for now - images handled server-side later
       });
       return response.json();

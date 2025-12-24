@@ -51,6 +51,19 @@ Drizzle ORM with PostgreSQL manages data for `users`, `teams`, `plays`, `ai_logs
 
 Allows users to create, edit, and manage team playbooks, including uploading cover images and associating plays with teams. The `play_teams` junction table enables many-to-many relationships, allowing a single play to be assigned to multiple team playbooks simultaneously.
 
+### Google Drive Export (Admin Only)
+
+Admin users can export team playbooks to Google Drive:
+-   **Export Modal**: Accessible via "Sync to Drive" button on Team Playbooks page (`/playbooks`)
+-   **Formats**: Google Docs (handout format with 2 plays per page) and Google Slides (one play per slide)
+-   **Play Selection**: Choose which plays to include in export with select all/deselect all options
+-   **OAuth Integration**: Uses Replit's Google Drive connector for authentication
+-   **API Endpoints**: 
+    -   `GET /api/admin/google-drive/status` - Check connection status
+    -   `POST /api/admin/teams/:teamId/export-to-drive` - Export playbook
+    -   `GET /api/admin/teams/:teamId/plays-for-export` - Get plays for export modal
+-   **Files**: `server/google-drive.ts` (service), `client/src/components/GoogleDriveExportModal.tsx` (UI)
+
 ### Play-Team Assignment
 
 The TagPopover component includes a "Team Playbooks" section that allows users to:

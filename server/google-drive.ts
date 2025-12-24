@@ -4,12 +4,23 @@
 import { google } from 'googleapis';
 
 let connectionSettings: any;
+let tokenExpiryBuffer = 60000; // Refresh 1 minute before expiry
 
 async function getAccessToken() {
-  if (connectionSettings && connectionSettings.settings.expires_at && new Date(connectionSettings.settings.expires_at).getTime() > Date.now()) {
-    return connectionSettings.settings.access_token;
+  // Check if cached token is still valid (with buffer)
+  const now = Date.now();
+  if (connectionSettings && connectionSettings.settings?.expires_at) {
+    const expiresAt = new Date(connectionSettings.settings.expires_at).getTime();
+    if (expiresAt > now + tokenExpiryBuffer) {
+      const cachedToken = connectionSettings.settings?.access_token || 
+        connectionSettings.settings?.oauth?.credentials?.access_token;
+      if (cachedToken) {
+        return cachedToken;
+      }
+    }
   }
   
+  // Token expired or not cached, fetch fresh token
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
   const xReplitToken = process.env.REPL_IDENTITY 
     ? 'repl ' + process.env.REPL_IDENTITY 
@@ -21,7 +32,8 @@ async function getAccessToken() {
     throw new Error('X_REPLIT_TOKEN not found for repl/depl');
   }
 
-  connectionSettings = await fetch(
+  // Always fetch fresh connection settings when token needs refresh
+  const response = await fetch(
     'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=google-drive',
     {
       headers: {
@@ -29,9 +41,17 @@ async function getAccessToken() {
         'X_REPLIT_TOKEN': xReplitToken
       }
     }
-  ).then(res => res.json()).then(data => data.items?.[0]);
+  );
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch Google Drive connection: ${response.status}`);
+  }
+  
+  const data = await response.json();
+  connectionSettings = data.items?.[0];
 
-  const accessToken = connectionSettings?.settings?.access_token || connectionSettings.settings?.oauth?.credentials?.access_token;
+  const accessToken = connectionSettings?.settings?.access_token || 
+    connectionSettings?.settings?.oauth?.credentials?.access_token;
 
   if (!connectionSettings || !accessToken) {
     throw new Error('Google Drive not connected');
