@@ -316,7 +316,7 @@ export default function TeamPlaybooks() {
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
         <aside
-          className={`${sidebarCollapsed ? "w-16" : "w-64"} border-r border-gray-200 bg-gray-50 flex flex-col transition-all duration-300`}
+          className={`${sidebarCollapsed ? "w-16" : "w-96"} border-r border-gray-200 bg-gray-50 flex flex-col transition-all duration-300`}
           data-testid="sidebar-teams"
         >
           <div className="p-4 border-b border-gray-200 flex items-center justify-between">
