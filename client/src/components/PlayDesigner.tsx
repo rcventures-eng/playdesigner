@@ -321,83 +321,57 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
           })
           .then((play) => {
             // Load the play data into the designer
+            // Play data structure is flat: { players, routes, shapes, footballs, isPlayAction }
             const playData = play.data as {
-              offense?: { players: Player[]; routes: Route[]; shapes: Shape[]; footballs: Football[] };
-              defense?: { players: Player[]; routes: Route[]; shapes: Shape[]; footballs: Football[] };
-              special?: { players: Player[]; routes: Route[]; shapes: Shape[]; footballs: Football[] };
+              players?: Player[];
+              routes?: Route[];
+              shapes?: Shape[];
+              footballs?: Football[];
+              isPlayAction?: boolean;
             };
             
             // Determine play type from the saved type
             const type = (play.type as PlayTypeKey) || 'offense';
             
+            // Build the metadata for the loaded play
+            const loadedMetadata: PlayMetadata = {
+              name: play.name || '',
+              formation: play.formation || '',
+              concept: type === 'defense' ? '' : (play.concept || ''),
+              defenseConcept: type === 'defense' ? (play.concept || '') : '',
+              personnel: play.personnel || '',
+              situation: play.situation || '',
+            };
+            
+            // Build the play state for the appropriate tab
+            const loadedState: PlayTypeState = {
+              players: playData.players || [],
+              routes: playData.routes || [],
+              shapes: playData.shapes || [],
+              footballs: playData.footballs || [],
+              metadata: loadedMetadata,
+              history: [],
+            };
+            
             // Update the playTypeStates with loaded data
             const newStates = { ...playTypeStatesRef.current };
-            
-            if (playData.offense) {
-              newStates.offense = {
-                players: playData.offense.players || [],
-                routes: playData.offense.routes || [],
-                shapes: playData.offense.shapes || [],
-                footballs: playData.offense.footballs || [],
-                metadata: {
-                  name: play.name || '',
-                  formation: play.formation || '',
-                  concept: play.concept || '',
-                  defenseConcept: '',
-                  personnel: play.personnel || '',
-                  situation: play.situation || '',
-                },
-                history: [],
-              };
-            }
-            
-            if (playData.defense) {
-              newStates.defense = {
-                players: playData.defense.players || [],
-                routes: playData.defense.routes || [],
-                shapes: playData.defense.shapes || [],
-                footballs: playData.defense.footballs || [],
-                metadata: {
-                  name: play.name || '',
-                  formation: play.formation || '',
-                  concept: '',
-                  defenseConcept: play.concept || '',
-                  personnel: play.personnel || '',
-                  situation: play.situation || '',
-                },
-                history: [],
-              };
-            }
-            
-            if (playData.special) {
-              newStates.special = {
-                players: playData.special.players || [],
-                routes: playData.special.routes || [],
-                shapes: playData.special.shapes || [],
-                footballs: playData.special.footballs || [],
-                metadata: {
-                  name: play.name || '',
-                  formation: play.formation || '',
-                  concept: play.concept || '',
-                  defenseConcept: '',
-                  personnel: play.personnel || '',
-                  situation: play.situation || '',
-                },
-                history: [],
-              };
-            }
+            newStates[type] = loadedState;
             
             playTypeStatesRef.current = newStates;
             setPlayTypeStates(newStates);
             
-            // Set the active tab and load its state
+            // Set the active tab and load its state directly to current state
             setPlayType(type);
-            const activeState = newStates[type];
-            setPlayers(activeState.players);
-            setRoutes(activeState.routes);
-            setShapes(activeState.shapes);
-            setFootballs(activeState.footballs);
-            setMetadata(activeState.metadata);
+            setPlayers(loadedState.players);
+            setRoutes(loadedState.routes);
+            setShapes(loadedState.shapes);
+            setFootballs(loadedState.footballs);
+            setMetadata(loadedMetadata);
+            
+            // Set play action state if present
+            if (playData.isPlayAction !== undefined) {
+              setIsPlayAction(playData.isPlayAction);
+            }
             
             setLoadedPlayId(playId);
             setIsFavorite(play.isFavorite || false);
