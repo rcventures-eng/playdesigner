@@ -1044,6 +1044,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update a team (owner or admin can update)
+  app.patch("/api/teams/:id", requireAuth, async (req, res) => {
+    try {
+      const teamId = parseInt(req.params.id);
+      if (isNaN(teamId)) {
+        return res.status(400).json({ error: "Invalid team ID" });
+      }
+
+      // Fetch the team to check ownership
+      const [team] = await db.select().from(teams).where(eq(teams.id, teamId)).limit(1);
+      
+      if (!team) {
+        return res.status(404).json({ error: "Team not found" });
+      }
+
+      // Check if user is owner or admin
+      const [currentUser] = await db.select({ isAdmin: users.isAdmin })
+        .from(users)
+        .where(eq(users.id, req.session.userId!))
+        .limit(1);
+
+      const isOwner = team.ownerId === req.session.userId;
+      const isAdmin = currentUser?.isAdmin === true;
+
+      if (!isOwner && !isAdmin) {
+        return res.status(403).json({ error: "Access denied. Only the team owner or an admin can update this team." });
+      }
+
+      // Validate and extract update fields
+      const { name, year, coverImageUrl } = req.body;
+      const updateData: Partial<{ name: string; year: string; coverImageUrl: string | null }> = {};
+
+      if (name !== undefined) {
+        if (typeof name !== 'string' || name.trim().length === 0) {
+          return res.status(400).json({ error: "Team name cannot be empty" });
+        }
+        updateData.name = name.trim();
+      }
+
+      if (year !== undefined) {
+        if (typeof year !== 'string') {
+          return res.status(400).json({ error: "Year must be a string" });
+        }
+        updateData.year = year;
+      }
+
+      if (coverImageUrl !== undefined) {
+        updateData.coverImageUrl = coverImageUrl || null;
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ error: "No valid fields to update" });
+      }
+
+      const [updatedTeam] = await db.update(teams)
+        .set(updateData)
+        .where(eq(teams.id, teamId))
+        .returning();
+
+      res.json(updatedTeam);
+    } catch (error: any) {
+      console.error("Update team error:", error);
+      res.status(500).json({ error: error.message || "Failed to update team" });
+    }
+  });
+
   // Delete a team (owner or admin can delete)
   app.delete("/api/teams/:id", requireAuth, async (req, res) => {
     try {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
 import { Team } from "@shared/schema";
@@ -37,6 +37,8 @@ import {
   UserPlus,
   FolderOpen,
   Trash2,
+  Pencil,
+  Upload,
 } from "lucide-react";
 
 export default function TeamPlaybooks() {
@@ -52,6 +54,17 @@ export default function TeamPlaybooks() {
   const [newTeamName, setNewTeamName] = useState("");
   const [newTeamYear, setNewTeamYear] = useState("2025");
   const [newTeamCoverUrl, setNewTeamCoverUrl] = useState("");
+
+  // Edit modal state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editTeamId, setEditTeamId] = useState<number | null>(null);
+  const [editTeamName, setEditTeamName] = useState("");
+  const [editTeamYear, setEditTeamYear] = useState("2025");
+  const [editTeamCoverUrl, setEditTeamCoverUrl] = useState("");
+
+  // File input refs for image upload
+  const createFileInputRef = useRef<HTMLInputElement>(null);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: user, isLoading: userLoading } = useQuery<{
     id: string;
@@ -137,6 +150,101 @@ export default function TeamPlaybooks() {
       year: newTeamYear,
       coverImageUrl: newTeamCoverUrl.trim() || undefined,
     });
+  };
+
+  const updateTeamMutation = useMutation({
+    mutationFn: async (data: {
+      id: number;
+      name: string;
+      year: string;
+      coverImageUrl?: string;
+    }) => {
+      return apiRequest("PATCH", `/api/teams/${data.id}`, {
+        name: data.name,
+        year: data.year,
+        coverImageUrl: data.coverImageUrl,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+      setShowEditModal(false);
+      setEditTeamId(null);
+      setEditTeamName("");
+      setEditTeamYear("2025");
+      setEditTeamCoverUrl("");
+      toast({
+        title: "Team updated!",
+        description: "Your team playbook has been updated.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update team",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleEditTeam = (team: Team) => {
+    setEditTeamId(team.id);
+    setEditTeamName(team.name);
+    setEditTeamYear(team.year || "2025");
+    setEditTeamCoverUrl(team.coverImageUrl || "");
+    setShowEditModal(true);
+  };
+
+  const handleUpdateTeam = () => {
+    if (!editTeamId || !editTeamName.trim()) {
+      toast({
+        title: "Team name required",
+        description: "Please enter a name for your team.",
+        variant: "destructive",
+      });
+      return;
+    }
+    updateTeamMutation.mutate({
+      id: editTeamId,
+      name: editTeamName.trim(),
+      year: editTeamYear,
+      coverImageUrl: editTeamCoverUrl.trim() || undefined,
+    });
+  };
+
+  const handleImageUpload = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    setUrl: (url: string) => void
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload an image file.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result as string;
+      setUrl(base64);
+      toast({
+        title: "Image uploaded",
+        description: "Your cover image has been added.",
+      });
+    };
+    reader.onerror = () => {
+      toast({
+        title: "Upload failed",
+        description: "Could not read the image file.",
+        variant: "destructive",
+      });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
   };
 
   if (userLoading) {
@@ -365,14 +473,25 @@ export default function TeamPlaybooks() {
                     </h2>
                     <p className="text-gray-500">Season: {selectedTeam.year}</p>
                   </div>
-                  <Link href={`/plays?teamId=${selectedTeam.id}`}>
+                  <div className="flex gap-2">
                     <Button
-                      className="bg-orange-500 hover:bg-orange-600 text-white"
-                      data-testid="button-view-plays"
+                      variant="outline"
+                      onClick={() => handleEditTeam(selectedTeam)}
+                      className="border-zinc-600 text-zinc-700 hover:bg-zinc-100"
+                      data-testid="button-edit-team"
                     >
-                      View Plays
+                      <Pencil className="w-4 h-4 mr-2" />
+                      Edit
                     </Button>
-                  </Link>
+                    <Link href={`/plays?teamId=${selectedTeam.id}`}>
+                      <Button
+                        className="bg-orange-500 hover:bg-orange-600 text-white"
+                        data-testid="button-view-plays"
+                      >
+                        View Plays
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
                 {selectedTeam.coverImageUrl ? (
                   <div className="mb-6 relative group max-w-2xl">
@@ -473,6 +592,47 @@ export default function TeamPlaybooks() {
               </Select>
             </div>
             <div className="space-y-2">
+              <Label className="text-white">Upload Playbook Cover Image</Label>
+              <input
+                type="file"
+                ref={createFileInputRef}
+                onChange={(e) => handleImageUpload(e, setNewTeamCoverUrl)}
+                accept="image/*"
+                className="hidden"
+                data-testid="input-create-cover-file"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => createFileInputRef.current?.click()}
+                className="w-full border-zinc-700 text-white hover:bg-zinc-800"
+                data-testid="button-upload-create-cover"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Choose Image
+              </Button>
+              {newTeamCoverUrl && (
+                <div className="mt-2 relative">
+                  <img
+                    src={newTeamCoverUrl}
+                    alt="Cover preview"
+                    className="w-full h-24 object-cover rounded-md"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setNewTeamCoverUrl("")}
+                    className="absolute top-1 right-1 p-1 bg-red-500 hover:bg-red-600 text-white rounded-full text-xs"
+                    data-testid="button-remove-create-cover"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+              <p className="text-xs text-gray-500">
+                16:9 aspect ratio for best resolution
+              </p>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="team-cover" className="text-white">
                 Cover Image URL (optional)
               </Label>
@@ -484,9 +644,6 @@ export default function TeamPlaybooks() {
                 className="bg-zinc-800 border-zinc-700 text-white placeholder:text-gray-500"
                 data-testid="input-team-cover"
               />
-              <p className="text-xs text-gray-500">
-                Ideal dimensions: 672×192 OR 3.5:1 aspect ratio
-              </p>
             </div>
             <div className="flex justify-end gap-3 pt-4">
               <Button
@@ -504,6 +661,129 @@ export default function TeamPlaybooks() {
                 data-testid="button-submit-create"
               >
                 {createTeamMutation.isPending ? "Creating..." : "Create Team"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Team Modal */}
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent className="sm:max-w-md bg-zinc-900 border-zinc-800 text-white">
+          <DialogHeader>
+            <DialogTitle className="text-white">Edit Team Playbook</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Update your team's details.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-team-name" className="text-white">
+                Team Name
+              </Label>
+              <Input
+                id="edit-team-name"
+                value={editTeamName}
+                onChange={(e) => setEditTeamName(e.target.value)}
+                placeholder="Enter team name"
+                className="bg-zinc-800 border-zinc-700 text-white placeholder:text-gray-500"
+                data-testid="input-edit-team-name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-team-year" className="text-white">
+                Year
+              </Label>
+              <Select value={editTeamYear} onValueChange={setEditTeamYear}>
+                <SelectTrigger
+                  className="bg-zinc-800 border-zinc-700 text-white"
+                  data-testid="select-edit-team-year"
+                >
+                  <SelectValue placeholder="Select year" />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-800 border-zinc-700">
+                  <SelectItem value="2024" className="text-white">
+                    2024
+                  </SelectItem>
+                  <SelectItem value="2025" className="text-white">
+                    2025
+                  </SelectItem>
+                  <SelectItem value="2026" className="text-white">
+                    2026
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-white">Upload Playbook Cover Image</Label>
+              <input
+                type="file"
+                ref={editFileInputRef}
+                onChange={(e) => handleImageUpload(e, setEditTeamCoverUrl)}
+                accept="image/*"
+                className="hidden"
+                data-testid="input-edit-cover-file"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => editFileInputRef.current?.click()}
+                className="w-full border-zinc-700 text-white hover:bg-zinc-800"
+                data-testid="button-upload-edit-cover"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Choose Image
+              </Button>
+              {editTeamCoverUrl && (
+                <div className="mt-2 relative">
+                  <img
+                    src={editTeamCoverUrl}
+                    alt="Cover preview"
+                    className="w-full h-24 object-cover rounded-md"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setEditTeamCoverUrl("")}
+                    className="absolute top-1 right-1 p-1 bg-red-500 hover:bg-red-600 text-white rounded-full text-xs"
+                    data-testid="button-remove-edit-cover"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+              <p className="text-xs text-gray-500">
+                16:9 aspect ratio for best resolution
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-team-cover" className="text-white">
+                Cover Image URL (optional)
+              </Label>
+              <Input
+                id="edit-team-cover"
+                value={editTeamCoverUrl}
+                onChange={(e) => setEditTeamCoverUrl(e.target.value)}
+                placeholder="https://example.com/image.jpg"
+                className="bg-zinc-800 border-zinc-700 text-white placeholder:text-gray-500"
+                data-testid="input-edit-team-cover"
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setShowEditModal(false)}
+                className="border-zinc-700 text-white hover:bg-zinc-800"
+                data-testid="button-cancel-edit"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleUpdateTeam}
+                disabled={updateTeamMutation.isPending}
+                className="bg-orange-500 hover:bg-orange-600 text-white"
+                data-testid="button-submit-edit"
+              >
+                {updateTeamMutation.isPending ? "Saving..." : "Save Changes"}
               </Button>
             </div>
           </div>
