@@ -53,6 +53,7 @@ export default function TeamPlaybooks() {
 
   const [newTeamName, setNewTeamName] = useState("");
   const [newTeamYear, setNewTeamYear] = useState("2025");
+  const [newTeamGameFormat, setNewTeamGameFormat] = useState("11v11");
   const [newTeamCoverUrl, setNewTeamCoverUrl] = useState("");
 
   // Edit modal state
@@ -60,6 +61,7 @@ export default function TeamPlaybooks() {
   const [editTeamId, setEditTeamId] = useState<number | null>(null);
   const [editTeamName, setEditTeamName] = useState("");
   const [editTeamYear, setEditTeamYear] = useState("2025");
+  const [editTeamGameFormat, setEditTeamGameFormat] = useState("11v11");
   const [editTeamCoverUrl, setEditTeamCoverUrl] = useState("");
 
   // File input refs for image upload
@@ -92,6 +94,7 @@ export default function TeamPlaybooks() {
       setShowCreateModal(false);
       setNewTeamName("");
       setNewTeamYear("2025");
+      setNewTeamGameFormat("11v11");
       setNewTeamCoverUrl("");
       toast({
         title: "Team created!",
@@ -171,6 +174,7 @@ export default function TeamPlaybooks() {
       setEditTeamId(null);
       setEditTeamName("");
       setEditTeamYear("2025");
+      setEditTeamGameFormat("11v11");
       setEditTeamCoverUrl("");
       toast({
         title: "Team updated!",
@@ -592,6 +596,33 @@ export default function TeamPlaybooks() {
               </Select>
             </div>
             <div className="space-y-2">
+              <Label htmlFor="team-game-format" className="text-white">
+                Game Format
+              </Label>
+              <Select value={newTeamGameFormat} onValueChange={setNewTeamGameFormat}>
+                <SelectTrigger
+                  className="bg-zinc-800 border-zinc-700 text-white"
+                  data-testid="select-team-game-format"
+                >
+                  <SelectValue placeholder="Select game format" />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-800 border-zinc-700">
+                  <SelectItem value="5v5" className="text-white">
+                    5-on-5
+                  </SelectItem>
+                  <SelectItem value="7v7" className="text-white">
+                    7-on-7
+                  </SelectItem>
+                  <SelectItem value="9v9" className="text-white">
+                    9-on-9
+                  </SelectItem>
+                  <SelectItem value="11v11" className="text-white">
+                    11-on-11
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <Label className="text-white">Upload Playbook Cover Image</Label>
               <input
                 type="file"
@@ -710,6 +741,33 @@ export default function TeamPlaybooks() {
                   </SelectItem>
                   <SelectItem value="2026" className="text-white">
                     2026
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-game-format" className="text-white">
+                Game Format
+              </Label>
+              <Select value={editTeamGameFormat} onValueChange={setEditTeamGameFormat}>
+                <SelectTrigger
+                  className="bg-zinc-800 border-zinc-700 text-white"
+                  data-testid="select-edit-game-format"
+                >
+                  <SelectValue placeholder="Select game format" />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-800 border-zinc-700">
+                  <SelectItem value="5v5" className="text-white">
+                    5-on-5
+                  </SelectItem>
+                  <SelectItem value="7v7" className="text-white">
+                    7-on-7
+                  </SelectItem>
+                  <SelectItem value="9v9" className="text-white">
+                    9-on-9
+                  </SelectItem>
+                  <SelectItem value="11v11" className="text-white">
+                    11-on-11
                   </SelectItem>
                 </SelectContent>
               </Select>
