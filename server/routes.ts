@@ -1306,6 +1306,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get a single play by ID
+  app.get("/api/plays/:id", requireAuth, async (req, res) => {
+    try {
+      const playId = parseInt(req.params.id);
+      if (isNaN(playId)) {
+        return res.status(400).json({ error: "Invalid play ID" });
+      }
+
+      const [play] = await db.select().from(plays).where(eq(plays.id, playId)).limit(1);
+      
+      if (!play) {
+        return res.status(404).json({ error: "Play not found" });
+      }
+
+      // Check authorization: user owns the play OR play is public OR user is admin
+      const [currentUser] = await db.select({ isAdmin: users.isAdmin })
+        .from(users)
+        .where(eq(users.id, req.session.userId!))
+        .limit(1);
+
+      const isOwner = play.userId === req.session.userId;
+      const isAdmin = currentUser?.isAdmin === true;
+      const isPublic = play.isPublic === true;
+
+      if (!isOwner && !isPublic && !isAdmin) {
+        return res.status(403).json({ error: "Not authorized to view this play" });
+      }
+
+      res.json(play);
+    } catch (error: any) {
+      console.error("Get single play error:", error);
+      res.status(500).json({ error: error.message || "Failed to get play" });
+    }
+  });
+
   // Update a play (PATCH for partial updates)
   app.patch("/api/plays/:id", requireAuth, async (req, res) => {
     try {

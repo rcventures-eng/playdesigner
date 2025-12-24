@@ -301,6 +301,130 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   
+  // Track loaded play ID for editing
+  const [loadedPlayId, setLoadedPlayId] = useState<number | null>(null);
+  const [isLoadingPlay, setIsLoadingPlay] = useState(false);
+  
+  // Load play from URL parameter on mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const playIdParam = urlParams.get('playId');
+    
+    if (playIdParam) {
+      const playId = parseInt(playIdParam);
+      if (!isNaN(playId)) {
+        setIsLoadingPlay(true);
+        fetch(`/api/plays/${playId}`, { credentials: 'include' })
+          .then(res => {
+            if (!res.ok) throw new Error('Failed to load play');
+            return res.json();
+          })
+          .then((play) => {
+            // Load the play data into the designer
+            const playData = play.data as {
+              offense?: { players: Player[]; routes: Route[]; shapes: Shape[]; footballs: Football[] };
+              defense?: { players: Player[]; routes: Route[]; shapes: Shape[]; footballs: Football[] };
+              special?: { players: Player[]; routes: Route[]; shapes: Shape[]; footballs: Football[] };
+            };
+            
+            // Determine play type from the saved type
+            const type = (play.type as PlayTypeKey) || 'offense';
+            
+            // Update the playTypeStates with loaded data
+            const newStates = { ...playTypeStatesRef.current };
+            
+            if (playData.offense) {
+              newStates.offense = {
+                players: playData.offense.players || [],
+                routes: playData.offense.routes || [],
+                shapes: playData.offense.shapes || [],
+                footballs: playData.offense.footballs || [],
+                metadata: {
+                  name: play.name || '',
+                  formation: play.formation || '',
+                  concept: play.concept || '',
+                  defenseConcept: '',
+                  personnel: play.personnel || '',
+                  situation: play.situation || '',
+                },
+                history: [],
+              };
+            }
+            
+            if (playData.defense) {
+              newStates.defense = {
+                players: playData.defense.players || [],
+                routes: playData.defense.routes || [],
+                shapes: playData.defense.shapes || [],
+                footballs: playData.defense.footballs || [],
+                metadata: {
+                  name: play.name || '',
+                  formation: play.formation || '',
+                  concept: '',
+                  defenseConcept: play.concept || '',
+                  personnel: play.personnel || '',
+                  situation: play.situation || '',
+                },
+                history: [],
+              };
+            }
+            
+            if (playData.special) {
+              newStates.special = {
+                players: playData.special.players || [],
+                routes: playData.special.routes || [],
+                shapes: playData.special.shapes || [],
+                footballs: playData.special.footballs || [],
+                metadata: {
+                  name: play.name || '',
+                  formation: play.formation || '',
+                  concept: play.concept || '',
+                  defenseConcept: '',
+                  personnel: play.personnel || '',
+                  situation: play.situation || '',
+                },
+                history: [],
+              };
+            }
+            
+            playTypeStatesRef.current = newStates;
+            setPlayTypeStates(newStates);
+            
+            // Set the active tab and load its state
+            setPlayType(type);
+            const activeState = newStates[type];
+            setPlayers(activeState.players);
+            setRoutes(activeState.routes);
+            setShapes(activeState.shapes);
+            setFootballs(activeState.footballs);
+            setMetadata(activeState.metadata);
+            
+            setLoadedPlayId(playId);
+            setIsFavorite(play.isFavorite || false);
+            
+            // Clear the URL parameter without reloading
+            window.history.replaceState({}, '', '/');
+            
+            toast({
+              title: "Play Loaded",
+              description: `"${play.name}" is ready for editing.`,
+            });
+          })
+          .catch((err) => {
+            console.error('Error loading play:', err);
+            toast({
+              title: "Error Loading Play",
+              description: "Could not load the play. Please try again.",
+              variant: "destructive",
+            });
+          })
+          .finally(() => {
+            setIsLoadingPlay(false);
+          });
+      }
+    }
+  }, []);
+  
   // User authentication state
   interface UserData {
     id: string;

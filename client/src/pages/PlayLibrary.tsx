@@ -996,8 +996,14 @@ export default function PlayLibrary() {
                   key={play.id}
                   onClick={() => togglePlaySelection(play.id)}
                   onDoubleClick={() => {
-                    setDoubleClickedPlay(play);
-                    setShowPlayDialog(true);
+                    if (play.isPublic) {
+                      // Public templates need dialog to clone first
+                      setDoubleClickedPlay(play);
+                      setShowPlayDialog(true);
+                    } else {
+                      // User's own plays - navigate directly to designer
+                      navigate(`/?playId=${play.id}`);
+                    }
                   }}
                   className={`bg-white rounded-lg border ${
                     selectedPlays.has(play.id) 
@@ -1197,13 +1203,17 @@ export default function PlayLibrary() {
                 <Button
                   onClick={() => {
                     setShowPlayDialog(false);
-                    navigate("/");
+                    if (doubleClickedPlay) {
+                      navigate(`/?playId=${doubleClickedPlay.id}`);
+                    } else {
+                      navigate("/");
+                    }
                   }}
                   className="w-full bg-orange-500 hover:bg-orange-600 text-white justify-start"
                   data-testid="button-go-to-designer"
                 >
                   <Edit className="w-4 h-4 mr-2" />
-                  Go to Play Designer
+                  Edit in Play Designer
                 </Button>
                 {doubleClickedPlay && (
                   <div className="w-full">
