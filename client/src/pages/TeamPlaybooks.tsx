@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import GoogleDriveExportModal from "@/components/GoogleDriveExportModal";
 import {
   ChevronLeft,
   ChevronRight,
@@ -39,6 +40,7 @@ import {
   Trash2,
   Pencil,
   Upload,
+  CloudUpload,
 } from "lucide-react";
 
 export default function TeamPlaybooks() {
@@ -68,10 +70,14 @@ export default function TeamPlaybooks() {
   const createFileInputRef = useRef<HTMLInputElement>(null);
   const editFileInputRef = useRef<HTMLInputElement>(null);
 
+  // Google Drive export modal state (admin only)
+  const [showExportModal, setShowExportModal] = useState(false);
+
   const { data: user, isLoading: userLoading } = useQuery<{
     id: string;
     email: string;
     firstName: string;
+    isAdmin?: boolean;
   } | null>({
     queryKey: ["/api/me"],
   });
@@ -487,6 +493,17 @@ export default function TeamPlaybooks() {
                       <Pencil className="w-4 h-4 mr-2" />
                       Edit
                     </Button>
+                    {user?.isAdmin && (
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowExportModal(true)}
+                        className="border-blue-600 text-blue-700 hover:bg-blue-50"
+                        data-testid="button-sync-to-drive"
+                      >
+                        <CloudUpload className="w-4 h-4 mr-2" />
+                        Sync to Drive
+                      </Button>
+                    )}
                     <Link href={`/plays?teamId=${selectedTeam.id}`}>
                       <Button
                         className="bg-orange-500 hover:bg-orange-600 text-white"
@@ -847,6 +864,16 @@ export default function TeamPlaybooks() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Google Drive Export Modal (Admin Only) */}
+      {selectedTeam && (
+        <GoogleDriveExportModal
+          open={showExportModal}
+          onOpenChange={setShowExportModal}
+          teamId={selectedTeam.id}
+          teamName={selectedTeam.name}
+        />
+      )}
     </div>
   );
 }
