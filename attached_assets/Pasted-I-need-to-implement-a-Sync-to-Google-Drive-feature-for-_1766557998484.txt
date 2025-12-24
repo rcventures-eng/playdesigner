@@ -1,0 +1,71 @@
+I need to implement a 'Sync to Google Drive' feature for the Team Playbooks section. This allows users to export their playbooks directly into formatted Google Docs and Slides.
+
+1. Authentication Infrastructure (OAuth)
+
+Setup: Configure Passport.js (or your existing auth provider) to handle Google OAuth 2.0.
+
+Scopes: We need https://www.googleapis.com/auth/drive.file (to create files), documents (for Docs), and presentations (for Slides).
+
+User Profile: Store the refreshToken in the users table (encrypted) so we can generate documents without re-logging in every time.
+
+2. The UI: 'Export Playbook' Modal
+
+On the Team Playbooks page, add a 'Sync to Drive' button next to the team name.
+
+Modal Options:
+
+Select Format: Checkboxes for 'Google Doc (Handout Format)' and/or 'Google Slides (Presentation Format)'.
+
+Select Plays: A list of plays in that team (default to 'Select All'). Allow drag-and-drop reordering here to define the export order.
+
+Action: 'Generate Files'.
+
+3. The Google Docs Generator (Handout Logic)
+
+Create a service function generateTeamDoc(team, plays, authClient).
+
+Page 1 (Cover):
+
+Insert the Team Name centered in Header 1 style at the top.
+
+Insert the Team Logo (large) in the center.
+
+Insert the Team Name again at the bottom.
+
+Insert a Page Break.
+
+Subsequent Pages (Play Grid):
+
+Create a 1x2 invisible table (1 column, 2 rows) on each page.
+
+Row 1: Insert Play #1 Image + Play Name.
+
+Row 2: Insert Play #2 Image + Play Name.
+
+Constraint: Ensure images are scaled to fit margins (approx 6.5" width). Insert a Page Break after every 2 plays.
+
+4. The Google Slides Generator (Presentation Logic)
+
+Create a service function generateTeamSlides(team, plays, authClient).
+
+Slide 1 (Title):
+
+Use the 'Title Only' layout. Set Title to Team Name.
+
+Set Background Image to the Team Logo (with 80% opacity overlay or centered).
+
+Subsequent Slides:
+
+Create one new blank slide per play.
+
+Content: Insert the Play Image as the background (or full-width image) to maximize resolution.
+
+Notes: Insert the Play Name and any 'Concept' tags into the Speaker Notes section.
+
+5. Implementation Details
+
+Image Generation: You will need to reuse the existing FieldCanvas export logic to generate a Base64/Buffer of each play server-side (or upload from client) before sending to Google.
+
+API Client: Use the official googleapis Node.js library.
+
+Please output the OAuth setup code, the GoogleDriveService class with the two generation methods, and the frontend Export Modal component."
