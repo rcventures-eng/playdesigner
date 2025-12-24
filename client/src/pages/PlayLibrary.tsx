@@ -542,7 +542,7 @@ export default function PlayLibrary() {
               {!sidebarCollapsed && (
                 <>
                   <span className="flex-1 text-sm">RC Football Premium Play Library</span>
-                  <Lock className="w-3.5 h-3.5 text-gray-400" />
+                  <Lock className="w-3.5 h-3.5 text-orange-500" />
                 </>
               )}
             </button>
