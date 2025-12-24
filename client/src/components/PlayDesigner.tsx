@@ -2876,7 +2876,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     <div className="h-screen w-screen flex flex-col overflow-hidden">
       <TopNav isAdmin={isAdmin} setIsAdmin={setIsAdmin} showSignUp={showSignUp} setShowSignUp={handleShowSignUpChange} signUpMessage={signUpMessage} />
       <div className={`flex-1 bg-slate-950 px-10 pb-10 pt-3 flex flex-col gap-4 overflow-hidden ${isLongPressHolding || longPressMenuOpen ? "select-none" : ""}`}>
-        {(metadata.name || metadata.formation || metadata.concept || metadata.defenseConcept || metadata.personnel) && (
+        {(metadata.name || metadata.formation || metadata.concept || metadata.defenseConcept || metadata.personnel || metadata.situation) && (
         <div className="bg-gradient-to-r from-[#1a2332] to-[#2a3342] rounded-2xl border border-white/10 px-6 py-3 flex items-center gap-3 flex-wrap">
           {metadata.name && (
             <Badge variant="default" className="bg-primary text-primary-foreground font-semibold px-3 py-1.5 text-base" data-testid="badge-play-name">
@@ -2896,6 +2896,11 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
           {metadata.defenseConcept && (
             <Badge variant="secondary" className="bg-secondary/80 text-secondary-foreground font-medium px-3 py-1.5" data-testid="badge-defense-concept">
               Concept: {getFormattedLabel(metadata.defenseConcept, conceptLabels)}
+            </Badge>
+          )}
+          {metadata.situation && (
+            <Badge variant="secondary" className="bg-blue-600 text-white font-medium px-3 py-1.5" data-testid="badge-situation">
+              {metadata.situation}
             </Badge>
           )}
           {metadata.personnel && (
@@ -3785,7 +3790,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                   zIndex: 25 
                 }}
               >
-                {(metadata.name || metadata.formation || metadata.concept || metadata.defenseConcept || metadata.personnel) && (
+                {(metadata.name || metadata.formation || metadata.concept || metadata.defenseConcept || metadata.personnel || metadata.situation) && (
                   <div className="flex flex-wrap items-center justify-center gap-2 px-4">
                     {metadata.name && (
                       <div
@@ -3821,6 +3826,15 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                         data-testid="overlay-defense-concept"
                       >
                         Concept: {getFormattedLabel(metadata.defenseConcept, conceptLabels)}
+                      </div>
+                    )}
+                    {metadata.situation && (
+                      <div
+                        className="px-3 py-1.5 rounded text-white font-medium text-sm"
+                        style={{ backgroundColor: "#2563eb" }}
+                        data-testid="overlay-situation"
+                      >
+                        {metadata.situation}
                       </div>
                     )}
                     {metadata.personnel && (
