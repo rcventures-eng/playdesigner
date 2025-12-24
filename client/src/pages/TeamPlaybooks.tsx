@@ -53,7 +53,7 @@ export default function TeamPlaybooks() {
 
   const [newTeamName, setNewTeamName] = useState("");
   const [newTeamYear, setNewTeamYear] = useState("2025");
-  const [newTeamGameFormat, setNewTeamGameFormat] = useState("11v11");
+  const [newTeamGameFormat, setNewTeamGameFormat] = useState("5v5");
   const [newTeamCoverUrl, setNewTeamCoverUrl] = useState("");
 
   // Edit modal state
@@ -61,7 +61,7 @@ export default function TeamPlaybooks() {
   const [editTeamId, setEditTeamId] = useState<number | null>(null);
   const [editTeamName, setEditTeamName] = useState("");
   const [editTeamYear, setEditTeamYear] = useState("2025");
-  const [editTeamGameFormat, setEditTeamGameFormat] = useState("11v11");
+  const [editTeamGameFormat, setEditTeamGameFormat] = useState("5v5");
   const [editTeamCoverUrl, setEditTeamCoverUrl] = useState("");
 
   // File input refs for image upload
@@ -94,7 +94,7 @@ export default function TeamPlaybooks() {
       setShowCreateModal(false);
       setNewTeamName("");
       setNewTeamYear("2025");
-      setNewTeamGameFormat("11v11");
+      setNewTeamGameFormat("5v5");
       setNewTeamCoverUrl("");
       toast({
         title: "Team created!",
@@ -174,7 +174,7 @@ export default function TeamPlaybooks() {
       setEditTeamId(null);
       setEditTeamName("");
       setEditTeamYear("2025");
-      setEditTeamGameFormat("11v11");
+      setEditTeamGameFormat("5v5");
       setEditTeamCoverUrl("");
       toast({
         title: "Team updated!",
