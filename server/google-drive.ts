@@ -255,11 +255,49 @@ export async function generateTeamDoc(
       });
       currentIndex += 1;
       
+      // Handle cover image - if it's a data URI, upload to Drive first
+      let coverImageUrl = team.coverImageUrl;
+      
+      if (team.coverImageUrl.startsWith('data:')) {
+        // Extract base64 data from data URI (format: data:image/png;base64,XXXX)
+        const matches = team.coverImageUrl.match(/^data:image\/(\w+);base64,(.+)$/);
+        if (matches) {
+          const imageType = matches[1]; // png, jpeg, etc.
+          const base64Data = matches[2];
+          const imageBuffer = Buffer.from(base64Data, 'base64');
+          
+          // Upload cover image to Drive
+          const coverImageFile = await drive.files.create({
+            requestBody: {
+              name: `${team.name}_cover.${imageType}`,
+              mimeType: `image/${imageType}`
+            },
+            media: {
+              mimeType: `image/${imageType}`,
+              body: Readable.from(imageBuffer)
+            },
+            fields: 'id'
+          });
+          
+          // Make the image publicly accessible
+          await drive.permissions.create({
+            fileId: coverImageFile.data.id!,
+            requestBody: {
+              role: 'reader',
+              type: 'anyone'
+            }
+          });
+          
+          // Use the Drive URL instead of data URI
+          coverImageUrl = `https://drive.google.com/uc?id=${coverImageFile.data.id}`;
+        }
+      }
+      
       // Insert the cover image (centered, moderate size for cover page)
       requests.push({
         insertInlineImage: {
           location: { index: currentIndex },
-          uri: team.coverImageUrl,
+          uri: coverImageUrl,
           objectSize: {
             width: { magnitude: 300, unit: 'PT' },
             height: { magnitude: 200, unit: 'PT' }
@@ -289,7 +327,14 @@ export async function generateTeamDoc(
       currentIndex += 1;
     } catch (error) {
       console.error('Failed to insert cover image:', error);
-      // Continue without cover image
+      // Continue without cover image - add spacing instead
+      requests.push({
+        insertText: {
+          location: { index: currentIndex },
+          text: '\n'
+        }
+      });
+      currentIndex += 1;
     }
   } else {
     // Add spacing if no cover image
