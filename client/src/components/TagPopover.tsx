@@ -113,15 +113,20 @@ export function TagPopover({
   // Toggle team assignment mutation
   const toggleTeamMutation = useMutation({
     mutationFn: async ({ teamId, isAssigned }: { teamId: number; isAssigned: boolean }) => {
+      console.log("[TagPopover] Toggle mutation called - playId:", playId, "teamId:", teamId, "isAssigned:", isAssigned);
       if (isAssigned) {
         await apiRequest("DELETE", `/api/plays/${playId}/teams/${teamId}`);
       } else {
         await apiRequest("POST", `/api/plays/${playId}/teams/${teamId}`);
       }
+      console.log("[TagPopover] API request completed successfully");
     },
     onSuccess: (_, { teamId, isAssigned }) => {
+      console.log("[TagPopover] Mutation success - invalidating queries");
       queryClient.invalidateQueries({ queryKey: ["/api/plays", playId, "teams"] });
       queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+      // Also invalidate the team playbooks query so Team Playbooks page updates
+      queryClient.invalidateQueries({ queryKey: ["/api/teams", teamId, "plays-for-export"] });
       const team = userTeams.find(t => t.id === teamId);
       toast({
         title: isAssigned ? "Removed from playbook" : "Added to playbook",
@@ -129,6 +134,7 @@ export function TagPopover({
       });
     },
     onError: (error: Error) => {
+      console.error("[TagPopover] Mutation error:", error);
       toast({
         title: "Failed to update playbook",
         description: error.message,

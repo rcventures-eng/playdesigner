@@ -1554,11 +1554,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Assign play to a team
   app.post("/api/plays/:id/teams/:teamId", requireAuth, async (req, res) => {
+    console.log("[Play-Team Assign] Starting - playId:", req.params.id, "teamId:", req.params.teamId, "userId:", req.session.userId);
     try {
       const playId = parseInt(req.params.id);
       const teamId = parseInt(req.params.teamId);
       
       if (isNaN(playId) || isNaN(teamId)) {
+        console.log("[Play-Team Assign] Invalid IDs - playId:", playId, "teamId:", teamId);
         return res.status(400).json({ error: "Invalid play or team ID" });
       }
 
@@ -1600,7 +1602,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Create the assignment
+      console.log("[Play-Team Assign] Inserting - playId:", playId, "teamId:", teamId);
       await db.insert(playTeams).values({ playId, teamId });
+      console.log("[Play-Team Assign] Success - play", playId, "assigned to team", teamId);
 
       res.json({ message: "Play assigned to team" });
     } catch (error: any) {
