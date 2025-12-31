@@ -2323,6 +2323,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         type: plays.type,
         concept: plays.concept,
         formation: plays.formation,
+        situation: plays.situation,
         data: plays.data,
       })
         .from(playTeams)

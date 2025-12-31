@@ -227,7 +227,7 @@ export async function generateTeamDoc(
   requests.push({
     insertText: {
       location: { index: currentIndex },
-      text: `${team.name}\n\n`
+      text: `${team.name}\n`
     }
   });
   
@@ -241,7 +241,66 @@ export async function generateTeamDoc(
       fields: 'namedStyleType,alignment'
     }
   });
-  currentIndex += team.name.length + 2;
+  currentIndex += team.name.length + 1;
+
+  // Add team cover image if available
+  if (team.coverImageUrl) {
+    try {
+      // Add newline before image for spacing
+      requests.push({
+        insertText: {
+          location: { index: currentIndex },
+          text: '\n'
+        }
+      });
+      currentIndex += 1;
+      
+      // Insert the cover image (centered, moderate size for cover page)
+      requests.push({
+        insertInlineImage: {
+          location: { index: currentIndex },
+          uri: team.coverImageUrl,
+          objectSize: {
+            width: { magnitude: 300, unit: 'PT' },
+            height: { magnitude: 200, unit: 'PT' }
+          }
+        }
+      });
+      currentIndex += 1;
+      
+      // Center the image paragraph
+      requests.push({
+        updateParagraphStyle: {
+          range: { startIndex: currentIndex - 1, endIndex: currentIndex },
+          paragraphStyle: {
+            alignment: 'CENTER'
+          },
+          fields: 'alignment'
+        }
+      });
+      
+      // Add newline after image
+      requests.push({
+        insertText: {
+          location: { index: currentIndex },
+          text: '\n'
+        }
+      });
+      currentIndex += 1;
+    } catch (error) {
+      console.error('Failed to insert cover image:', error);
+      // Continue without cover image
+    }
+  } else {
+    // Add spacing if no cover image
+    requests.push({
+      insertText: {
+        location: { index: currentIndex },
+        text: '\n'
+      }
+    });
+    currentIndex += 1;
+  }
 
   // Add year subtitle
   const yearText = `${team.year || new Date().getFullYear()} Season\n`;
@@ -264,12 +323,22 @@ export async function generateTeamDoc(
   });
   currentIndex += yearText.length;
 
-  // Add total plays count
+  // Add total plays count (centered)
   const countText = `Total Plays: ${plays.length}\n`;
   requests.push({
     insertText: {
       location: { index: currentIndex },
       text: countText
+    }
+  });
+  
+  requests.push({
+    updateParagraphStyle: {
+      range: { startIndex: currentIndex, endIndex: currentIndex + countText.length },
+      paragraphStyle: {
+        alignment: 'CENTER'
+      },
+      fields: 'alignment'
     }
   });
   currentIndex += countText.length;
@@ -282,48 +351,11 @@ export async function generateTeamDoc(
   });
   currentIndex += 1;
 
-  // Add each play
+  // Add each play - only images, no text labels (metadata is rendered on the image)
   for (let i = 0; i < plays.length; i++) {
     const play = plays[i];
     
-    // Play name header
-    const playHeader = `${i + 1}. ${play.name}\n`;
-    requests.push({
-      insertText: {
-        location: { index: currentIndex },
-        text: playHeader
-      }
-    });
-    
-    requests.push({
-      updateParagraphStyle: {
-        range: { startIndex: currentIndex, endIndex: currentIndex + playHeader.length },
-        paragraphStyle: {
-          namedStyleType: 'HEADING_2'
-        },
-        fields: 'namedStyleType'
-      }
-    });
-    currentIndex += playHeader.length;
-
-    // Play metadata
-    const metadata: string[] = [];
-    if (play.type) metadata.push(`Type: ${play.type}`);
-    if (play.formation) metadata.push(`Formation: ${play.formation}`);
-    if (play.concept) metadata.push(`Concept: ${play.concept}`);
-    
-    if (metadata.length > 0) {
-      const metaText = metadata.join(' | ') + '\n\n';
-      requests.push({
-        insertText: {
-          location: { index: currentIndex },
-          text: metaText
-        }
-      });
-      currentIndex += metaText.length;
-    }
-
-    // If we have an image, insert it
+    // Insert the play image (metadata is rendered directly on the image header)
     if (play.imageBase64) {
       // Upload image to Drive first
       const imageBuffer = Buffer.from(play.imageBase64, 'base64');

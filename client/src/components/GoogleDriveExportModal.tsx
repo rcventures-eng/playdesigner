@@ -34,6 +34,7 @@ interface Play {
   type: string;
   concept?: string | null;
   formation?: string | null;
+  situation?: string | null;
   data?: any;
 }
 
@@ -232,8 +233,19 @@ export default function GoogleDriveExportModal({
       
       if ((generateSlides || generateDoc) && selectedPlayData.length > 0) {
         try {
+          // Transform plays to handle null -> undefined for type compatibility
+          const playsForRendering = selectedPlayData.map(p => ({
+            id: p.id,
+            name: p.name,
+            type: p.type,
+            data: p.data,
+            formation: p.formation ?? undefined,
+            concept: p.concept ?? undefined,
+            situation: p.situation ?? undefined,
+          }));
+          
           playImages = await renderPlaysToImages(
-            selectedPlayData,
+            playsForRendering,
             (current, total) => {
               setRenderingProgress({ current, total });
             }

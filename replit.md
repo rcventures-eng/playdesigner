@@ -58,17 +58,24 @@ Coaches can connect their personal Google Drive accounts and export team playboo
 -   **Export Modal**: Accessible via "Sync to Drive" button on Team Playbooks page (`/playbooks`)
 -   **Formats**: Google Docs (handout format with 2 plays per page) and Google Slides (one play per slide)
 -   **Play Selection**: Choose which plays to include in export with select all/deselect all options
+-   **Drag-and-Drop Reordering**: Plays can be reordered in the export modal before exporting
 -   **Connect/Disconnect**: Users can manage their Google Drive connection from the export modal
 -   **Token Storage**: OAuth tokens stored securely in user's `googleDriveTokens` column with automatic refresh
+-   **Google Docs Formatting**:
+    -   Cover page: Team Name → Cover Image (if available) → Year → Total Plays (all centered)
+    -   Play images render with metadata header (name, formation, concept, situation) - no separate text labels
+    -   2 plays per page layout with proper spacing and page breaks
+    -   Images rendered at high quality (2x pixel ratio, 468 PT width)
+-   **Play Image Rendering**: `PlaySVGForExport` component renders metadata boxes in header (matching Play Designer appearance)
 -   **API Endpoints**: 
     -   `GET /api/google-drive/status` - Check user's connection status
     -   `GET /api/auth/google-drive/authorize` - Start OAuth flow
     -   `GET /api/auth/google-drive/callback` - OAuth callback with CSRF protection
     -   `POST /api/google-drive/disconnect` - Disconnect user's Google Drive
     -   `POST /api/teams/:teamId/export-to-drive` - Export playbook (team owner only)
-    -   `GET /api/teams/:teamId/plays-for-export` - Get plays for export modal
+    -   `GET /api/teams/:teamId/plays-for-export` - Get plays for export modal (includes situation field)
 -   **Security**: State parameter validated against session to prevent CSRF attacks
--   **Files**: `server/google-drive.ts` (service), `client/src/components/GoogleDriveExportModal.tsx` (UI)
+-   **Files**: `server/google-drive.ts` (service), `client/src/components/GoogleDriveExportModal.tsx` (UI), `client/src/lib/renderPlayToImage.tsx` (image rendering)
 
 ### Play-Team Assignment
 

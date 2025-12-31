@@ -95,14 +95,23 @@ function getPlayerColor(player: Player): string {
   return player.side === "defense" ? "#87CEEB" : "#6b7280";
 }
 
+interface PlayMetadata {
+  name?: string;
+  formation?: string;
+  concept?: string;
+  situation?: string;
+}
+
 function PlaySVGForExport({ 
   playData, 
   playType, 
-  playName 
+  playName,
+  metadata
 }: { 
   playData: PlayData | null; 
   playType: "offense" | "defense" | "special"; 
   playName?: string;
+  metadata?: PlayMetadata;
 }) {
   const players = playData?.players || [];
   const routes = playData?.routes || [];
@@ -155,19 +164,150 @@ function PlaySVGForExport({
           fill="white"
         />
         
-        {playName && (
-          <text
-            x={FIELD.WIDTH / 2}
-            y={FIELD.getHeaderStartY(playType) + FIELD.HEADER_HEIGHT / 2}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fill="#ea580c"
-            fontSize={14}
-            fontWeight="bold"
-          >
-            {playName}
-          </text>
-        )}
+        {/* Render metadata boxes like the Play Designer */}
+        {(() => {
+          const headerY = FIELD.getHeaderStartY(playType);
+          const boxHeight = 22;
+          const boxY = headerY + (FIELD.HEADER_HEIGHT - boxHeight) / 2;
+          const boxRadius = 4;
+          const fontSize = 10;
+          const padding = 8;
+          const gap = 6;
+          
+          // Get display name (prefer metadata.name, fallback to playName)
+          const displayName = metadata?.name || playName || "";
+          const formation = metadata?.formation || "";
+          const concept = metadata?.concept || "";
+          const situation = metadata?.situation || "";
+          
+          // Calculate box widths based on content (approximate)
+          const charWidth = 5.5;
+          const nameWidth = displayName ? Math.max(60, displayName.length * charWidth + padding * 2) : 0;
+          const formationWidth = formation ? Math.max(80, ("Formation: " + formation).length * charWidth + padding * 2) : 0;
+          const conceptWidth = concept ? Math.max(60, ("Concept: " + concept).length * charWidth + padding * 2) : 0;
+          const situationWidth = situation ? Math.max(70, ("Situation: " + situation).length * charWidth + padding * 2) : 0;
+          
+          // Calculate total width and starting X to center
+          const totalWidth = [nameWidth, formationWidth, conceptWidth, situationWidth]
+            .filter(w => w > 0)
+            .reduce((sum, w, i, arr) => sum + w + (i < arr.length - 1 ? gap : 0), 0);
+          let currentX = (FIELD.WIDTH - totalWidth) / 2;
+          
+          const boxes: JSX.Element[] = [];
+          
+          // Play name box (orange)
+          if (displayName) {
+            boxes.push(
+              <g key="name">
+                <rect
+                  x={currentX}
+                  y={boxY}
+                  width={nameWidth}
+                  height={boxHeight}
+                  rx={boxRadius}
+                  fill="#ea580c"
+                />
+                <text
+                  x={currentX + nameWidth / 2}
+                  y={boxY + boxHeight / 2}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fill="white"
+                  fontSize={fontSize}
+                  fontWeight="bold"
+                >
+                  {displayName}
+                </text>
+              </g>
+            );
+            currentX += nameWidth + gap;
+          }
+          
+          // Formation box (dark gray)
+          if (formation) {
+            boxes.push(
+              <g key="formation">
+                <rect
+                  x={currentX}
+                  y={boxY}
+                  width={formationWidth}
+                  height={boxHeight}
+                  rx={boxRadius}
+                  fill="#374151"
+                />
+                <text
+                  x={currentX + formationWidth / 2}
+                  y={boxY + boxHeight / 2}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fill="white"
+                  fontSize={fontSize}
+                  fontWeight="500"
+                >
+                  Formation: {formation}
+                </text>
+              </g>
+            );
+            currentX += formationWidth + gap;
+          }
+          
+          // Concept box (dark gray)
+          if (concept) {
+            boxes.push(
+              <g key="concept">
+                <rect
+                  x={currentX}
+                  y={boxY}
+                  width={conceptWidth}
+                  height={boxHeight}
+                  rx={boxRadius}
+                  fill="#374151"
+                />
+                <text
+                  x={currentX + conceptWidth / 2}
+                  y={boxY + boxHeight / 2}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fill="white"
+                  fontSize={fontSize}
+                  fontWeight="500"
+                >
+                  Concept: {concept}
+                </text>
+              </g>
+            );
+            currentX += conceptWidth + gap;
+          }
+          
+          // Situation box (dark gray)
+          if (situation) {
+            boxes.push(
+              <g key="situation">
+                <rect
+                  x={currentX}
+                  y={boxY}
+                  width={situationWidth}
+                  height={boxHeight}
+                  rx={boxRadius}
+                  fill="#374151"
+                />
+                <text
+                  x={currentX + situationWidth / 2}
+                  y={boxY + boxHeight / 2}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fill="white"
+                  fontSize={fontSize}
+                  fontWeight="500"
+                >
+                  Situation: {situation}
+                </text>
+              </g>
+            );
+          }
+          
+          return boxes;
+        })()}
         
         {Array.from({ length: Math.floor(FIELD.FIELD_HEIGHT / 60) + 1 }, (_, i) => {
           const y = fieldStartY + i * 60;
@@ -359,7 +499,8 @@ export interface RenderedPlayImage {
 export async function renderPlayToBase64(
   playData: PlayData | null,
   playType: "offense" | "defense" | "special",
-  playName?: string
+  playName?: string,
+  metadata?: PlayMetadata
 ): Promise<RenderedPlayImage> {
   return new Promise((resolve, reject) => {
     const container = document.createElement("div");
@@ -375,6 +516,7 @@ export async function renderPlayToBase64(
         playData={playData}
         playType={playType}
         playName={playName}
+        metadata={metadata}
       />
     );
 
@@ -422,6 +564,9 @@ export async function renderPlaysToImages(
     name: string;
     type: string;
     data?: any;
+    formation?: string;
+    concept?: string;
+    situation?: string;
   }>,
   onProgress?: (current: number, total: number) => void
 ): Promise<Record<number, PlayImageData>> {
@@ -438,7 +583,15 @@ export async function renderPlaysToImages(
       const playData = typeof play.data === 'string' ? JSON.parse(play.data) : play.data;
       const playType = (play.type || 'offense') as "offense" | "defense" | "special";
       
-      const result = await renderPlayToBase64(playData, playType, play.name);
+      // Build metadata for the header
+      const metadata: PlayMetadata = {
+        name: play.name,
+        formation: play.formation,
+        concept: play.concept,
+        situation: play.situation,
+      };
+      
+      const result = await renderPlayToBase64(playData, playType, play.name, metadata);
       images[play.id] = result;
     } catch (error) {
       console.error(`Failed to render play ${play.id} (${play.name}):`, error);
