@@ -224,6 +224,10 @@ export async function generateTeamDoc(
   let currentIndex = 1;
 
   // Cover page: Team Name (32pt, centered, bold)
+  // Add spacing before to vertically center the cover page content
+  // US Letter: 792 PT height, 1" margins (72 PT each) = 648 PT usable
+  // Content: ~48 PT (title) + 409 PT (image) + 48 PT (season) + 24 PT (count) + 24 PT (gaps) ≈ 553 PT
+  // Space before: (648 - 553) / 2 ≈ 48 PT for vertical centering
   requests.push({
     insertText: {
       location: { index: currentIndex },
@@ -233,14 +237,15 @@ export async function generateTeamDoc(
   
   const teamNameEnd = currentIndex + team.name.length;
   
-  // Set paragraph alignment to center
+  // Set paragraph alignment to center and add spaceBefore for vertical centering
   requests.push({
     updateParagraphStyle: {
       range: { startIndex: currentIndex, endIndex: teamNameEnd + 1 },
       paragraphStyle: {
-        alignment: 'CENTER'
+        alignment: 'CENTER',
+        spaceAbove: { magnitude: 72, unit: 'PT' }
       },
-      fields: 'alignment'
+      fields: 'alignment,spaceAbove'
     }
   });
   
