@@ -167,12 +167,12 @@ function PlaySVGForExport({
         {/* Render metadata boxes like the Play Designer */}
         {(() => {
           const headerY = FIELD.getHeaderStartY(playType);
-          const boxHeight = 22;
+          const boxHeight = 30;
           const boxY = headerY + (FIELD.HEADER_HEIGHT - boxHeight) / 2;
-          const boxRadius = 4;
-          const fontSize = 10;
-          const padding = 8;
-          const gap = 6;
+          const boxRadius = 5;
+          const fontSize = 13;
+          const padding = 10;
+          const gap = 8;
           
           // Get display name (prefer metadata.name, fallback to playName)
           const displayName = metadata?.name || playName || "";
@@ -181,11 +181,11 @@ function PlaySVGForExport({
           const situation = metadata?.situation || "";
           
           // Calculate box widths based on content (approximate)
-          const charWidth = 5.5;
-          const nameWidth = displayName ? Math.max(60, displayName.length * charWidth + padding * 2) : 0;
-          const formationWidth = formation ? Math.max(80, ("Formation: " + formation).length * charWidth + padding * 2) : 0;
-          const conceptWidth = concept ? Math.max(60, ("Concept: " + concept).length * charWidth + padding * 2) : 0;
-          const situationWidth = situation ? Math.max(70, ("Situation: " + situation).length * charWidth + padding * 2) : 0;
+          const charWidth = 6.5;
+          const nameWidth = displayName ? Math.max(70, displayName.length * charWidth + padding * 2) : 0;
+          const formationWidth = formation ? Math.max(90, ("Formation: " + formation).length * charWidth + padding * 2) : 0;
+          const conceptWidth = concept ? Math.max(70, ("Concept: " + concept).length * charWidth + padding * 2) : 0;
+          const situationWidth = situation ? Math.max(80, ("Situation: " + situation).length * charWidth + padding * 2) : 0;
           
           // Calculate total width and starting X to center
           const totalWidth = [nameWidth, formationWidth, conceptWidth, situationWidth]

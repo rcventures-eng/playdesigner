@@ -223,7 +223,7 @@ export async function generateTeamDoc(
   const requests: any[] = [];
   let currentIndex = 1;
 
-  // Cover page: Team Name (Header 1)
+  // Cover page: Team Name (32pt, centered, bold)
   requests.push({
     insertText: {
       location: { index: currentIndex },
@@ -231,14 +231,28 @@ export async function generateTeamDoc(
     }
   });
   
+  const teamNameEnd = currentIndex + team.name.length;
+  
+  // Set paragraph alignment to center
   requests.push({
     updateParagraphStyle: {
-      range: { startIndex: currentIndex, endIndex: currentIndex + team.name.length + 1 },
+      range: { startIndex: currentIndex, endIndex: teamNameEnd + 1 },
       paragraphStyle: {
-        namedStyleType: 'HEADING_1',
         alignment: 'CENTER'
       },
-      fields: 'namedStyleType,alignment'
+      fields: 'alignment'
+    }
+  });
+  
+  // Set explicit font size to 32pt and bold
+  requests.push({
+    updateTextStyle: {
+      range: { startIndex: currentIndex, endIndex: teamNameEnd },
+      textStyle: {
+        fontSize: { magnitude: 32, unit: 'PT' },
+        bold: true
+      },
+      fields: 'fontSize,bold'
     }
   });
   currentIndex += team.name.length + 1;
@@ -293,14 +307,14 @@ export async function generateTeamDoc(
         }
       }
       
-      // Insert the cover image (centered, moderate size for cover page)
+      // Insert the cover image (centered, 628x545 px = 471x409 PT)
       requests.push({
         insertInlineImage: {
           location: { index: currentIndex },
           uri: coverImageUrl,
           objectSize: {
-            width: { magnitude: 300, unit: 'PT' },
-            height: { magnitude: 200, unit: 'PT' }
+            width: { magnitude: 471, unit: 'PT' },
+            height: { magnitude: 409, unit: 'PT' }
           }
         }
       });
@@ -347,7 +361,7 @@ export async function generateTeamDoc(
     currentIndex += 1;
   }
 
-  // Add year subtitle
+  // Add year subtitle (32pt, centered, bold)
   const yearText = `${team.year || new Date().getFullYear()} Season\n`;
   requests.push({
     insertText: {
@@ -356,19 +370,33 @@ export async function generateTeamDoc(
     }
   });
   
+  const yearTextEnd = currentIndex + yearText.length - 1; // Exclude newline from text styling
+  
+  // Set paragraph alignment to center
   requests.push({
     updateParagraphStyle: {
       range: { startIndex: currentIndex, endIndex: currentIndex + yearText.length },
       paragraphStyle: {
-        namedStyleType: 'HEADING_2',
         alignment: 'CENTER'
       },
-      fields: 'namedStyleType,alignment'
+      fields: 'alignment'
+    }
+  });
+  
+  // Set explicit font size to 32pt and bold
+  requests.push({
+    updateTextStyle: {
+      range: { startIndex: currentIndex, endIndex: yearTextEnd },
+      textStyle: {
+        fontSize: { magnitude: 32, unit: 'PT' },
+        bold: true
+      },
+      fields: 'fontSize,bold'
     }
   });
   currentIndex += yearText.length;
 
-  // Add total plays count (centered)
+  // Add total plays count (18pt, centered)
   const countText = `Total Plays: ${plays.length}\n`;
   requests.push({
     insertText: {
@@ -377,6 +405,9 @@ export async function generateTeamDoc(
     }
   });
   
+  const countTextEnd = currentIndex + countText.length - 1; // Exclude newline from text styling
+  
+  // Set paragraph alignment to center
   requests.push({
     updateParagraphStyle: {
       range: { startIndex: currentIndex, endIndex: currentIndex + countText.length },
@@ -384,6 +415,17 @@ export async function generateTeamDoc(
         alignment: 'CENTER'
       },
       fields: 'alignment'
+    }
+  });
+  
+  // Set explicit font size to 18pt
+  requests.push({
+    updateTextStyle: {
+      range: { startIndex: currentIndex, endIndex: countTextEnd },
+      textStyle: {
+        fontSize: { magnitude: 18, unit: 'PT' }
+      },
+      fields: 'fontSize'
     }
   });
   currentIndex += countText.length;
@@ -432,17 +474,17 @@ export async function generateTeamDoc(
       // Field aspect ratio is 694:392 ≈ 1.77:1
       // Standard US Letter page: 612 PT x 792 PT with 1" margins = 540 PT x 720 PT usable
       // Image width based on plays per page layout:
-      // 1 play/page: 500 PT width (large, full-width)
-      // 2 plays/page: 468 PT width (default)
-      // 4 plays/page: 250 PT width (2x2 grid)
-      // 8 plays/page: 250 PT width (2x4 grid, compact)
+      // 1 play/page: 540 PT width (full usable width)
+      // 2 plays/page: 510 PT width (increased to utilize extra vertical space)
+      // 4 plays/page: 260 PT width (2x2 grid)
+      // 8 plays/page: 260 PT width (2x4 grid, compact)
       const imageWidthByLayout: Record<number, number> = {
-        1: 500,
-        2: 468,
-        4: 250,
-        8: 250
+        1: 540,
+        2: 510,
+        4: 260,
+        8: 260
       };
-      const imageWidth = imageWidthByLayout[playsPerPage] || 468;
+      const imageWidth = imageWidthByLayout[playsPerPage] || 510;
       const imageHeight = play.imageWidth && play.imageHeight
         ? Math.round(imageWidth * (play.imageHeight / play.imageWidth))
         : Math.round(imageWidth * (392 / 694)); // Default to field aspect ratio
