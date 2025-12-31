@@ -51,17 +51,23 @@ Drizzle ORM with PostgreSQL manages data for `users`, `teams`, `plays`, `ai_logs
 
 Allows users to create, edit, and manage team playbooks, including uploading cover images and associating plays with teams. The `play_teams` junction table enables many-to-many relationships, allowing a single play to be assigned to multiple team playbooks simultaneously.
 
-### Google Drive Export (Admin Only)
+### Google Drive Export (All Users)
 
-Admin users can export team playbooks to Google Drive:
+Coaches can connect their personal Google Drive accounts and export team playbooks:
+-   **Per-User OAuth**: Each coach connects their own Google Drive via OAuth 2.0 flow
 -   **Export Modal**: Accessible via "Sync to Drive" button on Team Playbooks page (`/playbooks`)
 -   **Formats**: Google Docs (handout format with 2 plays per page) and Google Slides (one play per slide)
 -   **Play Selection**: Choose which plays to include in export with select all/deselect all options
--   **OAuth Integration**: Uses Replit's Google Drive connector for authentication
+-   **Connect/Disconnect**: Users can manage their Google Drive connection from the export modal
+-   **Token Storage**: OAuth tokens stored securely in user's `googleDriveTokens` column with automatic refresh
 -   **API Endpoints**: 
-    -   `GET /api/admin/google-drive/status` - Check connection status
-    -   `POST /api/admin/teams/:teamId/export-to-drive` - Export playbook
-    -   `GET /api/admin/teams/:teamId/plays-for-export` - Get plays for export modal
+    -   `GET /api/google-drive/status` - Check user's connection status
+    -   `GET /api/auth/google-drive/authorize` - Start OAuth flow
+    -   `GET /api/auth/google-drive/callback` - OAuth callback with CSRF protection
+    -   `POST /api/google-drive/disconnect` - Disconnect user's Google Drive
+    -   `POST /api/teams/:teamId/export-to-drive` - Export playbook (team owner only)
+    -   `GET /api/teams/:teamId/plays-for-export` - Get plays for export modal
+-   **Security**: State parameter validated against session to prevent CSRF attacks
 -   **Files**: `server/google-drive.ts` (service), `client/src/components/GoogleDriveExportModal.tsx` (UI)
 
 ### Play-Team Assignment

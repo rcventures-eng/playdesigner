@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,8 @@ import {
   AlertCircle,
   CheckCircle2,
   GripVertical,
+  Link2,
+  Unlink,
 } from "lucide-react";
 
 interface Play {
@@ -55,6 +57,7 @@ export default function GoogleDriveExportModal({
   teamName,
 }: GoogleDriveExportModalProps) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [generateDoc, setGenerateDoc] = useState(true);
   const [generateSlides, setGenerateSlides] = useState(true);
   const [selectedPlays, setSelectedPlays] = useState<number[]>([]);
@@ -65,14 +68,14 @@ export default function GoogleDriveExportModal({
   } | null>(null);
 
   // Check Google Drive connection status
-  const { data: driveStatus } = useQuery<{ connected: boolean; error?: string }>({
-    queryKey: ["/api/admin/google-drive/status"],
+  const { data: driveStatus, isLoading: statusLoading, refetch: refetchStatus } = useQuery<{ connected: boolean; error?: string }>({
+    queryKey: ["/api/google-drive/status"],
     enabled: open,
   });
 
   // Fetch plays for export
   const { data: exportData, isLoading: playsLoading } = useQuery<TeamExportData>({
-    queryKey: ["/api/admin/teams", teamId, "plays-for-export"],
+    queryKey: ["/api/teams", teamId, "plays-for-export"],
     enabled: open && teamId > 0,
   });
 
@@ -87,8 +90,9 @@ export default function GoogleDriveExportModal({
   useEffect(() => {
     if (open) {
       setExportResult(null);
+      refetchStatus();
     }
-  }, [open]);
+  }, [open, refetchStatus]);
 
   const togglePlaySelection = useCallback((playId: number) => {
     setSelectedPlays((prev) =>
@@ -108,15 +112,62 @@ export default function GoogleDriveExportModal({
     setSelectedPlays([]);
   }, []);
 
+  // Connect Google Drive mutation
+  const connectMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch("/api/auth/google-drive/authorize", {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to start authorization");
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      // Redirect to Google OAuth
+      if (data.authUrl) {
+        window.location.href = data.authUrl;
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Connection Failed",
+        description: error.message || "Failed to connect to Google Drive",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Disconnect Google Drive mutation
+  const disconnectMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/google-drive/disconnect");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/google-drive/status"] });
+      toast({
+        title: "Disconnected",
+        description: "Google Drive has been disconnected from your account.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Disconnect Failed",
+        description: error.message || "Failed to disconnect Google Drive",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Export mutation
   const exportMutation = useMutation({
     mutationFn: async () => {
-      // Send selected play IDs to the server
-      const response = await apiRequest("POST", `/api/admin/teams/${teamId}/export-to-drive`, {
+      const response = await apiRequest("POST", `/api/teams/${teamId}/export-to-drive`, {
         generateDoc,
         generateSlides,
         playIds: selectedPlays,
-        playImages: {}, // Empty for now - images handled server-side later
+        playImages: {},
       });
       return response.json();
     },
@@ -165,6 +216,14 @@ export default function GoogleDriveExportModal({
     exportMutation.mutate();
   };
 
+  const handleConnect = () => {
+    connectMutation.mutate();
+  };
+
+  const handleDisconnect = () => {
+    disconnectMutation.mutate();
+  };
+
   const isConnected = driveStatus?.connected ?? false;
   const plays = exportData?.plays || [];
 
@@ -190,15 +249,66 @@ export default function GoogleDriveExportModal({
 
         <div className="space-y-6 pt-4">
           {/* Connection Status */}
-          {!isConnected && (
-            <div className="flex items-center gap-3 p-4 bg-yellow-900/30 border border-yellow-600/50 rounded-lg">
-              <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0" />
-              <div>
-                <p className="text-yellow-200 font-medium">Google Drive Not Connected</p>
-                <p className="text-yellow-200/70 text-sm">
-                  Please connect Google Drive in the Replit settings to enable export.
-                </p>
+          {statusLoading ? (
+            <div className="flex items-center gap-3 p-4 bg-zinc-800 rounded-lg">
+              <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+              <p className="text-gray-400">Checking Google Drive connection...</p>
+            </div>
+          ) : isConnected ? (
+            <div className="flex items-center justify-between p-4 bg-green-900/30 border border-green-600/50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                <div>
+                  <p className="text-green-200 font-medium">Google Drive Connected</p>
+                  <p className="text-green-200/70 text-sm">
+                    Ready to export your playbook
+                  </p>
+                </div>
               </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleDisconnect}
+                disabled={disconnectMutation.isPending}
+                className="text-gray-400 hover:text-white hover:bg-zinc-700"
+                data-testid="button-disconnect-drive"
+              >
+                {disconnectMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <Unlink className="w-4 h-4 mr-1" />
+                    Disconnect
+                  </>
+                )}
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between p-4 bg-yellow-900/30 border border-yellow-600/50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0" />
+                <div>
+                  <p className="text-yellow-200 font-medium">Google Drive Not Connected</p>
+                  <p className="text-yellow-200/70 text-sm">
+                    Connect your Google account to export playbooks
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={handleConnect}
+                disabled={connectMutation.isPending}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+                data-testid="button-connect-drive"
+              >
+                {connectMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <Link2 className="w-4 h-4 mr-1" />
+                    Connect
+                  </>
+                )}
+              </Button>
             </div>
           )}
 
@@ -250,97 +360,102 @@ export default function GoogleDriveExportModal({
             </div>
           )}
 
-          {/* Format Selection */}
-          <div className="space-y-3">
-            <Label className="text-white text-base font-medium">Export Format</Label>
-            <div className="flex flex-col gap-3">
-              <label className="flex items-center gap-3 p-3 bg-zinc-800 rounded-lg cursor-pointer hover:bg-zinc-750 transition-colors">
-                <Checkbox
-                  checked={generateDoc}
-                  onCheckedChange={(checked) => setGenerateDoc(!!checked)}
-                  data-testid="checkbox-generate-doc"
-                />
-                <FileText className="w-5 h-5 text-blue-400" />
-                <div>
-                  <p className="text-white font-medium">Google Doc (Handout Format)</p>
-                  <p className="text-gray-400 text-sm">Printable playbook with 2 plays per page</p>
-                </div>
-              </label>
-              <label className="flex items-center gap-3 p-3 bg-zinc-800 rounded-lg cursor-pointer hover:bg-zinc-750 transition-colors">
-                <Checkbox
-                  checked={generateSlides}
-                  onCheckedChange={(checked) => setGenerateSlides(!!checked)}
-                  data-testid="checkbox-generate-slides"
-                />
-                <Presentation className="w-5 h-5 text-orange-400" />
-                <div>
-                  <p className="text-white font-medium">Google Slides (Presentation Format)</p>
-                  <p className="text-gray-400 text-sm">One play per slide for team meetings</p>
-                </div>
-              </label>
-            </div>
-          </div>
-
-          {/* Play Selection */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="text-white text-base font-medium">
-                Select Plays ({selectedPlays.length} of {plays.length})
-              </Label>
-              <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={selectAllPlays}
-                  className="text-gray-400 hover:text-white"
-                  data-testid="button-select-all-plays"
-                >
-                  Select All
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={deselectAllPlays}
-                  className="text-gray-400 hover:text-white"
-                  data-testid="button-deselect-all-plays"
-                >
-                  Deselect All
-                </Button>
-              </div>
-            </div>
-            
-            {playsLoading ? (
-              <div className="flex items-center justify-center p-8">
-                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-              </div>
-            ) : plays.length === 0 ? (
-              <div className="p-4 bg-zinc-800 rounded-lg text-center text-gray-400">
-                No plays assigned to this team yet.
-              </div>
-            ) : (
-              <div className="max-h-64 overflow-y-auto space-y-1 bg-zinc-800 rounded-lg p-2">
-                {plays.map((play) => (
-                  <label
-                    key={play.id}
-                    className="flex items-center gap-3 p-2 rounded cursor-pointer hover:bg-zinc-700 transition-colors"
-                  >
-                    <GripVertical className="w-4 h-4 text-gray-500" />
+          {/* Only show export options if connected */}
+          {isConnected && (
+            <>
+              {/* Format Selection */}
+              <div className="space-y-3">
+                <Label className="text-white text-base font-medium">Export Format</Label>
+                <div className="flex flex-col gap-3">
+                  <label className="flex items-center gap-3 p-3 bg-zinc-800 rounded-lg cursor-pointer hover:bg-zinc-750 transition-colors">
                     <Checkbox
-                      checked={selectedPlays.includes(play.id)}
-                      onCheckedChange={() => togglePlaySelection(play.id)}
-                      data-testid={`checkbox-play-${play.id}`}
+                      checked={generateDoc}
+                      onCheckedChange={(checked) => setGenerateDoc(!!checked)}
+                      data-testid="checkbox-generate-doc"
                     />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-white truncate">{play.name}</p>
-                      <p className="text-gray-400 text-xs truncate">
-                        {play.type} {play.formation && `• ${play.formation}`} {play.concept && `• ${play.concept}`}
-                      </p>
+                    <FileText className="w-5 h-5 text-blue-400" />
+                    <div>
+                      <p className="text-white font-medium">Google Doc (Handout Format)</p>
+                      <p className="text-gray-400 text-sm">Printable playbook with 2 plays per page</p>
                     </div>
                   </label>
-                ))}
+                  <label className="flex items-center gap-3 p-3 bg-zinc-800 rounded-lg cursor-pointer hover:bg-zinc-750 transition-colors">
+                    <Checkbox
+                      checked={generateSlides}
+                      onCheckedChange={(checked) => setGenerateSlides(!!checked)}
+                      data-testid="checkbox-generate-slides"
+                    />
+                    <Presentation className="w-5 h-5 text-orange-400" />
+                    <div>
+                      <p className="text-white font-medium">Google Slides (Presentation Format)</p>
+                      <p className="text-gray-400 text-sm">One play per slide for team meetings</p>
+                    </div>
+                  </label>
+                </div>
               </div>
-            )}
-          </div>
+
+              {/* Play Selection */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-white text-base font-medium">
+                    Select Plays ({selectedPlays.length} of {plays.length})
+                  </Label>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={selectAllPlays}
+                      className="text-gray-400 hover:text-white"
+                      data-testid="button-select-all-plays"
+                    >
+                      Select All
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={deselectAllPlays}
+                      className="text-gray-400 hover:text-white"
+                      data-testid="button-deselect-all-plays"
+                    >
+                      Deselect All
+                    </Button>
+                  </div>
+                </div>
+                
+                {playsLoading ? (
+                  <div className="flex items-center justify-center p-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                  </div>
+                ) : plays.length === 0 ? (
+                  <div className="p-4 bg-zinc-800 rounded-lg text-center text-gray-400">
+                    No plays assigned to this team yet.
+                  </div>
+                ) : (
+                  <div className="max-h-64 overflow-y-auto space-y-1 bg-zinc-800 rounded-lg p-2">
+                    {plays.map((play) => (
+                      <label
+                        key={play.id}
+                        className="flex items-center gap-3 p-2 rounded cursor-pointer hover:bg-zinc-700 transition-colors"
+                      >
+                        <GripVertical className="w-4 h-4 text-gray-500" />
+                        <Checkbox
+                          checked={selectedPlays.includes(play.id)}
+                          onCheckedChange={() => togglePlaySelection(play.id)}
+                          data-testid={`checkbox-play-${play.id}`}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white truncate">{play.name}</p>
+                          <p className="text-gray-400 text-xs truncate">
+                            {play.type} {play.formation && `• ${play.formation}`} {play.concept && `• ${play.concept}`}
+                          </p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
 
           {/* Actions */}
           <div className="flex justify-end gap-3 pt-4 border-t border-zinc-700">
@@ -350,23 +465,25 @@ export default function GoogleDriveExportModal({
               className="border-zinc-700 text-white hover:bg-zinc-800"
               data-testid="button-cancel-export"
             >
-              Cancel
+              {exportResult ? "Close" : "Cancel"}
             </Button>
-            <Button
-              onClick={handleExport}
-              disabled={!isConnected || exportMutation.isPending || plays.length === 0}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-              data-testid="button-generate-files"
-            >
-              {exportMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                "Generate Files"
-              )}
-            </Button>
+            {isConnected && !exportResult && (
+              <Button
+                onClick={handleExport}
+                disabled={exportMutation.isPending || plays.length === 0}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+                data-testid="button-generate-files"
+              >
+                {exportMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  "Generate Files"
+                )}
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>

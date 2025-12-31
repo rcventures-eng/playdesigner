@@ -1,97 +1,152 @@
 // Google Drive Integration for Team Playbook Export
-// Uses Replit's Google Drive connector for authentication
+// Supports per-user OAuth authentication for coaches
 
 import { google } from 'googleapis';
 
-let connectionSettings: any;
-let tokenExpiryBuffer = 60000; // Refresh 1 minute before expiry
+const TOKEN_EXPIRY_BUFFER = 60000; // Refresh 1 minute before expiry
 
-async function getAccessToken() {
-  // Check if cached token is still valid (with buffer)
-  const now = Date.now();
-  if (connectionSettings && connectionSettings.settings?.expires_at) {
-    const expiresAt = new Date(connectionSettings.settings.expires_at).getTime();
-    if (expiresAt > now + tokenExpiryBuffer) {
-      const cachedToken = connectionSettings.settings?.access_token || 
-        connectionSettings.settings?.oauth?.credentials?.access_token;
-      if (cachedToken) {
-        return cachedToken;
-      }
-    }
-  }
-  
-  // Token expired or not cached, fetch fresh token
-  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
-  const xReplitToken = process.env.REPL_IDENTITY 
-    ? 'repl ' + process.env.REPL_IDENTITY 
-    : process.env.WEB_REPL_RENEWAL 
-    ? 'depl ' + process.env.WEB_REPL_RENEWAL 
-    : null;
-
-  if (!xReplitToken) {
-    throw new Error('X_REPLIT_TOKEN not found for repl/depl');
-  }
-
-  // Always fetch fresh connection settings when token needs refresh
-  const response = await fetch(
-    'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=google-drive',
-    {
-      headers: {
-        'Accept': 'application/json',
-        'X_REPLIT_TOKEN': xReplitToken
-      }
-    }
-  );
-  
-  if (!response.ok) {
-    throw new Error(`Failed to fetch Google Drive connection: ${response.status}`);
-  }
-  
-  const data = await response.json();
-  connectionSettings = data.items?.[0];
-
-  const accessToken = connectionSettings?.settings?.access_token || 
-    connectionSettings?.settings?.oauth?.credentials?.access_token;
-
-  if (!connectionSettings || !accessToken) {
-    throw new Error('Google Drive not connected');
-  }
-  return accessToken;
+// Google Drive token structure stored in user record
+export interface GoogleDriveTokens {
+  access_token: string;
+  refresh_token: string;
+  expiry_date: number;
+  scope: string;
 }
 
-// Get fresh Google Drive client (never cache - tokens expire)
-export async function getGoogleDriveClient() {
-  const accessToken = await getAccessToken();
+// Get OAuth2 client configured with app credentials
+function getOAuth2Client() {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  
+  if (!clientId || !clientSecret) {
+    throw new Error('Google OAuth credentials not configured');
+  }
+  
+  // Determine the redirect URI based on environment
+  const domain = process.env.REPLIT_DEV_DOMAIN || process.env.REPLIT_DOMAINS?.split(',')[0];
+  const redirectUri = domain 
+    ? `https://${domain}/api/auth/google-drive/callback`
+    : 'http://localhost:5000/api/auth/google-drive/callback';
+  
+  return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
+}
 
+// Generate authorization URL for user to connect Google Drive
+export function getAuthorizationUrl(state: string): string {
+  const oauth2Client = getOAuth2Client();
+  
+  return oauth2Client.generateAuthUrl({
+    access_type: 'offline',
+    prompt: 'consent', // Force consent to get refresh token
+    scope: [
+      'https://www.googleapis.com/auth/drive.file',
+      'https://www.googleapis.com/auth/documents',
+      'https://www.googleapis.com/auth/presentations'
+    ],
+    state
+  });
+}
+
+// Exchange authorization code for tokens
+export async function exchangeCodeForTokens(code: string): Promise<GoogleDriveTokens> {
+  const oauth2Client = getOAuth2Client();
+  
+  const { tokens } = await oauth2Client.getToken(code);
+  
+  if (!tokens.access_token || !tokens.refresh_token) {
+    throw new Error('Failed to obtain tokens from Google');
+  }
+  
+  return {
+    access_token: tokens.access_token,
+    refresh_token: tokens.refresh_token,
+    expiry_date: tokens.expiry_date || Date.now() + 3600000,
+    scope: tokens.scope || ''
+  };
+}
+
+// Refresh access token using refresh token
+export async function refreshAccessToken(tokens: GoogleDriveTokens): Promise<GoogleDriveTokens> {
+  const oauth2Client = getOAuth2Client();
+  oauth2Client.setCredentials({
+    refresh_token: tokens.refresh_token
+  });
+  
+  const { credentials } = await oauth2Client.refreshAccessToken();
+  
+  return {
+    access_token: credentials.access_token!,
+    refresh_token: tokens.refresh_token, // Keep original refresh token
+    expiry_date: credentials.expiry_date || Date.now() + 3600000,
+    scope: credentials.scope || tokens.scope
+  };
+}
+
+// Get valid access token, refreshing if necessary
+export async function getValidAccessToken(
+  tokens: GoogleDriveTokens,
+  updateTokensCallback?: (newTokens: GoogleDriveTokens) => Promise<void>
+): Promise<string> {
+  const now = Date.now();
+  
+  // Check if token needs refresh (with buffer)
+  if (tokens.expiry_date > now + TOKEN_EXPIRY_BUFFER) {
+    return tokens.access_token;
+  }
+  
+  // Token expired or about to expire, refresh it
+  const newTokens = await refreshAccessToken(tokens);
+  
+  // Update stored tokens if callback provided
+  if (updateTokensCallback) {
+    await updateTokensCallback(newTokens);
+  }
+  
+  return newTokens.access_token;
+}
+
+// Get Google Drive client for a specific user
+export async function getGoogleDriveClientForUser(
+  tokens: GoogleDriveTokens,
+  updateTokensCallback?: (newTokens: GoogleDriveTokens) => Promise<void>
+) {
+  const accessToken = await getValidAccessToken(tokens, updateTokensCallback);
+  
   const oauth2Client = new google.auth.OAuth2();
   oauth2Client.setCredentials({
     access_token: accessToken
   });
-
+  
   return google.drive({ version: 'v3', auth: oauth2Client });
 }
 
-// Get Google Docs client
-export async function getGoogleDocsClient() {
-  const accessToken = await getAccessToken();
-
+// Get Google Docs client for a specific user
+export async function getGoogleDocsClientForUser(
+  tokens: GoogleDriveTokens,
+  updateTokensCallback?: (newTokens: GoogleDriveTokens) => Promise<void>
+) {
+  const accessToken = await getValidAccessToken(tokens, updateTokensCallback);
+  
   const oauth2Client = new google.auth.OAuth2();
   oauth2Client.setCredentials({
     access_token: accessToken
   });
-
+  
   return google.docs({ version: 'v1', auth: oauth2Client });
 }
 
-// Get Google Slides client
-export async function getGoogleSlidesClient() {
-  const accessToken = await getAccessToken();
-
+// Get Google Slides client for a specific user
+export async function getGoogleSlidesClientForUser(
+  tokens: GoogleDriveTokens,
+  updateTokensCallback?: (newTokens: GoogleDriveTokens) => Promise<void>
+) {
+  const accessToken = await getValidAccessToken(tokens, updateTokensCallback);
+  
   const oauth2Client = new google.auth.OAuth2();
   oauth2Client.setCredentials({
     access_token: accessToken
   });
-
+  
   return google.slides({ version: 'v1', auth: oauth2Client });
 }
 
@@ -119,11 +174,13 @@ interface ExportResult {
 
 // Generate Google Doc with team playbook (handout format)
 export async function generateTeamDoc(
+  tokens: GoogleDriveTokens,
   team: TeamInfo,
-  plays: PlayInfo[]
+  plays: PlayInfo[],
+  updateTokensCallback?: (newTokens: GoogleDriveTokens) => Promise<void>
 ): Promise<{ docUrl: string; docId: string }> {
-  const drive = await getGoogleDriveClient();
-  const docs = await getGoogleDocsClient();
+  const drive = await getGoogleDriveClientForUser(tokens, updateTokensCallback);
+  const docs = await getGoogleDocsClientForUser(tokens, updateTokensCallback);
 
   // Create a new Google Doc
   const docMetadata = {
@@ -317,11 +374,13 @@ export async function generateTeamDoc(
 
 // Generate Google Slides with team playbook (presentation format)
 export async function generateTeamSlides(
+  tokens: GoogleDriveTokens,
   team: TeamInfo,
-  plays: PlayInfo[]
+  plays: PlayInfo[],
+  updateTokensCallback?: (newTokens: GoogleDriveTokens) => Promise<void>
 ): Promise<{ slidesUrl: string; presentationId: string }> {
-  const drive = await getGoogleDriveClient();
-  const slides = await getGoogleSlidesClient();
+  const drive = await getGoogleDriveClientForUser(tokens, updateTokensCallback);
+  const slides = await getGoogleSlidesClientForUser(tokens, updateTokensCallback);
 
   // Create a new Google Slides presentation
   const presentation = await slides.presentations.create({
@@ -474,33 +533,6 @@ export async function generateTeamSlides(
         }
       });
     }
-
-    // Add speaker notes with metadata
-    const notes: string[] = [`Play: ${play.name}`];
-    if (play.type) notes.push(`Type: ${play.type}`);
-    if (play.formation) notes.push(`Formation: ${play.formation}`);
-    if (play.concept) notes.push(`Concept: ${play.concept}`);
-
-    requests.push({
-      createShape: {
-        objectId: `notes_${i}`,
-        shapeType: 'TEXT_BOX',
-        elementProperties: {
-          pageObjectId: `${slideId}_notes`,
-          size: {
-            width: { magnitude: 700, unit: 'PT' },
-            height: { magnitude: 100, unit: 'PT' }
-          },
-          transform: {
-            scaleX: 1,
-            scaleY: 1,
-            translateX: 0,
-            translateY: 0,
-            unit: 'PT'
-          }
-        }
-      }
-    });
   }
 
   // Execute all the updates
@@ -519,17 +551,19 @@ export async function generateTeamSlides(
   return { slidesUrl, presentationId };
 }
 
-// Main export function
+// Main export function - now requires user tokens
 export async function exportPlaybookToGoogleDrive(
+  tokens: GoogleDriveTokens,
   team: TeamInfo,
   plays: PlayInfo[],
-  options: { generateDoc: boolean; generateSlides: boolean }
+  options: { generateDoc: boolean; generateSlides: boolean },
+  updateTokensCallback?: (newTokens: GoogleDriveTokens) => Promise<void>
 ): Promise<ExportResult> {
   const result: ExportResult = { errors: [] };
 
   try {
     if (options.generateDoc) {
-      const docResult = await generateTeamDoc(team, plays);
+      const docResult = await generateTeamDoc(tokens, team, plays, updateTokensCallback);
       result.docUrl = docResult.docUrl;
     }
   } catch (error: any) {
@@ -539,7 +573,7 @@ export async function exportPlaybookToGoogleDrive(
 
   try {
     if (options.generateSlides) {
-      const slidesResult = await generateTeamSlides(team, plays);
+      const slidesResult = await generateTeamSlides(tokens, team, plays, updateTokensCallback);
       result.slidesUrl = slidesResult.slidesUrl;
     }
   } catch (error: any) {
@@ -550,12 +584,7 @@ export async function exportPlaybookToGoogleDrive(
   return result;
 }
 
-// Check if Google Drive is connected
-export async function isGoogleDriveConnected(): Promise<boolean> {
-  try {
-    await getAccessToken();
-    return true;
-  } catch {
-    return false;
-  }
+// Check if user has Google Drive connected
+export function isGoogleDriveConnected(tokens: GoogleDriveTokens | null | undefined): boolean {
+  return !!(tokens && tokens.access_token && tokens.refresh_token);
 }

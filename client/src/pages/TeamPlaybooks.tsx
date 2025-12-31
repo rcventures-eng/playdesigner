@@ -493,17 +493,15 @@ export default function TeamPlaybooks() {
                       <Pencil className="w-4 h-4 mr-2" />
                       Edit
                     </Button>
-                    {user?.isAdmin && (
-                      <Button
-                        variant="outline"
-                        onClick={() => setShowExportModal(true)}
-                        className="border-blue-600 text-blue-700 hover:bg-blue-50"
-                        data-testid="button-sync-to-drive"
-                      >
-                        <CloudUpload className="w-4 h-4 mr-2" />
-                        Sync to Drive
-                      </Button>
-                    )}
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowExportModal(true)}
+                      className="border-blue-600 text-blue-700 hover:bg-blue-50"
+                      data-testid="button-sync-to-drive"
+                    >
+                      <CloudUpload className="w-4 h-4 mr-2" />
+                      Sync to Drive
+                    </Button>
                     <Link href={`/plays?teamId=${selectedTeam.id}`}>
                       <Button
                         className="bg-orange-500 hover:bg-orange-600 text-white"

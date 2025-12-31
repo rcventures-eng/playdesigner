@@ -2050,24 +2050,129 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ==========================================
-  // Google Drive Export Routes (Admin Only)
+  // Google Drive Export Routes (All Users)
   // ==========================================
   
-  // Check Google Drive connection status
-  app.get("/api/admin/google-drive/status", verifyAdmin, async (req, res) => {
+  // Check Google Drive connection status for current user
+  app.get("/api/google-drive/status", requireAuth, async (req, res) => {
     try {
+      const userId = req.session.userId!;
+      const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+      
       const { isGoogleDriveConnected } = await import("./google-drive");
-      const connected = await isGoogleDriveConnected();
+      const tokens = user?.googleDriveTokens as any;
+      const connected = isGoogleDriveConnected(tokens);
       res.json({ connected });
     } catch (error: any) {
       console.error("Google Drive status check error:", error);
       res.json({ connected: false, error: error.message });
     }
   });
-
-  // Export team playbook to Google Drive
-  app.post("/api/admin/teams/:teamId/export-to-drive", verifyAdmin, async (req, res) => {
+  
+  // Start Google Drive OAuth flow
+  app.get("/api/auth/google-drive/authorize", requireAuth, async (req, res) => {
     try {
+      const userId = req.session.userId!;
+      
+      const { getAuthorizationUrl } = await import("./google-drive");
+      
+      // Generate a cryptographically random state token
+      const crypto = await import("crypto");
+      const randomNonce = crypto.randomBytes(32).toString('hex');
+      
+      // Store the nonce in the session for verification on callback
+      (req.session as any).googleDriveOAuthState = randomNonce;
+      
+      // The state passed to Google includes the nonce (for verification)
+      // We use session userId on callback, not data from the state
+      const authUrl = getAuthorizationUrl(randomNonce);
+      res.json({ authUrl });
+    } catch (error: any) {
+      console.error("Google Drive authorize error:", error);
+      res.status(500).json({ error: error.message || "Failed to start authorization" });
+    }
+  });
+  
+  // Google Drive OAuth callback
+  app.get("/api/auth/google-drive/callback", async (req, res) => {
+    try {
+      const { code, state, error: authError } = req.query;
+      
+      if (authError) {
+        return res.redirect('/playbooks?error=google_drive_denied');
+      }
+      
+      if (!code || typeof code !== 'string') {
+        return res.redirect('/playbooks?error=google_drive_no_code');
+      }
+      
+      // Verify state parameter exists
+      if (!state || typeof state !== 'string') {
+        return res.redirect('/playbooks?error=google_drive_invalid_state');
+      }
+      
+      // SECURITY: Verify the user is authenticated
+      if (!req.session?.userId) {
+        console.error("Google Drive callback: No authenticated session");
+        return res.redirect('/playbooks?error=google_drive_not_authenticated');
+      }
+      
+      // SECURITY: Verify the state matches what we stored in the session
+      // This prevents CSRF attacks - only the user who initiated the OAuth can complete it
+      const storedState = (req.session as any).googleDriveOAuthState;
+      if (!storedState || storedState !== state) {
+        console.error("Google Drive callback: State mismatch - possible CSRF attack");
+        return res.redirect('/playbooks?error=google_drive_invalid_state');
+      }
+      
+      // Clear the stored state to prevent reuse
+      delete (req.session as any).googleDriveOAuthState;
+      
+      // Exchange code for tokens
+      const { exchangeCodeForTokens } = await import("./google-drive");
+      const tokens = await exchangeCodeForTokens(code);
+      
+      // Save tokens to the authenticated user's record
+      await db.update(users)
+        .set({ googleDriveTokens: tokens })
+        .where(eq(users.id, req.session.userId));
+      
+      res.redirect('/playbooks?google_drive=connected');
+    } catch (error: any) {
+      console.error("Google Drive callback error:", error);
+      res.redirect('/playbooks?error=google_drive_failed');
+    }
+  });
+  
+  // Disconnect Google Drive
+  app.post("/api/google-drive/disconnect", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      
+      await db.update(users)
+        .set({ googleDriveTokens: null })
+        .where(eq(users.id, userId));
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Google Drive disconnect error:", error);
+      res.status(500).json({ error: error.message || "Failed to disconnect" });
+    }
+  });
+
+  // Export team playbook to Google Drive (for team owner)
+  app.post("/api/teams/:teamId/export-to-drive", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      
+      // Fetch user with tokens
+      const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+      const tokens = user?.googleDriveTokens as any;
+      
+      if (!tokens || !tokens.access_token) {
+        return res.status(400).json({ error: "Google Drive not connected. Please connect your account first." });
+      }
+      
       const teamId = parseInt(req.params.teamId);
       if (isNaN(teamId)) {
         return res.status(400).json({ error: "Invalid team ID" });
@@ -2080,10 +2185,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Please select at least one export format" });
       }
 
-      // Get team info
-      const [team] = await db.select().from(teams).where(eq(teams.id, teamId)).limit(1);
+      // Get team info - verify user owns the team
+      const [team] = await db.select().from(teams).where(
+        and(eq(teams.id, teamId), eq(teams.ownerId, userId))
+      ).limit(1);
+      
       if (!team) {
-        return res.status(404).json({ error: "Team not found" });
+        return res.status(404).json({ error: "Team not found or you don't have access" });
       }
 
       // Get plays assigned to this team
@@ -2120,9 +2228,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         imageBase64: playImages[play.id] || undefined
       }));
 
+      // Callback to update tokens if refreshed
+      const updateTokensCallback = async (newTokens: any) => {
+        await db.update(users)
+          .set({ googleDriveTokens: newTokens })
+          .where(eq(users.id, userId));
+      };
+
       // Export to Google Drive
       const { exportPlaybookToGoogleDrive } = await import("./google-drive");
       const result = await exportPlaybookToGoogleDrive(
+        tokens,
         {
           id: team.id,
           name: team.name,
@@ -2130,7 +2246,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           coverImageUrl: team.coverImageUrl
         },
         playsForExport,
-        { generateDoc, generateSlides }
+        { generateDoc, generateSlides },
+        updateTokensCallback
       );
 
       res.json({
@@ -2147,17 +2264,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get plays for a team (for export modal)
-  app.get("/api/admin/teams/:teamId/plays-for-export", verifyAdmin, async (req, res) => {
+  app.get("/api/teams/:teamId/plays-for-export", requireAuth, async (req, res) => {
     try {
+      const userId = req.session.userId!;
       const teamId = parseInt(req.params.teamId);
       if (isNaN(teamId)) {
         return res.status(400).json({ error: "Invalid team ID" });
       }
 
-      // Get team info
-      const [team] = await db.select().from(teams).where(eq(teams.id, teamId)).limit(1);
+      // Get team info - verify user owns the team
+      const [team] = await db.select().from(teams).where(
+        and(eq(teams.id, teamId), eq(teams.ownerId, userId))
+      ).limit(1);
+      
       if (!team) {
-        return res.status(404).json({ error: "Team not found" });
+        return res.status(404).json({ error: "Team not found or you don't have access" });
       }
 
       // Get plays assigned to this team
