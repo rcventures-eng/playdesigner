@@ -146,6 +146,7 @@ export const playTeams = pgTable("play_teams", {
   id: serial("id").primaryKey(),
   playId: integer("play_id").notNull().references(() => plays.id, { onDelete: 'cascade' }),
   teamId: integer("team_id").notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  displayOrder: integer("display_order").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

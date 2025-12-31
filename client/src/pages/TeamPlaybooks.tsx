@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
 import { Team } from "@shared/schema";
 import TopNav from "@/components/TopNav";
+import TeamPlaysList from "@/components/TeamPlaysList";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -86,6 +87,28 @@ export default function TeamPlaybooks() {
     queryKey: ["/api/teams"],
     enabled: !!user,
   });
+
+  // Fetch plays for the selected team
+  interface TeamPlayData {
+    id: number;
+    name: string;
+    type: string;
+    concept?: string | null;
+    formation?: string | null;
+    situation?: string | null;
+    data?: any;
+    displayOrder?: number;
+  }
+
+  const { data: teamPlaysData, isLoading: playsLoading } = useQuery<{
+    team: { id: number; name: string; year: string; coverImageUrl?: string };
+    plays: TeamPlayData[];
+  }>({
+    queryKey: ["/api/teams", selectedTeamId, "plays-for-export"],
+    enabled: !!selectedTeamId,
+  });
+
+  const teamPlays = teamPlaysData?.plays || [];
 
   const createTeamMutation = useMutation({
     mutationFn: async (data: {
@@ -541,10 +564,25 @@ export default function TeamPlaybooks() {
                     </button>
                   </div>
                 )}
-                <p className="text-gray-600">
-                  Select a team from the sidebar or create a new one to get
-                  started.
-                </p>
+
+                {/* Plays List */}
+                <div className="mt-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    Plays in this Playbook
+                    <span className="ml-2 text-sm font-normal text-gray-500">
+                      ({teamPlays.length} {teamPlays.length === 1 ? "play" : "plays"})
+                    </span>
+                  </h3>
+                  {playsLoading ? (
+                    <div className="text-gray-500 animate-pulse py-4">Loading plays...</div>
+                  ) : (
+                    <TeamPlaysList 
+                      teamId={selectedTeam.id} 
+                      plays={teamPlays}
+                      onPlayClick={(playId) => navigate(`/?loadPlay=${playId}`)}
+                    />
+                  )}
+                </div>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-64 text-center">

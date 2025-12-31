@@ -2316,7 +2316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Team not found or you don't have access" });
       }
 
-      // Get plays assigned to this team
+      // Get plays assigned to this team, sorted by displayOrder
       const teamPlaysData = await db.select({
         id: plays.id,
         name: plays.name,
@@ -2325,11 +2325,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         formation: plays.formation,
         situation: plays.situation,
         data: plays.data,
+        displayOrder: playTeams.displayOrder,
       })
         .from(playTeams)
         .innerJoin(plays, eq(playTeams.playId, plays.id))
         .where(eq(playTeams.teamId, teamId))
-        .orderBy(asc(plays.name));
+        .orderBy(asc(playTeams.displayOrder), asc(plays.name));
 
       res.json({
         team: {
@@ -2343,6 +2344,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Get plays for export error:", error);
       res.status(500).json({ error: error.message || "Failed to fetch plays" });
+    }
+  });
+
+  // Reorder plays within a team playbook
+  app.post("/api/teams/:teamId/reorder-plays", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const teamId = parseInt(req.params.teamId);
+      if (isNaN(teamId)) {
+        return res.status(400).json({ error: "Invalid team ID" });
+      }
+
+      const { playOrder } = req.body;
+      if (!Array.isArray(playOrder)) {
+        return res.status(400).json({ error: "playOrder must be an array of play IDs" });
+      }
+
+      // Verify user owns the team
+      const [team] = await db.select().from(teams).where(
+        and(eq(teams.id, teamId), eq(teams.ownerId, userId))
+      ).limit(1);
+      
+      if (!team) {
+        return res.status(404).json({ error: "Team not found or you don't have access" });
+      }
+
+      // Verify all playIds belong to this team
+      const existingPlayTeams = await db.select({ playId: playTeams.playId })
+        .from(playTeams)
+        .where(eq(playTeams.teamId, teamId));
+      
+      const validPlayIds = new Set(existingPlayTeams.map(pt => pt.playId));
+      const invalidIds = playOrder.filter((id: number) => !validPlayIds.has(id));
+      
+      if (invalidIds.length > 0) {
+        return res.status(400).json({ error: "Some play IDs do not belong to this team" });
+      }
+
+      // Update displayOrder for each play in a transaction-like manner
+      for (let i = 0; i < playOrder.length; i++) {
+        const playId = playOrder[i];
+        await db.update(playTeams)
+          .set({ displayOrder: i })
+          .where(and(
+            eq(playTeams.teamId, teamId),
+            eq(playTeams.playId, playId)
+          ));
+      }
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Reorder plays error:", error);
+      res.status(500).json({ error: error.message || "Failed to reorder plays" });
     }
   });
 
