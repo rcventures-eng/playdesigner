@@ -2178,7 +2178,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid team ID" });
       }
 
-      const { generateDoc = true, generateSlides = true, playIds = [], playImages = {} } = req.body;
+      const { generateDoc = true, generateSlides = true, playIds = [], playImages = {}, documentName } = req.body;
 
       // Validate at least one format is selected
       if (!generateDoc && !generateSlides) {
@@ -2237,6 +2237,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Export to Google Drive
       const { exportPlaybookToGoogleDrive } = await import("./google-drive");
+      
+      // Use custom document name or default to team name + year
+      const customDocName = documentName?.trim() || undefined;
+      console.log("Exporting to Google Drive:", { customDocName, teamName: team.name, playsCount: playsForExport.length, generateDoc, generateSlides });
+      
       const result = await exportPlaybookToGoogleDrive(
         tokens,
         {
@@ -2246,7 +2251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           coverImageUrl: team.coverImageUrl
         },
         playsForExport,
-        { generateDoc, generateSlides },
+        { generateDoc, generateSlides, customDocName },
         updateTokensCallback
       );
 

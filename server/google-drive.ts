@@ -191,14 +191,18 @@ export async function generateTeamDoc(
   tokens: GoogleDriveTokens,
   team: TeamInfo,
   plays: PlayInfo[],
-  updateTokensCallback?: (newTokens: GoogleDriveTokens) => Promise<void>
+  updateTokensCallback?: (newTokens: GoogleDriveTokens) => Promise<void>,
+  documentTitle?: string
 ): Promise<{ docUrl: string; docId: string }> {
   const drive = await getGoogleDriveClientForUser(tokens, updateTokensCallback);
   const docs = await getGoogleDocsClientForUser(tokens, updateTokensCallback);
 
+  // Use custom document title or default
+  const docTitle = documentTitle || `${team.name} Playbook - ${team.year || new Date().getFullYear()}`;
+  
   // Create a new Google Doc
   const docMetadata = {
-    name: `${team.name} Playbook - ${team.year || new Date().getFullYear()}`,
+    name: docTitle,
     mimeType: 'application/vnd.google-apps.document'
   };
 
@@ -391,15 +395,19 @@ export async function generateTeamSlides(
   tokens: GoogleDriveTokens,
   team: TeamInfo,
   plays: PlayInfo[],
-  updateTokensCallback?: (newTokens: GoogleDriveTokens) => Promise<void>
+  updateTokensCallback?: (newTokens: GoogleDriveTokens) => Promise<void>,
+  documentTitle?: string
 ): Promise<{ slidesUrl: string; presentationId: string }> {
   const drive = await getGoogleDriveClientForUser(tokens, updateTokensCallback);
   const slides = await getGoogleSlidesClientForUser(tokens, updateTokensCallback);
 
+  // Use custom document title or default
+  const slidesTitle = documentTitle || `${team.name} Playbook - ${team.year || new Date().getFullYear()}`;
+
   // Create a new Google Slides presentation
   const presentation = await slides.presentations.create({
     requestBody: {
-      title: `${team.name} Playbook - ${team.year || new Date().getFullYear()}`
+      title: slidesTitle
     }
   });
 
@@ -570,15 +578,21 @@ export async function exportPlaybookToGoogleDrive(
   tokens: GoogleDriveTokens,
   team: TeamInfo,
   plays: PlayInfo[],
-  options: { generateDoc: boolean; generateSlides: boolean },
+  options: { generateDoc: boolean; generateSlides: boolean; customDocName?: string },
   updateTokensCallback?: (newTokens: GoogleDriveTokens) => Promise<void>
 ): Promise<ExportResult> {
   const result: ExportResult = { errors: [] };
 
+  // Use custom document name for the file title, but keep team name for content
+  const documentTitle = options.customDocName || `${team.name} Playbook - ${team.year || new Date().getFullYear()}`;
+  console.log('Starting Google Drive export with title:', documentTitle);
+
   try {
     if (options.generateDoc) {
-      const docResult = await generateTeamDoc(tokens, team, plays, updateTokensCallback);
+      console.log('Generating Google Doc...');
+      const docResult = await generateTeamDoc(tokens, team, plays, updateTokensCallback, documentTitle);
       result.docUrl = docResult.docUrl;
+      console.log('Google Doc created:', docResult.docUrl);
     }
   } catch (error: any) {
     console.error('Error generating Google Doc:', error);
@@ -587,8 +601,10 @@ export async function exportPlaybookToGoogleDrive(
 
   try {
     if (options.generateSlides) {
-      const slidesResult = await generateTeamSlides(tokens, team, plays, updateTokensCallback);
+      console.log('Generating Google Slides...');
+      const slidesResult = await generateTeamSlides(tokens, team, plays, updateTokensCallback, documentTitle);
       result.slidesUrl = slidesResult.slidesUrl;
+      console.log('Google Slides created:', slidesResult.slidesUrl);
     }
   } catch (error: any) {
     console.error('Error generating Google Slides:', error);

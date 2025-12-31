@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import {
@@ -22,6 +23,7 @@ import {
   GripVertical,
   Link2,
   Unlink,
+  Edit3,
 } from "lucide-react";
 
 interface Play {
@@ -61,6 +63,8 @@ export default function GoogleDriveExportModal({
   const [generateDoc, setGenerateDoc] = useState(true);
   const [generateSlides, setGenerateSlides] = useState(true);
   const [selectedPlays, setSelectedPlays] = useState<number[]>([]);
+  const [documentName, setDocumentName] = useState("");
+  const [isExporting, setIsExporting] = useState(false);
   const [exportResult, setExportResult] = useState<{
     docUrl?: string;
     slidesUrl?: string;
@@ -90,9 +94,13 @@ export default function GoogleDriveExportModal({
   useEffect(() => {
     if (open) {
       setExportResult(null);
+      setIsExporting(false);
+      // Set default document name based on team name and current year
+      const year = new Date().getFullYear();
+      setDocumentName(`${teamName} Playbook - ${year}`);
       refetchStatus();
     }
-  }, [open, refetchStatus]);
+  }, [open, refetchStatus, teamName]);
 
   const togglePlaySelection = useCallback((playId: number) => {
     setSelectedPlays((prev) =>
@@ -160,18 +168,35 @@ export default function GoogleDriveExportModal({
     },
   });
 
-  // Export mutation
+  // Export mutation with improved error handling
   const exportMutation = useMutation({
     mutationFn: async () => {
+      setIsExporting(true);
+      console.log("Starting Google Drive export...", { teamId, generateDoc, generateSlides, selectedPlays: selectedPlays.length, documentName });
+      
       const response = await apiRequest("POST", `/api/teams/${teamId}/export-to-drive`, {
         generateDoc,
         generateSlides,
         playIds: selectedPlays,
         playImages: {},
+        documentName: documentName.trim() || `${teamName} Playbook`,
       });
-      return response.json();
+      
+      console.log("Export API response status:", response.status);
+      
+      // Parse JSON only once
+      const data = await response.json().catch(() => ({ error: "Failed to parse response" }));
+      
+      if (!response.ok) {
+        console.error("Export API error:", data);
+        throw new Error(data.error || `Export failed with status ${response.status}`);
+      }
+      
+      console.log("Export API success:", data);
+      return data;
     },
     onSuccess: (data) => {
+      setIsExporting(false);
       setExportResult({
         docUrl: data.docUrl,
         slidesUrl: data.slidesUrl,
@@ -183,12 +208,20 @@ export default function GoogleDriveExportModal({
           title: "Export Complete!",
           description: `Successfully exported ${data.playsExported} plays to Google Drive.`,
         });
+      } else if (data.errors && data.errors.length > 0) {
+        toast({
+          title: "Export Completed with Errors",
+          description: data.errors[0],
+          variant: "destructive",
+        });
       }
     },
     onError: (error: any) => {
+      setIsExporting(false);
+      console.error("Export mutation error:", error);
       toast({
         title: "Export Failed",
-        description: error.message || "Failed to export to Google Drive",
+        description: error.message || "Failed to export to Google Drive. Please try again.",
         variant: "destructive",
       });
     },
@@ -363,6 +396,25 @@ export default function GoogleDriveExportModal({
           {/* Only show export options if connected */}
           {isConnected && (
             <>
+              {/* Document Name Input */}
+              <div className="space-y-3">
+                <Label htmlFor="documentName" className="text-white text-base font-medium flex items-center gap-2">
+                  <Edit3 className="w-4 h-4" />
+                  Document Name
+                </Label>
+                <Input
+                  id="documentName"
+                  value={documentName}
+                  onChange={(e) => setDocumentName(e.target.value)}
+                  placeholder="Enter a name for your exported files"
+                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-gray-500"
+                  data-testid="input-document-name"
+                />
+                <p className="text-gray-400 text-sm">
+                  This name will be used for both Google Doc and Slides files
+                </p>
+              </div>
+
               {/* Format Selection */}
               <div className="space-y-3">
                 <Label className="text-white text-base font-medium">Export Format</Label>
@@ -470,14 +522,14 @@ export default function GoogleDriveExportModal({
             {isConnected && !exportResult && (
               <Button
                 onClick={handleExport}
-                disabled={exportMutation.isPending || plays.length === 0}
+                disabled={isExporting || exportMutation.isPending || plays.length === 0 || !documentName.trim()}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
                 data-testid="button-generate-files"
               >
-                {exportMutation.isPending ? (
+                {isExporting || exportMutation.isPending ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Generating...
+                    Generating files...
                   </>
                 ) : (
                   "Generate Files"
