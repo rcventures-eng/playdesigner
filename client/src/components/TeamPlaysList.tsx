@@ -142,16 +142,16 @@ export default function TeamPlaysList({ teamId, plays, onPlayClick }: TeamPlaysL
               onClick={(e) => e.stopPropagation()}
               data-testid={`drag-handle-${play.id}`}
             >
-              <GripVertical className="w-4 h-4" />
+              <GripVertical className="w-5 h-5" />
             </div>
 
-            {/* Play thumbnail - compact size for playlist style */}
-            <div className="w-24 h-16 flex-shrink-0 rounded overflow-hidden border border-gray-200">
+            {/* Play thumbnail - larger size for better visibility */}
+            <div className="w-32 h-20 flex-shrink-0 rounded-md overflow-hidden border border-gray-200">
               {useStructuredPreview ? (
                 <PlayPreview
                   playData={play.data}
                   playType={play.type as "offense" | "defense" | "special"}
-                  scale={0.2}
+                  scale={0.25}
                 />
               ) : hasRasterPreview ? (
                 <img 
@@ -168,16 +168,16 @@ export default function TeamPlaysList({ teamId, plays, onPlayClick }: TeamPlaysL
 
             {/* Play metadata */}
             <div className="flex-1 min-w-0">
-              <div className="font-medium text-gray-900 text-sm truncate" data-testid={`play-name-${play.id}`}>
+              <div className="font-medium text-gray-900 truncate" data-testid={`play-name-${play.id}`}>
                 {play.name}
               </div>
-              <div className="text-xs text-gray-500 truncate">
+              <div className="text-sm text-gray-500 truncate">
                 {[play.formation, play.concept, play.situation].filter(Boolean).join(" • ") || play.type}
               </div>
             </div>
 
             {/* Play number */}
-            <div className="text-xs text-gray-400 flex-shrink-0 font-medium">
+            <div className="text-sm text-gray-400 flex-shrink-0 font-medium">
               #{index + 1}
             </div>
           </div>

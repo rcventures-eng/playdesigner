@@ -466,11 +466,42 @@ export default function TeamPlaybooks() {
           {/* Header */}
           <header className="p-6 border-b border-gray-200">
             <h1
-              className="text-5xl font-bold text-gray-900 text-center mb-6"
+              className="text-5xl font-bold text-gray-900 text-center mb-4"
               data-testid="text-page-title"
             >
               Team Playbooks
             </h1>
+            {/* Action buttons - positioned left below title, above divider */}
+            {selectedTeam && (
+              <div className="flex gap-2 items-center">
+                <Button
+                  variant="outline"
+                  onClick={() => handleEditTeam(selectedTeam)}
+                  className="border-zinc-600 text-zinc-700 hover:bg-zinc-100"
+                  data-testid="button-edit-team"
+                >
+                  <Pencil className="w-4 h-4 mr-2" />
+                  Edit
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowExportModal(true)}
+                  className="border-blue-600 text-blue-700 hover:bg-blue-50"
+                  data-testid="button-sync-to-drive"
+                >
+                  <CloudUpload className="w-4 h-4 mr-2" />
+                  Sync to Drive
+                </Button>
+                <Link href={`/plays?teamId=${selectedTeam.id}`}>
+                  <Button
+                    className="bg-orange-500 hover:bg-orange-600 text-white"
+                    data-testid="button-view-plays"
+                  >
+                    View Plays
+                  </Button>
+                </Link>
+              </div>
+            )}
           </header>
 
           {/* Content Area */}
@@ -500,42 +531,12 @@ export default function TeamPlaybooks() {
             ) : selectedTeam ? (
               <div className="flex gap-6 h-full">
                 {/* Left Column: Team Info & Cover Image */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-6">
-                    <div>
-                      <h2 className="text-2xl font-bold text-gray-900">
-                        {selectedTeam.name}
-                      </h2>
-                      <p className="text-gray-500">Season: {selectedTeam.year}</p>
-                    </div>
-                    <div className="flex gap-2 flex-wrap">
-                      <Button
-                        variant="outline"
-                        onClick={() => handleEditTeam(selectedTeam)}
-                        className="border-zinc-600 text-zinc-700 hover:bg-zinc-100"
-                        data-testid="button-edit-team"
-                      >
-                        <Pencil className="w-4 h-4 mr-2" />
-                        Edit
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => setShowExportModal(true)}
-                        className="border-blue-600 text-blue-700 hover:bg-blue-50"
-                        data-testid="button-sync-to-drive"
-                      >
-                        <CloudUpload className="w-4 h-4 mr-2" />
-                        Sync to Drive
-                      </Button>
-                      <Link href={`/plays?teamId=${selectedTeam.id}`}>
-                        <Button
-                          className="bg-orange-500 hover:bg-orange-600 text-white"
-                          data-testid="button-view-plays"
-                        >
-                          View Plays
-                        </Button>
-                      </Link>
-                    </div>
+                <div className="w-1/2 min-w-0 flex-shrink-0">
+                  <div className="mb-4">
+                    <h2 className="text-2xl font-bold text-gray-900">
+                      {selectedTeam.name}
+                    </h2>
+                    <p className="text-gray-500">Season: {selectedTeam.year}</p>
                   </div>
                   {selectedTeam.coverImageUrl ? (
                     <div className="relative group">
@@ -568,8 +569,8 @@ export default function TeamPlaybooks() {
                   )}
                 </div>
 
-                {/* Right Column: Plays Rail (YouTube Playlist Style) */}
-                <div className="w-80 lg:w-96 flex-shrink-0 flex flex-col border-l border-gray-200 pl-6">
+                {/* Right Column: Plays Rail (YouTube Playlist Style) - Now 50% width */}
+                <div className="flex-1 flex flex-col border-l border-gray-200 pl-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-3 flex-shrink-0">
                     Plays in this Playbook
                     <span className="ml-2 text-sm font-normal text-gray-500">
