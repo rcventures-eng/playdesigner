@@ -498,90 +498,95 @@ export default function TeamPlaybooks() {
                 </Button>
               </div>
             ) : selectedTeam ? (
-              <div>
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900">
-                      {selectedTeam.name}
-                    </h2>
-                    <p className="text-gray-500">Season: {selectedTeam.year}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => handleEditTeam(selectedTeam)}
-                      className="border-zinc-600 text-zinc-700 hover:bg-zinc-100"
-                      data-testid="button-edit-team"
-                    >
-                      <Pencil className="w-4 h-4 mr-2" />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowExportModal(true)}
-                      className="border-blue-600 text-blue-700 hover:bg-blue-50"
-                      data-testid="button-sync-to-drive"
-                    >
-                      <CloudUpload className="w-4 h-4 mr-2" />
-                      Sync to Drive
-                    </Button>
-                    <Link href={`/plays?teamId=${selectedTeam.id}`}>
+              <div className="flex gap-6 h-full">
+                {/* Left Column: Team Info & Cover Image */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900">
+                        {selectedTeam.name}
+                      </h2>
+                      <p className="text-gray-500">Season: {selectedTeam.year}</p>
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
                       <Button
-                        className="bg-orange-500 hover:bg-orange-600 text-white"
-                        data-testid="button-view-plays"
+                        variant="outline"
+                        onClick={() => handleEditTeam(selectedTeam)}
+                        className="border-zinc-600 text-zinc-700 hover:bg-zinc-100"
+                        data-testid="button-edit-team"
                       >
-                        View Plays
+                        <Pencil className="w-4 h-4 mr-2" />
+                        Edit
                       </Button>
-                    </Link>
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowExportModal(true)}
+                        className="border-blue-600 text-blue-700 hover:bg-blue-50"
+                        data-testid="button-sync-to-drive"
+                      >
+                        <CloudUpload className="w-4 h-4 mr-2" />
+                        Sync to Drive
+                      </Button>
+                      <Link href={`/plays?teamId=${selectedTeam.id}`}>
+                        <Button
+                          className="bg-orange-500 hover:bg-orange-600 text-white"
+                          data-testid="button-view-plays"
+                        >
+                          View Plays
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
+                  {selectedTeam.coverImageUrl ? (
+                    <div className="relative group">
+                      <img
+                        src={selectedTeam.coverImageUrl}
+                        alt={`${selectedTeam.name} cover`}
+                        className="w-full h-64 object-cover rounded-lg"
+                      />
+                      <button
+                        onClick={() => handleDeleteTeam(selectedTeam.id, selectedTeam.name)}
+                        className="absolute top-3 right-3 p-2 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Delete team"
+                        data-testid="button-delete-team-cover"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="relative group bg-gray-100 h-64 rounded-lg flex items-center justify-center">
+                      <FolderOpen className="w-16 h-16 text-gray-300" />
+                      <button
+                        onClick={() => handleDeleteTeam(selectedTeam.id, selectedTeam.name)}
+                        className="absolute top-3 right-3 p-2 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Delete team"
+                        data-testid="button-delete-team-cover"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
-                {selectedTeam.coverImageUrl ? (
-                  <div className="mb-6 relative group max-w-2xl">
-                    <img
-                      src={selectedTeam.coverImageUrl}
-                      alt={`${selectedTeam.name} cover`}
-                      className="w-full h-48 object-cover rounded-lg"
-                    />
-                    <button
-                      onClick={() => handleDeleteTeam(selectedTeam.id, selectedTeam.name)}
-                      className="absolute top-3 right-3 p-2 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                      title="Delete team"
-                      data-testid="button-delete-team-cover"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="mb-6 relative group max-w-2xl bg-gray-100 h-48 rounded-lg flex items-center justify-center">
-                    <FolderOpen className="w-16 h-16 text-gray-300" />
-                    <button
-                      onClick={() => handleDeleteTeam(selectedTeam.id, selectedTeam.name)}
-                      className="absolute top-3 right-3 p-2 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                      title="Delete team"
-                      data-testid="button-delete-team-cover"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
 
-                {/* Plays List */}
-                <div className="mt-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                {/* Right Column: Plays Rail (YouTube Playlist Style) */}
+                <div className="w-80 lg:w-96 flex-shrink-0 flex flex-col border-l border-gray-200 pl-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3 flex-shrink-0">
                     Plays in this Playbook
                     <span className="ml-2 text-sm font-normal text-gray-500">
                       ({teamPlays.length} {teamPlays.length === 1 ? "play" : "plays"})
                     </span>
                   </h3>
-                  {playsLoading ? (
-                    <div className="text-gray-500 animate-pulse py-4">Loading plays...</div>
-                  ) : (
-                    <TeamPlaysList 
-                      teamId={selectedTeam.id} 
-                      plays={teamPlays}
-                      onPlayClick={(playId) => navigate(`/?loadPlay=${playId}`)}
-                    />
-                  )}
+                  <div className="flex-1 overflow-y-auto min-h-0">
+                    {playsLoading ? (
+                      <div className="text-gray-500 animate-pulse py-4">Loading plays...</div>
+                    ) : (
+                      <TeamPlaysList 
+                        teamId={selectedTeam.id} 
+                        plays={teamPlays}
+                        onPlayClick={(playId) => navigate(`/?loadPlay=${playId}`)}
+                      />
+                    )}
+                  </div>
                 </div>
               </div>
             ) : (

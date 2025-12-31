@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { GripVertical } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -32,7 +32,6 @@ export default function TeamPlaysList({ teamId, plays, onPlayClick }: TeamPlaysL
   const [localPlays, setLocalPlays] = useState<PlayItem[]>(plays);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setLocalPlays(plays);
@@ -110,106 +109,80 @@ export default function TeamPlaysList({ teamId, plays, onPlayClick }: TeamPlaysL
 
   return (
     <div 
-      ref={listRef}
-      className="relative overflow-y-auto pr-2 scrollbar-hover"
-      style={{ maxHeight: "calc(100vh - 350px)", minHeight: "300px" }}
+      className="space-y-2"
       data-testid="team-plays-list"
     >
-      <style>{`
-        .scrollbar-hover::-webkit-scrollbar {
-          width: 8px;
-        }
-        .scrollbar-hover::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .scrollbar-hover::-webkit-scrollbar-thumb {
-          background: transparent;
-          border-radius: 4px;
-          transition: background 0.2s;
-        }
-        .scrollbar-hover:hover::-webkit-scrollbar-thumb {
-          background: rgba(0, 0, 0, 0.2);
-        }
-        .scrollbar-hover:hover::-webkit-scrollbar-thumb:hover {
-          background: rgba(0, 0, 0, 0.35);
-        }
-      `}</style>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {localPlays.map((play, index) => {
-          const useStructuredPreview = hasStructuredPlayData(play.data);
-          const hasRasterPreview = play.data?.previewData;
-          
-          return (
-            <div
-              key={play.id}
-              draggable
-              onDragStart={(e) => handleDragStart(e, index)}
-              onDragOver={(e) => handleDragOver(e, index)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, index)}
-              onDragEnd={handleDragEnd}
-              onClick={() => onPlayClick?.(play.id)}
-              className={`
-                relative rounded-lg border bg-white overflow-hidden
-                transition-all duration-150 cursor-pointer
-                ${draggedIndex === index ? "opacity-50 scale-[0.98]" : ""}
-                ${dragOverIndex === index && draggedIndex !== index ? "border-orange-400 ring-2 ring-orange-200" : "border-gray-200"}
-                ${draggedIndex === null ? "hover:border-gray-300 hover:shadow-md" : ""}
-              `}
-              data-testid={`play-item-${play.id}`}
+      {localPlays.map((play, index) => {
+        const useStructuredPreview = hasStructuredPlayData(play.data);
+        const hasRasterPreview = play.data?.previewData;
+        
+        return (
+          <div
+            key={play.id}
+            draggable
+            onDragStart={(e) => handleDragStart(e, index)}
+            onDragOver={(e) => handleDragOver(e, index)}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop(e, index)}
+            onDragEnd={handleDragEnd}
+            onClick={() => onPlayClick?.(play.id)}
+            className={`
+              flex items-center gap-3 p-2 rounded-lg border bg-white
+              transition-all duration-150 cursor-pointer
+              ${draggedIndex === index ? "opacity-50 scale-[0.98]" : ""}
+              ${dragOverIndex === index && draggedIndex !== index ? "border-orange-400 bg-orange-50" : "border-gray-200"}
+              ${draggedIndex === null ? "hover:border-gray-300 hover:shadow-sm" : ""}
+            `}
+            data-testid={`play-item-${play.id}`}
+          >
+            {/* Drag handle */}
+            <div 
+              className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 flex-shrink-0"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+              data-testid={`drag-handle-${play.id}`}
             >
-              {/* Drag handle - positioned outside the preview area for reliable grabbing */}
-              <div 
-                className="absolute top-2 left-2 z-20 cursor-grab active:cursor-grabbing bg-black/40 hover:bg-black/60 text-white rounded p-1.5 pointer-events-auto"
-                onMouseDown={(e) => e.stopPropagation()}
-                onClick={(e) => e.stopPropagation()}
-                data-testid={`drag-handle-${play.id}`}
-              >
-                <GripVertical className="w-4 h-4" />
-              </div>
-              
-              {/* Play number badge */}
-              <div className="absolute top-2 right-2 z-20 bg-black/50 text-white text-xs font-bold px-2 py-1 rounded pointer-events-none">
-                #{index + 1}
-              </div>
+              <GripVertical className="w-4 h-4" />
+            </div>
 
-              {/* Large Play Preview - use structured data if available, otherwise raster image */}
-              <div className="w-full" style={{ aspectRatio: "400/300" }}>
-                {useStructuredPreview ? (
-                  <PlayPreview
-                    playData={play.data}
-                    playType={play.type as "offense" | "defense" | "special"}
-                    playName={play.name}
-                    formation={play.formation || undefined}
-                    scale={0.7}
-                  />
-                ) : hasRasterPreview ? (
-                  <img 
-                    src={play.data.previewData} 
-                    alt={play.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-b from-green-600 to-green-700 flex items-center justify-center">
-                    <div className="text-white/50 text-sm">No preview</div>
-                  </div>
-                )}
-              </div>
+            {/* Play thumbnail - compact size for playlist style */}
+            <div className="w-24 h-16 flex-shrink-0 rounded overflow-hidden border border-gray-200">
+              {useStructuredPreview ? (
+                <PlayPreview
+                  playData={play.data}
+                  playType={play.type as "offense" | "defense" | "special"}
+                  scale={0.2}
+                />
+              ) : hasRasterPreview ? (
+                <img 
+                  src={play.data.previewData} 
+                  alt={play.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-b from-green-600 to-green-700 flex items-center justify-center">
+                  <div className="text-white/50 text-xs">No preview</div>
+                </div>
+              )}
+            </div>
 
-              {/* Play metadata footer */}
-              <div className="p-3 bg-gray-50 border-t border-gray-100">
-                <div className="font-semibold text-gray-900 truncate text-sm" data-testid={`play-name-${play.id}`}>
-                  {play.name}
-                </div>
-                <div className="text-xs text-gray-500 truncate mt-0.5">
-                  {[play.formation, play.concept, play.situation].filter(Boolean).join(" • ") || play.type}
-                </div>
+            {/* Play metadata */}
+            <div className="flex-1 min-w-0">
+              <div className="font-medium text-gray-900 text-sm truncate" data-testid={`play-name-${play.id}`}>
+                {play.name}
+              </div>
+              <div className="text-xs text-gray-500 truncate">
+                {[play.formation, play.concept, play.situation].filter(Boolean).join(" • ") || play.type}
               </div>
             </div>
-          );
-        })}
-      </div>
+
+            {/* Play number */}
+            <div className="text-xs text-gray-400 flex-shrink-0 font-medium">
+              #{index + 1}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
