@@ -190,12 +190,14 @@ interface ExportResult {
 }
 
 // Generate Google Doc with team playbook (handout format)
+// playsPerPage: 1, 2, 4, or 8 plays per page layout
 export async function generateTeamDoc(
   tokens: GoogleDriveTokens,
   team: TeamInfo,
   plays: PlayInfo[],
   updateTokensCallback?: (newTokens: GoogleDriveTokens) => Promise<void>,
-  documentTitle?: string
+  documentTitle?: string,
+  playsPerPage: number = 2
 ): Promise<{ docUrl: string; docId: string }> {
   const drive = await getGoogleDriveClientForUser(tokens, updateTokensCallback);
   const docs = await getGoogleDocsClientForUser(tokens, updateTokensCallback);
@@ -349,13 +351,32 @@ export async function generateTeamDoc(
       // Get direct download link
       const imageUrl = `https://drive.google.com/uc?id=${imageFile.data.id}`;
 
+      // Calculate image dimensions based on playsPerPage
+      // Field aspect ratio is 694:392 ≈ 1.77:1
+      // Standard US Letter page: 612 PT x 792 PT with 1" margins = 540 PT x 720 PT usable
+      // Image width based on plays per page layout:
+      // 1 play/page: 500 PT width (large, full-width)
+      // 2 plays/page: 468 PT width (default)
+      // 4 plays/page: 250 PT width (2x2 grid)
+      // 8 plays/page: 250 PT width (2x4 grid, compact)
+      const imageWidthByLayout: Record<number, number> = {
+        1: 500,
+        2: 468,
+        4: 250,
+        8: 250
+      };
+      const imageWidth = imageWidthByLayout[playsPerPage] || 468;
+      const imageHeight = play.imageWidth && play.imageHeight
+        ? Math.round(imageWidth * (play.imageHeight / play.imageWidth))
+        : Math.round(imageWidth * (392 / 694)); // Default to field aspect ratio
+      
       requests.push({
         insertInlineImage: {
           location: { index: currentIndex },
           uri: imageUrl,
           objectSize: {
-            width: { magnitude: 468, unit: 'PT' },
-            height: { magnitude: 300, unit: 'PT' }
+            width: { magnitude: imageWidth, unit: 'PT' },
+            height: { magnitude: imageHeight, unit: 'PT' }
           }
         }
       });
@@ -371,8 +392,8 @@ export async function generateTeamDoc(
     });
     currentIndex += 2;
 
-    // Page break every 2 plays (except for the last one)
-    if ((i + 1) % 2 === 0 && i < plays.length - 1) {
+    // Page break based on playsPerPage setting (except for the last one)
+    if ((i + 1) % playsPerPage === 0 && i < plays.length - 1) {
       requests.push({
         insertPageBreak: {
           location: { index: currentIndex }
@@ -630,7 +651,7 @@ export async function exportPlaybookToGoogleDrive(
   tokens: GoogleDriveTokens,
   team: TeamInfo,
   plays: PlayInfo[],
-  options: { generateDoc: boolean; generateSlides: boolean; customDocName?: string },
+  options: { generateDoc: boolean; generateSlides: boolean; customDocName?: string; playsPerPage?: number },
   updateTokensCallback?: (newTokens: GoogleDriveTokens) => Promise<void>
 ): Promise<ExportResult> {
   const result: ExportResult = { errors: [] };
@@ -639,10 +660,12 @@ export async function exportPlaybookToGoogleDrive(
   const documentTitle = options.customDocName || `${team.name} Playbook - ${team.year || new Date().getFullYear()}`;
   console.log('Starting Google Drive export with title:', documentTitle);
 
+  const playsPerPage = options.playsPerPage || 2;
+  
   try {
     if (options.generateDoc) {
       console.log('Generating Google Doc...');
-      const docResult = await generateTeamDoc(tokens, team, plays, updateTokensCallback, documentTitle);
+      const docResult = await generateTeamDoc(tokens, team, plays, updateTokensCallback, documentTitle, playsPerPage);
       result.docUrl = docResult.docUrl;
       console.log('Google Doc created:', docResult.docUrl);
     }

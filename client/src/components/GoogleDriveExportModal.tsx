@@ -226,11 +226,11 @@ export default function GoogleDriveExportModal({
       // Get ordered play IDs for export (maintains user's drag-and-drop order)
       const orderedSelectedPlayIds = orderedPlays.filter(p => selectedPlays.includes(p.id)).map(p => p.id);
       
-      // Render plays to images for slides
+      // Render plays to images for both Docs and Slides
       console.log("Rendering plays to images...");
       let playImages: Record<number, PlayImageData> = {};
       
-      if (generateSlides && selectedPlayData.length > 0) {
+      if ((generateSlides || generateDoc) && selectedPlayData.length > 0) {
         try {
           playImages = await renderPlaysToImages(
             selectedPlayData,
