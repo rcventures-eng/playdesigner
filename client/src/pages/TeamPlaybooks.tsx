@@ -41,7 +41,6 @@ import {
   Trash2,
   Pencil,
   Upload,
-  CloudUpload,
 } from "lucide-react";
 
 export default function TeamPlaybooks() {
@@ -464,16 +463,16 @@ export default function TeamPlaybooks() {
         {/* Main Content */}
         <main className="flex-1 flex flex-col pl-4">
           {/* Header */}
-          <header className="p-6 border-b border-gray-200">
+          <header className="p-6 pr-8 border-b border-gray-200">
             <h1
               className="text-5xl font-bold text-gray-900 text-center mb-4"
               data-testid="text-page-title"
             >
               Team Playbooks
             </h1>
-            {/* Action buttons - positioned left below title, above divider */}
+            {/* Action buttons - positioned right, aligned with content area */}
             {selectedTeam && (
-              <div className="flex gap-2 items-center">
+              <div className="flex gap-2 items-center justify-end">
                 <Button
                   variant="outline"
                   onClick={() => handleEditTeam(selectedTeam)}
@@ -486,11 +485,18 @@ export default function TeamPlaybooks() {
                 <Button
                   variant="outline"
                   onClick={() => setShowExportModal(true)}
-                  className="border-blue-600 text-blue-700 hover:bg-blue-50"
+                  className="border-[#4285F4] text-[#4285F4] hover:bg-blue-50"
                   data-testid="button-sync-to-drive"
                 >
-                  <CloudUpload className="w-4 h-4 mr-2" />
-                  Sync to Drive
+                  <svg className="w-4 h-4 mr-2" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg">
+                    <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
+                    <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/>
+                    <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/>
+                    <path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/>
+                    <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/>
+                    <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>
+                  </svg>
+                  Sync to Google Drive
                 </Button>
                 <Link href={`/plays?teamId=${selectedTeam.id}`}>
                   <Button
