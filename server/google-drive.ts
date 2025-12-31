@@ -23,10 +23,24 @@ function getOAuth2Client() {
   }
   
   // Determine the redirect URI based on environment
-  const domain = process.env.REPLIT_DEV_DOMAIN || process.env.REPLIT_DOMAINS?.split(',')[0];
+  // In production (published apps), use REPLIT_DOMAINS which contains the production/custom domain
+  // In development, fall back to REPLIT_DEV_DOMAIN
+  // REPLIT_DEPLOYMENT is set when the app is deployed/published
+  let domain: string | undefined;
+  
+  if (process.env.REPLIT_DEPLOYMENT === '1' || !process.env.REPLIT_DEV_DOMAIN) {
+    // Production mode: use the first domain from REPLIT_DOMAINS (usually the custom domain or .replit.app)
+    domain = process.env.REPLIT_DOMAINS?.split(',')[0];
+  } else {
+    // Development mode: use the dev domain
+    domain = process.env.REPLIT_DEV_DOMAIN;
+  }
+  
   const redirectUri = domain 
     ? `https://${domain}/api/auth/google-drive/callback`
     : 'http://localhost:5000/api/auth/google-drive/callback';
+  
+  console.log('Google Drive OAuth redirect URI:', redirectUri);
   
   return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
 }
