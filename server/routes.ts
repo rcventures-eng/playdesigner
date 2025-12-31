@@ -2250,6 +2250,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
 
+      // Validate that images were provided for slides export
+      const playsWithImages = playsForExport.filter(p => p.imageBase64);
+      if (generateSlides && playsWithImages.length === 0) {
+        console.warn("Slides export requested but no play images were provided");
+      } else if (generateSlides) {
+        console.log(`${playsWithImages.length}/${playsForExport.length} plays have images for slides`);
+      }
+
       // Callback to update tokens if refreshed
       const updateTokensCallback = async (newTokens: any) => {
         await db.update(users)

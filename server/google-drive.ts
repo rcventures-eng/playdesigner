@@ -2,6 +2,7 @@
 // Supports per-user OAuth authentication for coaches
 
 import { google } from 'googleapis';
+import { Readable } from 'node:stream';
 
 const TOKEN_EXPIRY_BUFFER = 60000; // Refresh 1 minute before expiry
 
@@ -331,7 +332,7 @@ export async function generateTeamDoc(
         },
         media: {
           mimeType: 'image/png',
-          body: require('stream').Readable.from(imageBuffer)
+          body: Readable.from(imageBuffer)
         },
         fields: 'id, webContentLink'
       });
@@ -533,7 +534,7 @@ export async function generateTeamSlides(
         },
         media: {
           mimeType: 'image/png',
-          body: require('stream').Readable.from(imageBuffer)
+          body: Readable.from(imageBuffer)
         },
         fields: 'id'
       });
