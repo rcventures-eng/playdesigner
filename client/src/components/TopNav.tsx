@@ -70,6 +70,8 @@ export default function TopNav({ isAdmin, setIsAdmin, showSignUp, setShowSignUp,
         method: "POST",
         credentials: "include",
       });
+      // Immediately clear user cache to update UI
+      queryClient.setQueryData(["/api/me"], null);
       queryClient.invalidateQueries({ queryKey: ["/api/me"] });
       
       // Redirect to Play Designer if logging out from Play Library or Team Playbooks

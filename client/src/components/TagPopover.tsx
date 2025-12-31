@@ -110,22 +110,47 @@ export function TagPopover({
     enabled: open,
   });
 
-  // Toggle team assignment mutation
+  // Toggle team assignment mutation with optimistic updates for instant UI response
   const toggleTeamMutation = useMutation({
     mutationFn: async ({ teamId, isAssigned }: { teamId: number; isAssigned: boolean }) => {
-      console.log("[TagPopover] Toggle mutation called - playId:", playId, "teamId:", teamId, "isAssigned:", isAssigned);
       if (isAssigned) {
         await apiRequest("DELETE", `/api/plays/${playId}/teams/${teamId}`);
       } else {
         await apiRequest("POST", `/api/plays/${playId}/teams/${teamId}`);
       }
-      console.log("[TagPopover] API request completed successfully");
+    },
+    // Optimistic update - immediately update UI before server response
+    onMutate: async ({ teamId, isAssigned }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["/api/plays", playId, "teams"] });
+      
+      // Snapshot the previous value
+      const previousAssignedTeamIds = queryClient.getQueryData<number[]>(["/api/plays", playId, "teams"]);
+      
+      // Optimistically update to the new value
+      queryClient.setQueryData<number[]>(["/api/plays", playId, "teams"], (old = []) => {
+        if (isAssigned) {
+          return old.filter(id => id !== teamId);
+        } else {
+          return [...old, teamId];
+        }
+      });
+      
+      return { previousAssignedTeamIds };
+    },
+    onError: (error: Error, { teamId }, context) => {
+      // Rollback to previous value on error
+      if (context?.previousAssignedTeamIds) {
+        queryClient.setQueryData(["/api/plays", playId, "teams"], context.previousAssignedTeamIds);
+      }
+      toast({
+        title: "Failed to update playbook",
+        description: error.message,
+        variant: "destructive",
+      });
     },
     onSuccess: (_, { teamId, isAssigned }) => {
-      console.log("[TagPopover] Mutation success - invalidating queries");
-      queryClient.invalidateQueries({ queryKey: ["/api/plays", playId, "teams"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
-      // Also invalidate the team playbooks query so Team Playbooks page updates
+      // Invalidate team playbooks query so Team Playbooks page updates
       queryClient.invalidateQueries({ queryKey: ["/api/teams", teamId, "plays-for-export"] });
       const team = userTeams.find(t => t.id === teamId);
       toast({
@@ -133,13 +158,9 @@ export function TagPopover({
         description: team ? `Play ${isAssigned ? "removed from" : "added to"} "${team.name}"` : undefined,
       });
     },
-    onError: (error: Error) => {
-      console.error("[TagPopover] Mutation error:", error);
-      toast({
-        title: "Failed to update playbook",
-        description: error.message,
-        variant: "destructive",
-      });
+    onSettled: () => {
+      // Refetch to ensure server state is in sync
+      queryClient.invalidateQueries({ queryKey: ["/api/plays", playId, "teams"] });
     },
   });
 

@@ -498,7 +498,7 @@ export default function TeamPlaybooks() {
                   </svg>
                   Sync to Google Drive
                 </Button>
-                <Link href={`/plays?teamId=${selectedTeam.id}`}>
+                <Link href={`/plays?folder=my-plays&teamId=${selectedTeam.id}`}>
                   <Button
                     className="bg-orange-500 hover:bg-orange-600 text-white"
                     data-testid="button-view-plays"
