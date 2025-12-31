@@ -539,12 +539,14 @@ export async function generateTeamDoc(
 }
 
 // Generate Google Slides with team playbook (presentation format)
+// playsPerSlide: 1 (full slide), 2 (stacked), or 4 (2x2 grid)
 export async function generateTeamSlides(
   tokens: GoogleDriveTokens,
   team: TeamInfo,
   plays: PlayInfo[],
   updateTokensCallback?: (newTokens: GoogleDriveTokens) => Promise<void>,
-  documentTitle?: string
+  documentTitle?: string,
+  playsPerSlide: number = 1
 ): Promise<{ slidesUrl: string; presentationId: string }> {
   const drive = await getGoogleDriveClientForUser(tokens, updateTokensCallback);
   const slides = await getGoogleSlidesClientForUser(tokens, updateTokensCallback);
@@ -598,77 +600,25 @@ export async function generateTeamSlides(
     }
   }
 
-  // Create a slide for each play
-  for (let i = 0; i < plays.length; i++) {
-    const play = plays[i];
-    const slideId = `play_slide_${i}`;
-    const titleShapeId = `play_title_${i}`;
-    const imageShapeId = `play_image_${i}`;
+  // Google Slides default size is 720pt x 405pt (16:9)
+  const slideWidth = 720;
+  const slideHeight = 405;
+  const margin = 10;
 
-    // Create new slide
-    requests.push({
-      createSlide: {
-        objectId: slideId,
-        insertionIndex: i + 1,
-        slideLayoutReference: {
-          predefinedLayout: 'BLANK'
-        }
-      }
-    });
+  // Calculate layout based on playsPerSlide
+  // 1 play: Full slide with title
+  // 2 plays: Stacked vertically (2 rows, 1 column)
+  // 4 plays: 2x2 grid
+  const layoutConfig = {
+    1: { cols: 1, rows: 1 },
+    2: { cols: 1, rows: 2 },
+    4: { cols: 2, rows: 2 }
+  };
+  const layout = layoutConfig[playsPerSlide as 1 | 2 | 4] || layoutConfig[1];
 
-    // Add play title at top - centered
-    // Google Slides default size is 720pt x 405pt (16:9)
-    requests.push({
-      createShape: {
-        objectId: titleShapeId,
-        shapeType: 'TEXT_BOX',
-        elementProperties: {
-          pageObjectId: slideId,
-          size: {
-            width: { magnitude: 680, unit: 'PT' },
-            height: { magnitude: 40, unit: 'PT' }
-          },
-          transform: {
-            scaleX: 1,
-            scaleY: 1,
-            translateX: 20,
-            translateY: 8,
-            unit: 'PT'
-          }
-        }
-      }
-    });
-
-    requests.push({
-      insertText: {
-        objectId: titleShapeId,
-        text: play.name
-      }
-    });
-
-    requests.push({
-      updateTextStyle: {
-        objectId: titleShapeId,
-        style: {
-          fontSize: { magnitude: 20, unit: 'PT' },
-          bold: true
-        },
-        fields: 'fontSize,bold'
-      }
-    });
-
-    // Center align the title text
-    requests.push({
-      updateParagraphStyle: {
-        objectId: titleShapeId,
-        style: {
-          alignment: 'CENTER'
-        },
-        fields: 'alignment'
-      }
-    });
-
-    // If we have an image, upload and insert it
+  // Upload all images first to avoid interleaving API calls
+  const imageUrls: Record<number, string> = {};
+  for (const play of plays) {
     if (play.imageBase64) {
       console.log(`Uploading image for play ${play.id}: ${play.name}`);
       const imageBuffer = Buffer.from(play.imageBase64, 'base64');
@@ -684,7 +634,6 @@ export async function generateTeamSlides(
         fields: 'id'
       });
 
-      // Make the image publicly accessible
       await drive.permissions.create({
         fileId: imageFile.data.id!,
         requestBody: {
@@ -693,64 +642,147 @@ export async function generateTeamSlides(
         }
       });
 
-      const imageUrl = `https://drive.google.com/uc?id=${imageFile.data.id}`;
-      console.log(`Image uploaded, URL: ${imageUrl}`);
+      imageUrls[play.id] = `https://drive.google.com/uc?id=${imageFile.data.id}`;
+    }
+  }
 
-      // Calculate optimal image size for 16:9 slide (720pt x 405pt)
-      // Use actual image dimensions if provided, otherwise fallback to default field dimensions
-      const slideWidth = 720;
-      const slideHeight = 405;
-      const titleHeight = 55;
-      const margin = 15;
-      const availableWidth = slideWidth - (margin * 2);
-      const availableHeight = slideHeight - titleHeight - margin;
-      
-      // Use actual image dimensions from client, or fallback to field config (694x392)
-      const sourceWidth = play.imageWidth || 694 * 2; // Images rendered at 2x
-      const sourceHeight = play.imageHeight || 392 * 2;
-      const sourceAspect = sourceWidth / sourceHeight;
-      const targetAspect = availableWidth / availableHeight;
-      
-      console.log(`Image dimensions: ${sourceWidth}x${sourceHeight}, aspect: ${sourceAspect.toFixed(2)}`);
-      
-      let displayWidth: number;
-      let displayHeight: number;
-      
-      if (sourceAspect > targetAspect) {
-        // Image is wider than available area - fit by width
-        displayWidth = availableWidth;
-        displayHeight = availableWidth / sourceAspect;
-      } else {
-        // Image is taller than available area - fit by height
-        displayHeight = availableHeight;
-        displayWidth = availableHeight * sourceAspect;
+  // Group plays into slides
+  const slideGroups: PlayInfo[][] = [];
+  for (let i = 0; i < plays.length; i += playsPerSlide) {
+    slideGroups.push(plays.slice(i, i + playsPerSlide));
+  }
+
+  // Create slides for each group
+  for (let slideIndex = 0; slideIndex < slideGroups.length; slideIndex++) {
+    const group = slideGroups[slideIndex];
+    const slideId = `play_slide_${slideIndex}`;
+
+    // Create new slide
+    requests.push({
+      createSlide: {
+        objectId: slideId,
+        insertionIndex: slideIndex + 1,
+        slideLayoutReference: {
+          predefinedLayout: 'BLANK'
+        }
       }
-      
-      const imageX = (slideWidth - displayWidth) / 2; // Center horizontally
-      const imageY = titleHeight; // Below title
+    });
 
+    // Calculate cell dimensions
+    const cellWidth = (slideWidth - margin * (layout.cols + 1)) / layout.cols;
+    const cellHeight = (slideHeight - margin * (layout.rows + 1)) / layout.rows;
+    const titleHeight = playsPerSlide === 1 ? 40 : 24;
+    const titleFontSize = playsPerSlide === 1 ? 20 : 12;
+
+    // Add each play to its position in the grid
+    for (let playIndex = 0; playIndex < group.length; playIndex++) {
+      const play = group[playIndex];
+      const col = playIndex % layout.cols;
+      const row = Math.floor(playIndex / layout.cols);
+      
+      const cellX = margin + col * (cellWidth + margin);
+      const cellY = margin + row * (cellHeight + margin);
+
+      const titleShapeId = `play_title_${slideIndex}_${playIndex}`;
+      const imageShapeId = `play_image_${slideIndex}_${playIndex}`;
+
+      // Add play title
       requests.push({
-        createImage: {
-          objectId: imageShapeId,
-          url: imageUrl,
+        createShape: {
+          objectId: titleShapeId,
+          shapeType: 'TEXT_BOX',
           elementProperties: {
             pageObjectId: slideId,
             size: {
-              width: { magnitude: displayWidth, unit: 'PT' },
-              height: { magnitude: displayHeight, unit: 'PT' }
+              width: { magnitude: cellWidth, unit: 'PT' },
+              height: { magnitude: titleHeight, unit: 'PT' }
             },
             transform: {
               scaleX: 1,
               scaleY: 1,
-              translateX: imageX,
-              translateY: imageY,
+              translateX: cellX,
+              translateY: cellY,
               unit: 'PT'
             }
           }
         }
       });
-    } else {
-      console.log(`No image for play ${play.id}: ${play.name}`);
+
+      requests.push({
+        insertText: {
+          objectId: titleShapeId,
+          text: play.name
+        }
+      });
+
+      requests.push({
+        updateTextStyle: {
+          objectId: titleShapeId,
+          style: {
+            fontSize: { magnitude: titleFontSize, unit: 'PT' },
+            bold: true
+          },
+          fields: 'fontSize,bold'
+        }
+      });
+
+      requests.push({
+        updateParagraphStyle: {
+          objectId: titleShapeId,
+          style: {
+            alignment: 'CENTER'
+          },
+          fields: 'alignment'
+        }
+      });
+
+      // Add play image if available
+      const imageUrl = imageUrls[play.id];
+      if (imageUrl) {
+        const availableImageWidth = cellWidth;
+        const availableImageHeight = cellHeight - titleHeight - margin;
+
+        // Calculate scaled dimensions maintaining aspect ratio
+        const sourceWidth = play.imageWidth || 694 * 2;
+        const sourceHeight = play.imageHeight || 392 * 2;
+        const sourceAspect = sourceWidth / sourceHeight;
+        const targetAspect = availableImageWidth / availableImageHeight;
+
+        let displayWidth: number;
+        let displayHeight: number;
+
+        if (sourceAspect > targetAspect) {
+          displayWidth = availableImageWidth;
+          displayHeight = availableImageWidth / sourceAspect;
+        } else {
+          displayHeight = availableImageHeight;
+          displayWidth = availableImageHeight * sourceAspect;
+        }
+
+        const imageX = cellX + (cellWidth - displayWidth) / 2;
+        const imageY = cellY + titleHeight + margin / 2;
+
+        requests.push({
+          createImage: {
+            objectId: imageShapeId,
+            url: imageUrl,
+            elementProperties: {
+              pageObjectId: slideId,
+              size: {
+                width: { magnitude: displayWidth, unit: 'PT' },
+                height: { magnitude: displayHeight, unit: 'PT' }
+              },
+              transform: {
+                scaleX: 1,
+                scaleY: 1,
+                translateX: imageX,
+                translateY: imageY,
+                unit: 'PT'
+              }
+            }
+          }
+        });
+      }
     }
   }
 
@@ -775,7 +807,7 @@ export async function exportPlaybookToGoogleDrive(
   tokens: GoogleDriveTokens,
   team: TeamInfo,
   plays: PlayInfo[],
-  options: { generateDoc: boolean; generateSlides: boolean; customDocName?: string; playsPerPage?: number },
+  options: { generateDoc: boolean; generateSlides: boolean; customDocName?: string; playsPerPage?: number; slidesPlaysPerPage?: number },
   updateTokensCallback?: (newTokens: GoogleDriveTokens) => Promise<void>
 ): Promise<ExportResult> {
   const result: ExportResult = { errors: [] };
@@ -785,6 +817,7 @@ export async function exportPlaybookToGoogleDrive(
   console.log('Starting Google Drive export with title:', documentTitle);
 
   const playsPerPage = options.playsPerPage || 2;
+  const slidesPlaysPerPage = options.slidesPlaysPerPage || 1;
   
   try {
     if (options.generateDoc) {
@@ -801,7 +834,7 @@ export async function exportPlaybookToGoogleDrive(
   try {
     if (options.generateSlides) {
       console.log('Generating Google Slides...');
-      const slidesResult = await generateTeamSlides(tokens, team, plays, updateTokensCallback, documentTitle);
+      const slidesResult = await generateTeamSlides(tokens, team, plays, updateTokensCallback, documentTitle, slidesPlaysPerPage);
       result.slidesUrl = slidesResult.slidesUrl;
       console.log('Google Slides created:', slidesResult.slidesUrl);
     }

@@ -27,6 +27,13 @@ import {
   Edit3,
   Image,
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Play {
   id: number;
@@ -65,6 +72,8 @@ export default function GoogleDriveExportModal({
   const queryClient = useQueryClient();
   const [generateDoc, setGenerateDoc] = useState(true);
   const [generateSlides, setGenerateSlides] = useState(true);
+  const [docsPlaysPerPage, setDocsPlaysPerPage] = useState<number>(2);
+  const [slidesPlaysPerPage, setSlidesPlaysPerPage] = useState<number>(1);
   const [selectedPlays, setSelectedPlays] = useState<number[]>([]);
   const [documentName, setDocumentName] = useState("");
   const [isExporting, setIsExporting] = useState(false);
@@ -264,6 +273,8 @@ export default function GoogleDriveExportModal({
         playIds: orderedSelectedPlayIds,  // Use ordered IDs for correct export sequence
         playImages,  // Now includes { base64, width, height } per play
         documentName: documentName.trim() || `${teamName} Playbook`,
+        playsPerPage: docsPlaysPerPage,
+        slidesPlaysPerPage: slidesPlaysPerPage,
       });
       
       console.log("Export API response status:", response.status);
@@ -502,30 +513,66 @@ export default function GoogleDriveExportModal({
               <div className="space-y-3">
                 <Label className="text-white text-base font-medium">Export Format</Label>
                 <div className="flex flex-col gap-3">
-                  <label className="flex items-center gap-3 p-3 bg-zinc-800 rounded-lg cursor-pointer hover:bg-zinc-750 transition-colors">
-                    <Checkbox
-                      checked={generateDoc}
-                      onCheckedChange={(checked) => setGenerateDoc(!!checked)}
-                      data-testid="checkbox-generate-doc"
-                    />
-                    <FileText className="w-5 h-5 text-blue-400" />
-                    <div>
-                      <p className="text-white font-medium">Google Doc (Handout Format)</p>
-                      <p className="text-gray-400 text-sm">Printable playbook with 2 plays per page</p>
-                    </div>
-                  </label>
-                  <label className="flex items-center gap-3 p-3 bg-zinc-800 rounded-lg cursor-pointer hover:bg-zinc-750 transition-colors">
-                    <Checkbox
-                      checked={generateSlides}
-                      onCheckedChange={(checked) => setGenerateSlides(!!checked)}
-                      data-testid="checkbox-generate-slides"
-                    />
-                    <Presentation className="w-5 h-5 text-orange-400" />
-                    <div>
-                      <p className="text-white font-medium">Google Slides (Presentation Format)</p>
-                      <p className="text-gray-400 text-sm">One play per slide for team meetings</p>
-                    </div>
-                  </label>
+                  <div className="flex items-center justify-between p-3 bg-zinc-800 rounded-lg">
+                    <label className="flex items-center gap-3 cursor-pointer flex-1">
+                      <Checkbox
+                        checked={generateDoc}
+                        onCheckedChange={(checked) => setGenerateDoc(!!checked)}
+                        data-testid="checkbox-generate-doc"
+                      />
+                      <FileText className="w-5 h-5 text-blue-400" />
+                      <div>
+                        <p className="text-white font-medium">Google Doc (Handout Format)</p>
+                        <p className="text-gray-400 text-sm">Printable playbook format</p>
+                      </div>
+                    </label>
+                    <Select
+                      value={docsPlaysPerPage.toString()}
+                      onValueChange={(val) => setDocsPlaysPerPage(parseInt(val))}
+                    >
+                      <SelectTrigger 
+                        className="w-[140px] bg-zinc-700 border-zinc-600 text-white"
+                        data-testid="select-docs-plays-per-page"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">1 play per page</SelectItem>
+                        <SelectItem value="2">2 plays per page</SelectItem>
+                        <SelectItem value="4">4 plays per page</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-zinc-800 rounded-lg">
+                    <label className="flex items-center gap-3 cursor-pointer flex-1">
+                      <Checkbox
+                        checked={generateSlides}
+                        onCheckedChange={(checked) => setGenerateSlides(!!checked)}
+                        data-testid="checkbox-generate-slides"
+                      />
+                      <Presentation className="w-5 h-5 text-orange-400" />
+                      <div>
+                        <p className="text-white font-medium">Google Slides (Presentation Format)</p>
+                        <p className="text-gray-400 text-sm">For team meetings</p>
+                      </div>
+                    </label>
+                    <Select
+                      value={slidesPlaysPerPage.toString()}
+                      onValueChange={(val) => setSlidesPlaysPerPage(parseInt(val))}
+                    >
+                      <SelectTrigger 
+                        className="w-[140px] bg-zinc-700 border-zinc-600 text-white"
+                        data-testid="select-slides-plays-per-page"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">1 play per slide</SelectItem>
+                        <SelectItem value="2">2 plays per slide</SelectItem>
+                        <SelectItem value="4">4 plays per slide</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
 

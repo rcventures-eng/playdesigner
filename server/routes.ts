@@ -2178,7 +2178,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid team ID" });
       }
 
-      const { generateDoc = true, generateSlides = true, playIds = [], playImages = {}, documentName, playsPerPage = 2 } = req.body;
+      const { generateDoc = true, generateSlides = true, playIds = [], playImages = {}, documentName, playsPerPage = 2, slidesPlaysPerPage = 1 } = req.body;
 
       // Validate at least one format is selected
       if (!generateDoc && !generateSlides) {
@@ -2281,7 +2281,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           coverImageUrl: team.coverImageUrl
         },
         playsForExport,
-        { generateDoc, generateSlides, customDocName, playsPerPage },
+        { generateDoc, generateSlides, customDocName, playsPerPage, slidesPlaysPerPage },
         updateTokensCallback
       );
 
