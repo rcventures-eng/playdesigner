@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
@@ -73,6 +73,9 @@ export default function GoogleDriveExportModal({
     slidesUrl?: string;
     errors: string[];
   } | null>(null);
+  const [orderedPlays, setOrderedPlays] = useState<Play[]>([]);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const draggedIndexRef = useRef<number | null>(null);
 
   // Check Google Drive connection status
   const { data: driveStatus, isLoading: statusLoading, refetch: refetchStatus } = useQuery<{ connected: boolean; error?: string }>({
@@ -86,9 +89,10 @@ export default function GoogleDriveExportModal({
     enabled: open && teamId > 0,
   });
 
-  // Initialize selected plays when data loads
+  // Initialize ordered plays and selected plays when data loads
   useEffect(() => {
     if (exportData?.plays) {
+      setOrderedPlays(exportData.plays);
       setSelectedPlays(exportData.plays.map((p) => p.id));
     }
   }, [exportData]);
@@ -114,13 +118,51 @@ export default function GoogleDriveExportModal({
   }, []);
 
   const selectAllPlays = useCallback(() => {
-    if (exportData?.plays) {
-      setSelectedPlays(exportData.plays.map((p) => p.id));
+    if (orderedPlays.length > 0) {
+      setSelectedPlays(orderedPlays.map((p) => p.id));
     }
-  }, [exportData]);
+  }, [orderedPlays]);
 
   const deselectAllPlays = useCallback(() => {
     setSelectedPlays([]);
+  }, []);
+
+  // Drag and drop handlers for reordering plays
+  const handleDragStart = useCallback((e: React.DragEvent, index: number) => {
+    draggedIndexRef.current = index;
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", index.toString());
+  }, []);
+
+  const handleDragEnter = useCallback((e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    const sourceIndex = draggedIndexRef.current;
+    
+    if (sourceIndex === null || sourceIndex === targetIndex) return;
+    
+    // Reorder the plays as the user drags
+    setOrderedPlays((prev) => {
+      const newPlays = [...prev];
+      const draggedItem = newPlays[sourceIndex];
+      newPlays.splice(sourceIndex, 1);
+      newPlays.splice(targetIndex, 0, draggedItem);
+      return newPlays;
+    });
+    
+    // Update both ref and state to stay in sync
+    draggedIndexRef.current = targetIndex;
+    setDraggedIndex(targetIndex);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    draggedIndexRef.current = null;
+    setDraggedIndex(null);
   }, []);
 
   // Connect Google Drive mutation
@@ -178,8 +220,11 @@ export default function GoogleDriveExportModal({
       setRenderingProgress(null);
       console.log("Starting Google Drive export...", { teamId, generateDoc, generateSlides, selectedPlays: selectedPlays.length, documentName });
       
-      // Get selected plays with their data for rendering
-      const selectedPlayData = plays.filter(p => selectedPlays.includes(p.id));
+      // Get selected plays with their data for rendering, maintaining the user's custom order
+      const selectedPlayData = orderedPlays.filter(p => selectedPlays.includes(p.id));
+      
+      // Get ordered play IDs for export (maintains user's drag-and-drop order)
+      const orderedSelectedPlayIds = orderedPlays.filter(p => selectedPlays.includes(p.id)).map(p => p.id);
       
       // Render plays to images for slides
       console.log("Rendering plays to images...");
@@ -204,7 +249,7 @@ export default function GoogleDriveExportModal({
       const response = await apiRequest("POST", `/api/teams/${teamId}/export-to-drive`, {
         generateDoc,
         generateSlides,
-        playIds: selectedPlays,
+        playIds: orderedSelectedPlayIds,  // Use ordered IDs for correct export sequence
         playImages,  // Now includes { base64, width, height } per play
         documentName: documentName.trim() || `${teamName} Playbook`,
       });
@@ -285,7 +330,6 @@ export default function GoogleDriveExportModal({
   };
 
   const isConnected = driveStatus?.connected ?? false;
-  const plays = exportData?.plays || [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -477,7 +521,7 @@ export default function GoogleDriveExportModal({
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <Label className="text-white text-base font-medium">
-                    Select Plays ({selectedPlays.length} of {plays.length})
+                    Select Plays ({selectedPlays.length} of {orderedPlays.length})
                   </Label>
                   <div className="flex gap-2">
                     <Button
@@ -505,18 +549,28 @@ export default function GoogleDriveExportModal({
                   <div className="flex items-center justify-center p-8">
                     <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
                   </div>
-                ) : plays.length === 0 ? (
+                ) : orderedPlays.length === 0 ? (
                   <div className="p-4 bg-zinc-800 rounded-lg text-center text-gray-400">
                     No plays assigned to this team yet.
                   </div>
                 ) : (
                   <div className="max-h-64 overflow-y-auto space-y-1 bg-zinc-800 rounded-lg p-2">
-                    {plays.map((play) => (
-                      <label
+                    {orderedPlays.map((play, index) => (
+                      <div
                         key={play.id}
-                        className="flex items-center gap-3 p-2 rounded cursor-pointer hover:bg-zinc-700 transition-colors"
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, index)}
+                        onDragEnter={(e) => handleDragEnter(e, index)}
+                        onDragOver={handleDragOver}
+                        onDragEnd={handleDragEnd}
+                        className={`flex items-center gap-3 p-2 rounded cursor-grab active:cursor-grabbing transition-colors select-none ${
+                          draggedIndex === index 
+                            ? "bg-zinc-600 opacity-50" 
+                            : "hover:bg-zinc-700"
+                        }`}
+                        data-testid={`draggable-play-${play.id}`}
                       >
-                        <GripVertical className="w-4 h-4 text-gray-500" />
+                        <GripVertical className="w-4 h-4 text-gray-500 flex-shrink-0" />
                         <Checkbox
                           checked={selectedPlays.includes(play.id)}
                           onCheckedChange={() => togglePlaySelection(play.id)}
@@ -528,7 +582,7 @@ export default function GoogleDriveExportModal({
                             {play.type} {play.formation && `• ${play.formation}`} {play.concept && `• ${play.concept}`}
                           </p>
                         </div>
-                      </label>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -549,7 +603,7 @@ export default function GoogleDriveExportModal({
             {isConnected && !exportResult && (
               <Button
                 onClick={handleExport}
-                disabled={isExporting || exportMutation.isPending || plays.length === 0 || !documentName.trim()}
+                disabled={isExporting || exportMutation.isPending || orderedPlays.length === 0 || !documentName.trim()}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
                 data-testid="button-generate-files"
               >
