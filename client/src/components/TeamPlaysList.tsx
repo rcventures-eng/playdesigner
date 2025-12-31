@@ -3,6 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { GripVertical } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { PlayPreview } from "@/components/PlayPreview";
 
 interface PlayItem {
   id: number;
@@ -19,6 +20,11 @@ interface TeamPlaysListProps {
   teamId: number;
   plays: PlayItem[];
   onPlayClick?: (playId: number) => void;
+}
+
+function hasStructuredPlayData(data: any): boolean {
+  if (!data) return false;
+  return Array.isArray(data.players) && data.players.length > 0;
 }
 
 export default function TeamPlaysList({ teamId, plays, onPlayClick }: TeamPlaysListProps) {
@@ -106,7 +112,7 @@ export default function TeamPlaysList({ teamId, plays, onPlayClick }: TeamPlaysL
     <div 
       ref={listRef}
       className="relative overflow-y-auto pr-2 scrollbar-hover"
-      style={{ maxHeight: "calc(100vh - 450px)", minHeight: "200px" }}
+      style={{ maxHeight: "calc(100vh - 350px)", minHeight: "300px" }}
       data-testid="team-plays-list"
     >
       <style>{`
@@ -129,62 +135,80 @@ export default function TeamPlaysList({ teamId, plays, onPlayClick }: TeamPlaysL
         }
       `}</style>
       
-      <div className="space-y-2">
-        {localPlays.map((play, index) => (
-          <div
-            key={play.id}
-            draggable
-            onDragStart={(e) => handleDragStart(e, index)}
-            onDragOver={(e) => handleDragOver(e, index)}
-            onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, index)}
-            onDragEnd={handleDragEnd}
-            onClick={() => onPlayClick?.(play.id)}
-            className={`
-              flex items-center gap-3 p-3 rounded-lg border bg-white
-              transition-all duration-150 cursor-pointer
-              ${draggedIndex === index ? "opacity-50 scale-[0.98]" : ""}
-              ${dragOverIndex === index && draggedIndex !== index ? "border-orange-400 bg-orange-50" : "border-gray-200"}
-              ${draggedIndex === null ? "hover:border-gray-300 hover:shadow-sm" : ""}
-            `}
-            data-testid={`play-item-${play.id}`}
-          >
-            <div 
-              className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 flex-shrink-0"
-              onMouseDown={(e) => e.stopPropagation()}
-              data-testid={`drag-handle-${play.id}`}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {localPlays.map((play, index) => {
+          const useStructuredPreview = hasStructuredPlayData(play.data);
+          const hasRasterPreview = play.data?.previewData;
+          
+          return (
+            <div
+              key={play.id}
+              draggable
+              onDragStart={(e) => handleDragStart(e, index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, index)}
+              onDragEnd={handleDragEnd}
+              onClick={() => onPlayClick?.(play.id)}
+              className={`
+                relative rounded-lg border bg-white overflow-hidden
+                transition-all duration-150 cursor-pointer
+                ${draggedIndex === index ? "opacity-50 scale-[0.98]" : ""}
+                ${dragOverIndex === index && draggedIndex !== index ? "border-orange-400 ring-2 ring-orange-200" : "border-gray-200"}
+                ${draggedIndex === null ? "hover:border-gray-300 hover:shadow-md" : ""}
+              `}
+              data-testid={`play-item-${play.id}`}
             >
-              <GripVertical className="w-5 h-5" />
-            </div>
+              {/* Drag handle - positioned outside the preview area for reliable grabbing */}
+              <div 
+                className="absolute top-2 left-2 z-20 cursor-grab active:cursor-grabbing bg-black/40 hover:bg-black/60 text-white rounded p-1.5 pointer-events-auto"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+                data-testid={`drag-handle-${play.id}`}
+              >
+                <GripVertical className="w-4 h-4" />
+              </div>
+              
+              {/* Play number badge */}
+              <div className="absolute top-2 right-2 z-20 bg-black/50 text-white text-xs font-bold px-2 py-1 rounded pointer-events-none">
+                #{index + 1}
+              </div>
 
-            <div className="w-16 h-10 bg-green-700 rounded flex-shrink-0 overflow-hidden border border-gray-300">
-              {play.data?.previewData ? (
-                <img 
-                  src={play.data.previewData} 
-                  alt={play.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <div className="w-1 h-full bg-white/30 absolute left-1/2 -translate-x-1/2" />
+              {/* Large Play Preview - use structured data if available, otherwise raster image */}
+              <div className="w-full" style={{ aspectRatio: "400/300" }}>
+                {useStructuredPreview ? (
+                  <PlayPreview
+                    playData={play.data}
+                    playType={play.type as "offense" | "defense" | "special"}
+                    playName={play.name}
+                    formation={play.formation || undefined}
+                    scale={0.7}
+                  />
+                ) : hasRasterPreview ? (
+                  <img 
+                    src={play.data.previewData} 
+                    alt={play.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-b from-green-600 to-green-700 flex items-center justify-center">
+                    <div className="text-white/50 text-sm">No preview</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Play metadata footer */}
+              <div className="p-3 bg-gray-50 border-t border-gray-100">
+                <div className="font-semibold text-gray-900 truncate text-sm" data-testid={`play-name-${play.id}`}>
+                  {play.name}
                 </div>
-              )}
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <div className="font-medium text-gray-900 truncate" data-testid={`play-name-${play.id}`}>
-                {play.name}
-              </div>
-              <div className="text-xs text-gray-500 truncate">
-                {[play.formation, play.concept, play.situation].filter(Boolean).join(" • ") || play.type}
+                <div className="text-xs text-gray-500 truncate mt-0.5">
+                  {[play.formation, play.concept, play.situation].filter(Boolean).join(" • ") || play.type}
+                </div>
               </div>
             </div>
-
-            <div className="text-xs text-gray-400 flex-shrink-0">
-              #{index + 1}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
