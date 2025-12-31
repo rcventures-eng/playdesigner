@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { renderPlaysToImages, type PlayImageData } from "@/lib/renderPlayToImage";
 import {
   FileText,
   Presentation,
@@ -24,6 +25,7 @@ import {
   Link2,
   Unlink,
   Edit3,
+  Image,
 } from "lucide-react";
 
 interface Play {
@@ -65,6 +67,7 @@ export default function GoogleDriveExportModal({
   const [selectedPlays, setSelectedPlays] = useState<number[]>([]);
   const [documentName, setDocumentName] = useState("");
   const [isExporting, setIsExporting] = useState(false);
+  const [renderingProgress, setRenderingProgress] = useState<{ current: number; total: number } | null>(null);
   const [exportResult, setExportResult] = useState<{
     docUrl?: string;
     slidesUrl?: string;
@@ -172,13 +175,37 @@ export default function GoogleDriveExportModal({
   const exportMutation = useMutation({
     mutationFn: async () => {
       setIsExporting(true);
+      setRenderingProgress(null);
       console.log("Starting Google Drive export...", { teamId, generateDoc, generateSlides, selectedPlays: selectedPlays.length, documentName });
+      
+      // Get selected plays with their data for rendering
+      const selectedPlayData = plays.filter(p => selectedPlays.includes(p.id));
+      
+      // Render plays to images for slides
+      console.log("Rendering plays to images...");
+      let playImages: Record<number, PlayImageData> = {};
+      
+      if (generateSlides && selectedPlayData.length > 0) {
+        try {
+          playImages = await renderPlaysToImages(
+            selectedPlayData,
+            (current, total) => {
+              setRenderingProgress({ current, total });
+            }
+          );
+          console.log(`Rendered ${Object.keys(playImages).length} play images`);
+        } catch (error) {
+          console.error("Error rendering play images:", error);
+        }
+      }
+      
+      setRenderingProgress(null);
       
       const response = await apiRequest("POST", `/api/teams/${teamId}/export-to-drive`, {
         generateDoc,
         generateSlides,
         playIds: selectedPlays,
-        playImages: {},
+        playImages,  // Now includes { base64, width, height } per play
         documentName: documentName.trim() || `${teamName} Playbook`,
       });
       
@@ -529,7 +556,14 @@ export default function GoogleDriveExportModal({
                 {isExporting || exportMutation.isPending ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Generating files...
+                    {renderingProgress ? (
+                      <>
+                        <Image className="w-4 h-4 mr-1" />
+                        Rendering play {renderingProgress.current} of {renderingProgress.total}...
+                      </>
+                    ) : (
+                      "Generating files..."
+                    )}
                   </>
                 ) : (
                   "Generate Files"

@@ -178,6 +178,8 @@ interface PlayInfo {
   concept?: string | null;
   formation?: string | null;
   imageBase64?: string;
+  imageWidth?: number;
+  imageHeight?: number;
 }
 
 interface ExportResult {
@@ -468,7 +470,8 @@ export async function generateTeamSlides(
       }
     });
 
-    // Add play title at top
+    // Add play title at top - centered
+    // Google Slides default size is 720pt x 405pt (16:9)
     requests.push({
       createShape: {
         objectId: titleShapeId,
@@ -476,14 +479,14 @@ export async function generateTeamSlides(
         elementProperties: {
           pageObjectId: slideId,
           size: {
-            width: { magnitude: 700, unit: 'PT' },
-            height: { magnitude: 50, unit: 'PT' }
+            width: { magnitude: 680, unit: 'PT' },
+            height: { magnitude: 40, unit: 'PT' }
           },
           transform: {
             scaleX: 1,
             scaleY: 1,
-            translateX: 10,
-            translateY: 10,
+            translateX: 20,
+            translateY: 8,
             unit: 'PT'
           }
         }
@@ -501,15 +504,27 @@ export async function generateTeamSlides(
       updateTextStyle: {
         objectId: titleShapeId,
         style: {
-          fontSize: { magnitude: 24, unit: 'PT' },
+          fontSize: { magnitude: 20, unit: 'PT' },
           bold: true
         },
         fields: 'fontSize,bold'
       }
     });
 
+    // Center align the title text
+    requests.push({
+      updateParagraphStyle: {
+        objectId: titleShapeId,
+        style: {
+          alignment: 'CENTER'
+        },
+        fields: 'alignment'
+      }
+    });
+
     // If we have an image, upload and insert it
     if (play.imageBase64) {
+      console.log(`Uploading image for play ${play.id}: ${play.name}`);
       const imageBuffer = Buffer.from(play.imageBase64, 'base64');
       const imageFile = await drive.files.create({
         requestBody: {
@@ -533,6 +548,40 @@ export async function generateTeamSlides(
       });
 
       const imageUrl = `https://drive.google.com/uc?id=${imageFile.data.id}`;
+      console.log(`Image uploaded, URL: ${imageUrl}`);
+
+      // Calculate optimal image size for 16:9 slide (720pt x 405pt)
+      // Use actual image dimensions if provided, otherwise fallback to default field dimensions
+      const slideWidth = 720;
+      const slideHeight = 405;
+      const titleHeight = 55;
+      const margin = 15;
+      const availableWidth = slideWidth - (margin * 2);
+      const availableHeight = slideHeight - titleHeight - margin;
+      
+      // Use actual image dimensions from client, or fallback to field config (694x392)
+      const sourceWidth = play.imageWidth || 694 * 2; // Images rendered at 2x
+      const sourceHeight = play.imageHeight || 392 * 2;
+      const sourceAspect = sourceWidth / sourceHeight;
+      const targetAspect = availableWidth / availableHeight;
+      
+      console.log(`Image dimensions: ${sourceWidth}x${sourceHeight}, aspect: ${sourceAspect.toFixed(2)}`);
+      
+      let displayWidth: number;
+      let displayHeight: number;
+      
+      if (sourceAspect > targetAspect) {
+        // Image is wider than available area - fit by width
+        displayWidth = availableWidth;
+        displayHeight = availableWidth / sourceAspect;
+      } else {
+        // Image is taller than available area - fit by height
+        displayHeight = availableHeight;
+        displayWidth = availableHeight * sourceAspect;
+      }
+      
+      const imageX = (slideWidth - displayWidth) / 2; // Center horizontally
+      const imageY = titleHeight; // Below title
 
       requests.push({
         createImage: {
@@ -541,19 +590,21 @@ export async function generateTeamSlides(
           elementProperties: {
             pageObjectId: slideId,
             size: {
-              width: { magnitude: 650, unit: 'PT' },
-              height: { magnitude: 420, unit: 'PT' }
+              width: { magnitude: displayWidth, unit: 'PT' },
+              height: { magnitude: displayHeight, unit: 'PT' }
             },
             transform: {
               scaleX: 1,
               scaleY: 1,
-              translateX: 35,
-              translateY: 70,
+              translateX: imageX,
+              translateY: imageY,
               unit: 'PT'
             }
           }
         }
       });
+    } else {
+      console.log(`No image for play ${play.id}: ${play.name}`);
     }
   }
 

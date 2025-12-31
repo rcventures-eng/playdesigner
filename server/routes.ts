@@ -2219,14 +2219,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Prepare plays for export with images
-      const playsForExport = filteredPlays.map(({ play }) => ({
-        id: play.id,
-        name: play.name,
-        type: play.type,
-        concept: play.concept,
-        formation: play.formation,
-        imageBase64: playImages[play.id] || undefined
-      }));
+      // playImages can be either { [id]: string } (legacy) or { [id]: { base64, width, height } }
+      const playsForExport = filteredPlays.map(({ play }) => {
+        const imageData = playImages[play.id];
+        let imageBase64: string | undefined;
+        let imageWidth: number | undefined;
+        let imageHeight: number | undefined;
+        
+        if (imageData) {
+          if (typeof imageData === 'string') {
+            // Legacy format: just base64 string
+            imageBase64 = imageData;
+          } else if (typeof imageData === 'object' && imageData.base64) {
+            // New format: { base64, width, height }
+            imageBase64 = imageData.base64;
+            imageWidth = imageData.width;
+            imageHeight = imageData.height;
+          }
+        }
+        
+        return {
+          id: play.id,
+          name: play.name,
+          type: play.type,
+          concept: play.concept,
+          formation: play.formation,
+          imageBase64,
+          imageWidth,
+          imageHeight
+        };
+      });
 
       // Callback to update tokens if refreshed
       const updateTokensCallback = async (newTokens: any) => {
