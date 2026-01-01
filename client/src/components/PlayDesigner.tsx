@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Download, Copy, Plus, Trash2, Circle as CircleIcon, MoveHorizontal, PenTool, Square as SquareIcon, Type, Hexagon, RotateCcw, Flag, Camera, X, Loader2, Sparkles, Save, Heart, Tag, Magnet } from "lucide-react";
+import { Download, Copy, Plus, Trash2, Circle as CircleIcon, MoveHorizontal, PenTool, Square as SquareIcon, Type, Hexagon, RotateCcw, Flag, Camera, X, Loader2, Sparkles, Save, Heart, Tag, Magnet, StickyNote } from "lucide-react";
 import { toPng } from "html-to-image";
 import { useToast } from "@/hooks/use-toast";
 import { getQueryFn, apiRequest, queryClient } from "@/lib/queryClient";
@@ -106,11 +106,21 @@ interface Football {
   hasPlayAction?: boolean;
 }
 
+interface PlayNote {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  text: string;
+}
+
 interface HistoryState {
   players: Player[];
   routes: Route[];
   shapes: Shape[];
   footballs: Football[];
+  notes: PlayNote[];
   metadata: { name: string; formation: string; concept: string; defenseConcept: string; personnel: string; situation: string };
 }
 
@@ -119,6 +129,7 @@ interface PlayTypeState {
   routes: Route[];
   shapes: Shape[];
   footballs: Football[];
+  notes: PlayNote[];
   metadata: PlayMetadata;
   history: HistoryState[];
 }
@@ -128,6 +139,7 @@ const createEmptyPlayTypeState = (): PlayTypeState => ({
   routes: [],
   shapes: [],
   footballs: [],
+  notes: [],
   metadata: { name: "", formation: "", concept: "", defenseConcept: "", personnel: "", situation: "" },
   history: [],
 });
@@ -175,6 +187,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   const [routes, setRoutes] = useState<Route[]>([]);
   const [shapes, setShapes] = useState<Shape[]>([]);
   const [footballs, setFootballs] = useState<Football[]>([]);
+  const [notes, setNotes] = useState<PlayNote[]>([]);
   const [history, setHistory] = useState<HistoryState[]>([]);
   
   const [playTypeStates, setPlayTypeStates] = useState<Record<PlayTypeKey, PlayTypeState>>({
@@ -195,7 +208,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   const [selectedFootball, setSelectedFootball] = useState<string | null>(null);
   const [editingPlayer, setEditingPlayer] = useState<string | null>(null);
   const [editingLabel, setEditingLabel] = useState("");
-  const [tool, setTool] = useState<"select" | "player" | "route" | "shape" | "label">("select");
+  const [tool, setTool] = useState<"select" | "player" | "route" | "shape" | "label" | "note">("select");
   const [shapeType, setShapeType] = useState<"circle" | "oval" | "rectangle">("circle");
   const [shapeColor, setShapeColor] = useState(FOOTBALL_CONFIG.colors.shapes.pink);
   const [routeType, setRouteType] = useState<"pass" | "run" | "blocking" | "assignment">("pass");
@@ -238,6 +251,21 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   const [currentRoutePoints, setCurrentRoutePoints] = useState<{ x: number; y: number }[]>([]);
   const [isDrawingShape, setIsDrawingShape] = useState(false);
   const [shapeStart, setShapeStart] = useState<{ x: number; y: number } | null>(null);
+  // Play Notes state
+  const [notesEnabled, setNotesEnabled] = useState(false);
+  const [isDrawingNote, setIsDrawingNote] = useState(false);
+  const [noteStart, setNoteStart] = useState<{ x: number; y: number } | null>(null);
+  const [noteEnd, setNoteEnd] = useState<{ x: number; y: number } | null>(null);
+  const [selectedNote, setSelectedNote] = useState<string | null>(null);
+  const [editingNote, setEditingNote] = useState<string | null>(null);
+  const [editingNoteText, setEditingNoteText] = useState("");
+  const noteJustCreatedRef = useRef<number>(0); // Timestamp of when note was just created
+  const noteTextareaRef = useRef<HTMLTextAreaElement | null>(null); // Ref for note textarea focus
+  const [isDraggingNote, setIsDraggingNote] = useState(false);
+  const [noteDragOffset, setNoteDragOffset] = useState({ x: 0, y: 0 });
+  const [isResizingNote, setIsResizingNote] = useState(false);
+  const [noteResizeHandle, setNoteResizeHandle] = useState<"nw" | "ne" | "sw" | "se" | null>(null);
+  const [noteResizeStartData, setNoteResizeStartData] = useState<{ x: number; y: number; width: number; height: number; startX: number; startY: number } | null>(null);
   const [draggingRoutePoint, setDraggingRoutePoint] = useState<{ routeId: string; pointIndex: number } | null>(null);
   const [editingRouteId, setEditingRouteId] = useState<string | null>(null);
   const editingRouteStartPoints = useRef<{ x: number; y: number }[] | null>(null);
@@ -321,12 +349,13 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
           })
           .then((play) => {
             // Load the play data into the designer
-            // Play data structure is flat: { players, routes, shapes, footballs, isPlayAction }
+            // Play data structure is flat: { players, routes, shapes, footballs, notes, isPlayAction }
             const playData = play.data as {
               players?: Player[];
               routes?: Route[];
               shapes?: Shape[];
               footballs?: Football[];
+              notes?: PlayNote[];
               isPlayAction?: boolean;
             };
             
@@ -349,6 +378,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
               routes: playData.routes || [],
               shapes: playData.shapes || [],
               footballs: playData.footballs || [],
+              notes: playData.notes || [],
               metadata: loadedMetadata,
               history: [],
             };
@@ -366,6 +396,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
             setRoutes(loadedState.routes);
             setShapes(loadedState.shapes);
             setFootballs(loadedState.footballs);
+            setNotes(loadedState.notes);
             setMetadata(loadedMetadata);
             
             // Set play action state if present
@@ -655,7 +686,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
         if (editingPlayer) return;
         
         const hasSelection = selectedElements.players.length > 0 || selectedElements.routes.length > 0 ||
-          selectedPlayer || selectedRoute || selectedShape || selectedFootball;
+          selectedPlayer || selectedRoute || selectedShape || selectedFootball || selectedNote;
         
         if (hasSelection) {
           setHistory(prev => [...prev, {
@@ -663,6 +694,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
             routes: JSON.parse(JSON.stringify(routes)),
             shapes: JSON.parse(JSON.stringify(shapes)),
             footballs: JSON.parse(JSON.stringify(footballs)),
+            notes: JSON.parse(JSON.stringify(notes)),
             metadata: JSON.parse(JSON.stringify(metadata))
           }]);
         }
@@ -694,11 +726,15 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
           setFootballs(prev => prev.filter(f => f.id !== selectedFootball));
           setSelectedFootball(null);
         }
+        if (selectedNote) {
+          setNotes(prev => prev.filter(n => n.id !== selectedNote));
+          setSelectedNote(null);
+        }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedPlayer, selectedRoute, selectedShape, selectedFootball, editingPlayer, selectedElements, players, routes, shapes, footballs, metadata, isDrawingRoute]);
+  }, [selectedPlayer, selectedRoute, selectedShape, selectedFootball, selectedNote, editingPlayer, selectedElements, players, routes, shapes, footballs, notes, metadata, isDrawingRoute]);
 
   // Sync Play-Action checkbox with selected football's hasPlayAction state
   useEffect(() => {
@@ -709,6 +745,64 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
       }
     }
   }, [selectedFootball, footballs]);
+
+  // Handle note creation on window pointerup (needed because pointer might release outside canvas)
+  useEffect(() => {
+    const handleNoteWindowPointerUp = (e: PointerEvent) => {
+      if (isDrawingNote && noteStart) {
+        const rect = canvasRef.current?.getBoundingClientRect();
+        if (rect) {
+          const x = (e.clientX - rect.left) / scale;
+          const y = (e.clientY - rect.top) / scale;
+          const width = Math.abs(x - noteStart.x);
+          const height = Math.abs(y - noteStart.y);
+          
+          // Minimum size for a note
+          if (width > 40 && height > 20) {
+            // Save history inline before creating note
+            setHistory(prev => [...prev, {
+              players: JSON.parse(JSON.stringify(players)),
+              routes: JSON.parse(JSON.stringify(routes)),
+              shapes: JSON.parse(JSON.stringify(shapes)),
+              footballs: JSON.parse(JSON.stringify(footballs)),
+              notes: JSON.parse(JSON.stringify(notes)),
+              metadata: JSON.parse(JSON.stringify(metadata))
+            }]);
+            const newNote: PlayNote = {
+              id: `${Date.now()}`,
+              x: Math.min(noteStart.x, x),
+              y: Math.min(noteStart.y, y),
+              width: Math.max(width, 80),
+              height: Math.max(height, 30),
+              text: "",
+            };
+            setNotes(prev => [...prev, newNote]);
+            setSelectedNote(newNote.id);
+            setEditingNote(newNote.id);
+            setEditingNoteText("");
+            // Mark note as just created to prevent blur from clearing editingNote
+            noteJustCreatedRef.current = Date.now();
+          }
+        }
+        setIsDrawingNote(false);
+        setNoteStart(null);
+        setNoteEnd(null);
+      }
+    };
+    
+    window.addEventListener("pointerup", handleNoteWindowPointerUp);
+    return () => window.removeEventListener("pointerup", handleNoteWindowPointerUp);
+  }, [isDrawingNote, noteStart, scale, players, routes, shapes, footballs, notes, metadata]);
+
+  // Focus the note textarea after creation or when editing starts
+  useEffect(() => {
+    if (editingNote && noteTextareaRef.current) {
+      // Use requestAnimationFrame to ensure DOM is ready
+      requestAnimationFrame(() => {
+        noteTextareaRef.current?.focus();
+      });
+    }
+  }, [editingNote]);
 
   // Handle click-outside to close long-press menu and cancel long-press on window pointerup
   useEffect(() => {
@@ -817,6 +911,17 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     });
   }, [players]);
 
+  const saveToHistory = () => {
+    setHistory(prev => [...prev, {
+      players: JSON.parse(JSON.stringify(players)),
+      routes: JSON.parse(JSON.stringify(routes)),
+      shapes: JSON.parse(JSON.stringify(shapes)),
+      footballs: JSON.parse(JSON.stringify(footballs)),
+      notes: JSON.parse(JSON.stringify(notes)),
+      metadata: JSON.parse(JSON.stringify(metadata))
+    }]);
+  };
+
   const addPlayer = (color: string) => {
     saveToHistory();
     
@@ -870,16 +975,6 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     setTool("select");
   };
 
-  const saveToHistory = () => {
-    setHistory(prev => [...prev, {
-      players: JSON.parse(JSON.stringify(players)),
-      routes: JSON.parse(JSON.stringify(routes)),
-      shapes: JSON.parse(JSON.stringify(shapes)),
-      footballs: JSON.parse(JSON.stringify(footballs)),
-      metadata: JSON.parse(JSON.stringify(metadata))
-    }]);
-  };
-
   const undo = () => {
     if (history.length === 0) return;
     const previousState = history[history.length - 1];
@@ -887,29 +982,33 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     setRoutes(previousState.routes);
     setShapes(previousState.shapes);
     setFootballs(previousState.footballs);
+    setNotes(previousState.notes || []);
     setMetadata(previousState.metadata);
     setHistory(prev => prev.slice(0, -1));
     setSelectedPlayer(null);
     setSelectedRoute(null);
     setSelectedShape(null);
     setSelectedFootball(null);
+    setSelectedNote(null);
     setSelectedElements({ players: [], routes: [] });
   };
 
   const clearAll = () => {
     // Save to history so user can undo the clear action
-    if (players.length > 0 || routes.length > 0 || shapes.length > 0 || footballs.length > 0) {
+    if (players.length > 0 || routes.length > 0 || shapes.length > 0 || footballs.length > 0 || notes.length > 0) {
       saveToHistory();
     }
     setPlayers([]);
     setRoutes([]);
     setShapes([]);
     setFootballs([]);
+    setNotes([]);
     setMetadata({ name: "", formation: "", concept: "", defenseConcept: "", personnel: "", situation: "" });
     setSelectedPlayer(null);
     setSelectedRoute(null);
     setSelectedShape(null);
     setSelectedFootball(null);
+    setSelectedNote(null);
     setSelectedElements({ players: [], routes: [] });
     // Note: Don't reset includeOffense here - preserve checkbox state across clear
   };
@@ -1949,6 +2048,48 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
         setLassoEnd({ x, y });
       }
     }
+    
+    // Handle note drawing preview (track end position during draw)
+    if (isDrawingNote && noteStart) {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (rect) {
+        const x = (e.clientX - rect.left) / scale;
+        const y = (e.clientY - rect.top) / scale;
+        setNoteEnd({ x, y });
+      }
+    }
+    
+    // Handle note dragging
+    if (isDraggingNote && selectedNote) {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (rect) {
+        const x = (e.clientX - rect.left) / scale;
+        const y = (e.clientY - rect.top) / scale;
+        const newX = Math.max(0, Math.min(FIELD.WIDTH - 40, x - noteDragOffset.x));
+        const newY = Math.max(0, Math.min(FIELD.HEIGHT - 20, y - noteDragOffset.y));
+        setNotes(prev => prev.map(n => 
+          n.id === selectedNote ? { ...n, x: newX, y: newY } : n
+        ));
+      }
+    }
+    
+    // Handle note resizing
+    if (isResizingNote && selectedNote && noteResizeStartData) {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (rect) {
+        const currentX = (e.clientX - rect.left) / scale;
+        const currentY = (e.clientY - rect.top) / scale;
+        const deltaX = currentX - noteResizeStartData.startX;
+        const deltaY = currentY - noteResizeStartData.startY;
+        
+        const newWidth = Math.max(40, noteResizeStartData.width + deltaX);
+        const newHeight = Math.max(20, noteResizeStartData.height + deltaY);
+        
+        setNotes(prev => prev.map(n => 
+          n.id === selectedNote ? { ...n, width: newWidth, height: newHeight } : n
+        ));
+      }
+    }
   };
 
   const handleCanvasMouseUp = () => {
@@ -1985,6 +2126,19 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     setResizeHandle(null);
     setResizeStartData(null);
     setActiveSnapLines({ x: null, y: null });
+    
+    // Reset note dragging/resizing states
+    if (isDraggingNote) {
+      saveToHistory();
+      setIsDraggingNote(false);
+      setNoteDragOffset({ x: 0, y: 0 });
+    }
+    if (isResizingNote) {
+      saveToHistory();
+      setIsResizingNote(false);
+      setNoteResizeHandle(null);
+      setNoteResizeStartData(null);
+    }
     
     if (tool === "select" && lassoStart) {
       if (lassoEnd) {
@@ -2095,6 +2249,15 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
         setShapeStart({ x, y });
         setIsDrawingShape(true);
       }
+    } else if (tool === "note" && notesEnabled) {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (rect) {
+        const x = (e.clientX - rect.left) / scale;
+        const y = (e.clientY - rect.top) / scale;
+        setNoteStart({ x, y });
+        setNoteEnd({ x, y });
+        setIsDrawingNote(true);
+      }
     }
   };
 
@@ -2131,6 +2294,13 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
       setIsDrawingShape(false);
       setShapeStart(null);
     }
+  };
+
+  // Handle note creation after drawing rectangle
+  // Note: This is now handled by window-level pointerup listener for better event capture
+  // This function is kept for the canvas onPointerUp handler but does nothing
+  const handleNotePointerUp = (e: React.PointerEvent) => {
+    // No-op: window-level handler handles note creation
   };
 
   const finishRoute = () => {
@@ -3128,6 +3298,29 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                   <Magnet className="h-4 w-4" />
                   Snap
                 </Button>
+                <Button
+                  size="sm"
+                  variant={notesEnabled ? "default" : "secondary"}
+                  onClick={() => {
+                    const newValue = !notesEnabled;
+                    setNotesEnabled(newValue);
+                    if (newValue) {
+                      setTool("note");
+                    } else {
+                      setTool("select");
+                    }
+                  }}
+                  data-testid="button-notes-toggle"
+                  aria-pressed={notesEnabled}
+                  className={`flex justify-center items-center gap-1 ${notesEnabled ? 'bg-yellow-500 hover:bg-yellow-600 text-black border-yellow-600' : 'bg-yellow-100 hover:bg-yellow-200 text-yellow-800 border-yellow-300'}`}
+                  style={{
+                    background: notesEnabled ? 'linear-gradient(145deg, #FFEB3B 0%, #FFC107 100%)' : 'linear-gradient(145deg, #FFF9C4 0%, #FFECB3 100%)',
+                    boxShadow: notesEnabled ? 'inset 0 1px 2px rgba(0,0,0,0.1)' : '0 1px 3px rgba(0,0,0,0.1)',
+                  }}
+                >
+                  <StickyNote className="h-4 w-4" />
+                  Notes
+                </Button>
                 {playType === "defense" && (
                   <Button
                     size="sm"
@@ -3712,6 +3905,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                       routes,
                       shapes,
                       footballs,
+                      notes,
                       isPlayAction
                     };
                     
@@ -3772,6 +3966,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
               onPointerUp={(e) => {
                 handleCanvasMouseUp();
                 handleShapePointerUp(e);
+                handleNotePointerUp(e);
               }}
               onPointerDown={handleCanvasPointerDown}
               onClick={handleCanvasClick}
@@ -4525,6 +4720,150 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                   )}
                 </div>
               ))}
+
+              {/* Play Notes - text annotations on the canvas */}
+              {notes.map((note) => {
+                // White field failsafe: detect if field is light and adjust note styling
+                const isLightField = false; // Could check actual field color here
+                const noteBackground = isLightField ? '#f3f4f6' : 'rgba(255, 255, 255, 0.95)';
+                const noteBorder = isLightField ? '#9ca3af' : 'rgba(0, 0, 0, 0.2)';
+                const noteTextColor = '#000000';
+                
+                return (
+                  <div
+                    key={note.id}
+                    className={`absolute cursor-move select-none ${selectedNote === note.id ? 'ring-2 ring-yellow-400' : ''}`}
+                    style={{
+                      left: note.x,
+                      top: note.y,
+                      width: note.width,
+                      minHeight: note.height,
+                      backgroundColor: noteBackground,
+                      border: `1px solid ${noteBorder}`,
+                      borderRadius: '4px',
+                      boxShadow: selectedNote === note.id ? '0 2px 8px rgba(0,0,0,0.15)' : '0 1px 3px rgba(0,0,0,0.1)',
+                      zIndex: 60,
+                      padding: '4px 6px',
+                      fontSize: '11px',
+                      lineHeight: '1.3',
+                      color: noteTextColor,
+                      overflow: 'hidden',
+                    }}
+                    data-testid={`note-${note.id}`}
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      setSelectedNote(note.id);
+                      setSelectedPlayer(null);
+                      setSelectedRoute(null);
+                      setSelectedShape(null);
+                      setSelectedFootball(null);
+                      
+                      // Start dragging if not clicking on resize handle
+                      if (!(e.target as HTMLElement).dataset.resizeHandle) {
+                        setIsDraggingNote(true);
+                        const rect = canvasRef.current?.getBoundingClientRect();
+                        if (rect) {
+                          const x = (e.clientX - rect.left) / scale;
+                          const y = (e.clientY - rect.top) / scale;
+                          setNoteDragOffset({ x: x - note.x, y: y - note.y });
+                        }
+                      }
+                    }}
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      setEditingNote(note.id);
+                      setEditingNoteText(note.text);
+                    }}
+                  >
+                    {editingNote === note.id ? (
+                      <textarea
+                        ref={noteTextareaRef}
+                        autoFocus
+                        value={editingNoteText}
+                        onChange={(e) => setEditingNoteText(e.target.value)}
+                        onBlur={() => {
+                          // Skip blur if note was just created (within 500ms) to prevent immediate closure
+                          if (Date.now() - noteJustCreatedRef.current < 500) {
+                            // Re-focus the textarea after a short delay
+                            requestAnimationFrame(() => {
+                              noteTextareaRef.current?.focus();
+                            });
+                            return;
+                          }
+                          saveToHistory();
+                          setNotes(prev => prev.map(n => 
+                            n.id === note.id ? { ...n, text: editingNoteText } : n
+                          ));
+                          setEditingNote(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Escape') {
+                            setEditingNote(null);
+                          }
+                        }}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-full h-full bg-transparent border-none outline-none resize-none text-black"
+                        style={{ 
+                          fontSize: '11px', 
+                          lineHeight: '1.3',
+                          minHeight: note.height - 8,
+                        }}
+                        data-testid={`note-input-${note.id}`}
+                      />
+                    ) : (
+                      <div className="whitespace-pre-wrap break-words" style={{ minHeight: note.height - 8 }}>
+                        {note.text || <span className="text-gray-400 italic">Click to add text...</span>}
+                      </div>
+                    )}
+                    
+                    {/* Resize handles - only show when selected */}
+                    {selectedNote === note.id && !editingNote && (
+                      <>
+                        <div
+                          data-resize-handle="se"
+                          className="absolute w-3 h-3 bg-yellow-500 rounded-sm cursor-se-resize"
+                          style={{ right: -4, bottom: -4 }}
+                          onPointerDown={(e) => {
+                            e.stopPropagation();
+                            setIsResizingNote(true);
+                            setNoteResizeHandle('se');
+                            const rect = canvasRef.current?.getBoundingClientRect();
+                            if (rect) {
+                              const startX = (e.clientX - rect.left) / scale;
+                              const startY = (e.clientY - rect.top) / scale;
+                              setNoteResizeStartData({
+                                x: note.x,
+                                y: note.y,
+                                width: note.width,
+                                height: note.height,
+                                startX,
+                                startY
+                              });
+                            }
+                          }}
+                          data-testid={`note-resize-se-${note.id}`}
+                        />
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Note drawing preview */}
+              {isDrawingNote && noteStart && noteEnd && (
+                <div
+                  className="absolute border-2 border-dashed border-yellow-500 bg-yellow-100/50 pointer-events-none"
+                  style={{
+                    left: Math.min(noteStart.x, noteEnd.x),
+                    top: Math.min(noteStart.y, noteEnd.y),
+                    width: Math.abs(noteEnd.x - noteStart.x),
+                    height: Math.abs(noteEnd.y - noteStart.y),
+                    zIndex: 100,
+                  }}
+                  data-testid="note-drawing-preview"
+                />
+              )}
 
             </div>
           </div>
