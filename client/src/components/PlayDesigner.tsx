@@ -444,6 +444,21 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
               setFootballs(flippedFootballs);
               setNotes(flippedNotes);
               
+              // Also update the playTypeStates cache so tab switches don't revert the flip
+              const flippedState: PlayTypeState = {
+                players: flippedPlayers,
+                routes: flippedRoutes,
+                shapes: flippedShapes,
+                footballs: flippedFootballs,
+                notes: flippedNotes,
+                metadata: loadedMetadata,
+                history: [],
+              };
+              const newFlippedStates = { ...playTypeStatesRef.current };
+              newFlippedStates[type] = flippedState;
+              playTypeStatesRef.current = newFlippedStates;
+              setPlayTypeStates(newFlippedStates);
+              
               // Clear the loaded play ID since this is a new flipped version (not saved yet)
               setLoadedPlayId(null);
             }
