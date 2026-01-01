@@ -33,6 +33,20 @@ The core play design functionality uses HTML5 Canvas and SVG. Features include:
 -   **Player Rendering**: Differentiates offensive (filled circles) and defensive (X shapes) players.
 -   **Defensive Assignments**: Supports advanced assignments like Blitz, Man Coverage (linked to offensive players), and Zone Coverage (resizable shapes).
 -   **Export Functionality**: Generates downloadable PNGs of the canvas content.
+-   **Flip Play**: Mirrors the entire play horizontally around the field center line (X=347).
+
+### Flip Play Feature
+
+The Flip Play feature allows coaches to quickly mirror their plays horizontally:
+-   **In Play Designer**: "Flip Play" button below the canvas with FlipHorizontal2 icon
+-   **In Play Library**: Flip icon on play cards and "Flip Play" button in the double-click dialog
+-   **URL Parameter**: `/?playId=123&flip=true` loads a play pre-flipped
+-   **Non-Permanent**: Flip doesn't auto-save; user must save manually to persist flipped version
+-   **Template Restriction**: Flip button hidden for public templates (isPublic plays)
+-   **What Flips**: Players, routes, shapes, footballs, and notes are mirrored around centerX
+-   **Labels Preserved**: Player labels (e.g., "LT", "QB") remain unchanged
+-   **State Caching**: Flipped state is stored in playTypeStatesRef to survive tab switches
+-   **Undo Support**: Flip is added to history so it can be undone
 
 ### Play Notes Feature
 
