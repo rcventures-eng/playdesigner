@@ -3962,6 +3962,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
               onPointerMove={(e) => {
                 handleCanvasPointerMove(e);
                 handleShapePointerMove(e);
+                handleNotePointerMove(e);
               }}
               onPointerUp={(e) => {
                 handleCanvasMouseUp();
