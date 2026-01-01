@@ -411,20 +411,20 @@ export default function TeamRosterCard({ teamId, gameFormat = "5v5" }: TeamRoste
                       <Input
                         value={editingCoach.firstName}
                         onChange={(e) => setEditingCoach({ ...editingCoach, firstName: e.target.value })}
-                        className="w-24 h-8"
+                        className="w-24 h-8 bg-white border-gray-300"
                         placeholder="First"
                       />
                       <Input
                         value={editingCoach.lastName}
                         onChange={(e) => setEditingCoach({ ...editingCoach, lastName: e.target.value })}
-                        className="w-24 h-8"
+                        className="w-24 h-8 bg-white border-gray-300"
                         placeholder="Last"
                       />
                       <Select
                         value={editingCoach.role}
                         onValueChange={(value) => setEditingCoach({ ...editingCoach, role: value })}
                       >
-                        <SelectTrigger className="w-40 h-8">
+                        <SelectTrigger className="w-40 h-8 bg-white border-gray-300">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -487,23 +487,23 @@ export default function TeamRosterCard({ teamId, gameFormat = "5v5" }: TeamRoste
               ))}
 
               {showAddCoach && (
-                <div className="flex items-center gap-2 bg-primary/10 rounded-md px-3 py-2">
+                <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-md px-3 py-2">
                   <Input
                     value={newCoachFirstName}
                     onChange={(e) => setNewCoachFirstName(e.target.value)}
-                    className="w-24 h-8"
+                    className="w-24 h-8 bg-white border-gray-300"
                     placeholder="First Name"
                     data-testid="input-coach-first-name"
                   />
                   <Input
                     value={newCoachLastName}
                     onChange={(e) => setNewCoachLastName(e.target.value)}
-                    className="w-24 h-8"
+                    className="w-24 h-8 bg-white border-gray-300"
                     placeholder="Last Name"
                     data-testid="input-coach-last-name"
                   />
                   <Select value={newCoachRole} onValueChange={setNewCoachRole}>
-                    <SelectTrigger className="w-40 h-8" data-testid="select-coach-role">
+                    <SelectTrigger className="w-40 h-8 bg-white border-gray-300" data-testid="select-coach-role">
                       <SelectValue placeholder="Select Role" />
                     </SelectTrigger>
                     <SelectContent>
@@ -574,20 +574,20 @@ export default function TeamRosterCard({ teamId, gameFormat = "5v5" }: TeamRoste
                       <Input
                         value={editingPlayer.firstName}
                         onChange={(e) => setEditingPlayer({ ...editingPlayer, firstName: e.target.value })}
-                        className="w-24 h-8"
+                        className="w-24 h-8 bg-white border-gray-300"
                         placeholder="First"
                       />
                       <Input
                         value={editingPlayer.lastName}
                         onChange={(e) => setEditingPlayer({ ...editingPlayer, lastName: e.target.value })}
-                        className="w-24 h-8"
+                        className="w-24 h-8 bg-white border-gray-300"
                         placeholder="Last"
                       />
                       <Select
                         value={editingPlayer.position1 || ""}
                         onValueChange={(value) => setEditingPlayer({ ...editingPlayer, position1: value })}
                       >
-                        <SelectTrigger className="w-28 h-8">
+                        <SelectTrigger className="w-28 h-8 bg-white border-gray-300">
                           <SelectValue placeholder="Off Pos 1" />
                         </SelectTrigger>
                         <SelectContent>
@@ -600,7 +600,7 @@ export default function TeamRosterCard({ teamId, gameFormat = "5v5" }: TeamRoste
                         value={editingPlayer.position2 || ""}
                         onValueChange={(value) => setEditingPlayer({ ...editingPlayer, position2: value })}
                       >
-                        <SelectTrigger className="w-28 h-8">
+                        <SelectTrigger className="w-28 h-8 bg-white border-gray-300">
                           <SelectValue placeholder="Off Pos 2" />
                         </SelectTrigger>
                         <SelectContent>
@@ -613,7 +613,7 @@ export default function TeamRosterCard({ teamId, gameFormat = "5v5" }: TeamRoste
                         value={editingPlayer.defPosition1 || ""}
                         onValueChange={(value) => setEditingPlayer({ ...editingPlayer, defPosition1: value })}
                       >
-                        <SelectTrigger className="w-28 h-8">
+                        <SelectTrigger className="w-28 h-8 bg-white border-gray-300">
                           <SelectValue placeholder="Def Pos" />
                         </SelectTrigger>
                         <SelectContent>
@@ -625,7 +625,7 @@ export default function TeamRosterCard({ teamId, gameFormat = "5v5" }: TeamRoste
                       <Input
                         value={editingPlayer.mainColor || ""}
                         onChange={(e) => setEditingPlayer({ ...editingPlayer, mainColor: e.target.value })}
-                        className="w-20 h-8"
+                        className="w-20 h-8 bg-white border-gray-300"
                         placeholder="Color"
                       />
                       <Button
@@ -711,23 +711,23 @@ export default function TeamRosterCard({ teamId, gameFormat = "5v5" }: TeamRoste
               ))}
 
               {showAddPlayer && (
-                <div className="flex items-center gap-2 bg-primary/10 rounded-md px-3 py-2 flex-wrap">
+                <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 flex-wrap">
                   <Input
                     value={newPlayerFirstName}
                     onChange={(e) => setNewPlayerFirstName(e.target.value)}
-                    className="w-24 h-8"
+                    className="w-24 h-8 bg-white border-gray-300"
                     placeholder="First Name"
                     data-testid="input-player-first-name"
                   />
                   <Input
                     value={newPlayerLastName}
                     onChange={(e) => setNewPlayerLastName(e.target.value)}
-                    className="w-24 h-8"
+                    className="w-24 h-8 bg-white border-gray-300"
                     placeholder="Last Name"
                     data-testid="input-player-last-name"
                   />
                   <Select value={newPlayerPosition1} onValueChange={setNewPlayerPosition1}>
-                    <SelectTrigger className="w-28 h-8" data-testid="select-player-position-1">
+                    <SelectTrigger className="w-28 h-8 bg-white border-gray-300" data-testid="select-player-position-1">
                       <SelectValue placeholder="Off Pos 1" />
                     </SelectTrigger>
                     <SelectContent>
@@ -737,7 +737,7 @@ export default function TeamRosterCard({ teamId, gameFormat = "5v5" }: TeamRoste
                     </SelectContent>
                   </Select>
                   <Select value={newPlayerPosition2} onValueChange={setNewPlayerPosition2}>
-                    <SelectTrigger className="w-28 h-8" data-testid="select-player-position-2">
+                    <SelectTrigger className="w-28 h-8 bg-white border-gray-300" data-testid="select-player-position-2">
                       <SelectValue placeholder="Off Pos 2" />
                     </SelectTrigger>
                     <SelectContent>
@@ -747,7 +747,7 @@ export default function TeamRosterCard({ teamId, gameFormat = "5v5" }: TeamRoste
                     </SelectContent>
                   </Select>
                   <Select value={newPlayerDefPosition1} onValueChange={setNewPlayerDefPosition1}>
-                    <SelectTrigger className="w-28 h-8" data-testid="select-player-def-position-1">
+                    <SelectTrigger className="w-28 h-8 bg-white border-gray-300" data-testid="select-player-def-position-1">
                       <SelectValue placeholder="Def Pos" />
                     </SelectTrigger>
                     <SelectContent>
@@ -759,7 +759,7 @@ export default function TeamRosterCard({ teamId, gameFormat = "5v5" }: TeamRoste
                   <Input
                     value={newPlayerMainColor}
                     onChange={(e) => setNewPlayerMainColor(e.target.value)}
-                    className="w-20 h-8"
+                    className="w-20 h-8 bg-white border-gray-300"
                     placeholder="Color"
                     data-testid="input-player-color"
                   />
