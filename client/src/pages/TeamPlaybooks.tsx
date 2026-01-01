@@ -4,6 +4,7 @@ import { useLocation, Link } from "wouter";
 import { Team } from "@shared/schema";
 import TopNav from "@/components/TopNav";
 import TeamPlaysList from "@/components/TeamPlaysList";
+import TeamRosterCard from "@/components/TeamRosterCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -573,6 +574,9 @@ export default function TeamPlaybooks() {
                       </button>
                     </div>
                   )}
+                  
+                  {/* Team Roster Card */}
+                  <TeamRosterCard teamId={selectedTeam.id} />
                 </div>
 
                 {/* Right Column: Plays Rail (YouTube Playlist Style) - Now 50% width */}

@@ -157,3 +157,55 @@ export const insertPlayTeamSchema = createInsertSchema(playTeams).omit({
 
 export type InsertPlayTeam = z.infer<typeof insertPlayTeamSchema>;
 export type PlayTeam = typeof playTeams.$inferSelect;
+
+// Team coaching staff
+export const teamCoaches = pgTable("team_coaches", {
+  id: serial("id").primaryKey(),
+  teamId: integer("team_id").notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  role: text("role").notNull(),
+  displayOrder: integer("display_order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertTeamCoachSchema = createInsertSchema(teamCoaches).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertTeamCoach = z.infer<typeof insertTeamCoachSchema>;
+export type TeamCoach = typeof teamCoaches.$inferSelect;
+
+// Team players roster
+export const teamPlayers = pgTable("team_players", {
+  id: serial("id").primaryKey(),
+  teamId: integer("team_id").notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  position1: text("position_1"),
+  position2: text("position_2"),
+  mainColor: text("main_color"),
+  displayOrder: integer("display_order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertTeamPlayerSchema = createInsertSchema(teamPlayers).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertTeamPlayer = z.infer<typeof insertTeamPlayerSchema>;
+export type TeamPlayer = typeof teamPlayers.$inferSelect;
+
+// Coach role options for dropdown
+export const COACH_ROLES = [
+  "Head Coach",
+  "Assistant Coach", 
+  "Offensive Coordinator",
+  "Defensive Coordinator",
+  "Special Teams",
+  "Assistant"
+] as const;
+
+export type CoachRole = typeof COACH_ROLES[number];

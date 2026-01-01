@@ -5,7 +5,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { FOOTBALL_CONFIG, FORMATIONS, resolveColorKey } from "../shared/football-config";
 import { LOGIC_DICTIONARY } from "../shared/logic-dictionary";
 import { db } from "./db";
-import { aiGenerationLogs, users, teams, plays, passwordResetTokens, featureRequests, playTeams, insertUserSchema, insertTeamSchema, insertPlaySchema, insertFeatureRequestSchema } from "@shared/schema";
+import { aiGenerationLogs, users, teams, plays, passwordResetTokens, featureRequests, playTeams, teamCoaches, teamPlayers, insertUserSchema, insertTeamSchema, insertPlaySchema, insertFeatureRequestSchema, insertTeamCoachSchema, insertTeamPlayerSchema } from "@shared/schema";
 import { desc, eq, and, gt, asc, sql, or } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
@@ -2401,6 +2401,437 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Reorder plays error:", error);
       res.status(500).json({ error: error.message || "Failed to reorder plays" });
+    }
+  });
+
+  // ================== TEAM ROSTER: COACHES ==================
+
+  // Get all coaches for a team
+  app.get("/api/teams/:teamId/coaches", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const teamId = parseInt(req.params.teamId);
+      if (isNaN(teamId)) {
+        return res.status(400).json({ error: "Invalid team ID" });
+      }
+
+      // Verify user owns the team
+      const [team] = await db.select().from(teams).where(
+        and(eq(teams.id, teamId), eq(teams.ownerId, userId))
+      ).limit(1);
+      
+      if (!team) {
+        return res.status(404).json({ error: "Team not found or you don't have access" });
+      }
+
+      const coaches = await db.select()
+        .from(teamCoaches)
+        .where(eq(teamCoaches.teamId, teamId))
+        .orderBy(asc(teamCoaches.displayOrder), asc(teamCoaches.id));
+
+      res.json(coaches);
+    } catch (error: any) {
+      console.error("Get coaches error:", error);
+      res.status(500).json({ error: error.message || "Failed to fetch coaches" });
+    }
+  });
+
+  // Add a coach to a team
+  app.post("/api/teams/:teamId/coaches", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const teamId = parseInt(req.params.teamId);
+      if (isNaN(teamId)) {
+        return res.status(400).json({ error: "Invalid team ID" });
+      }
+
+      // Verify user owns the team
+      const [team] = await db.select().from(teams).where(
+        and(eq(teams.id, teamId), eq(teams.ownerId, userId))
+      ).limit(1);
+      
+      if (!team) {
+        return res.status(404).json({ error: "Team not found or you don't have access" });
+      }
+
+      const { firstName, lastName, role, displayOrder } = req.body;
+      if (!firstName || !lastName || !role) {
+        return res.status(400).json({ error: "First name, last name, and role are required" });
+      }
+
+      const [coach] = await db.insert(teamCoaches).values({
+        teamId,
+        firstName,
+        lastName,
+        role,
+        displayOrder: displayOrder ?? 0,
+      }).returning();
+
+      res.status(201).json(coach);
+    } catch (error: any) {
+      console.error("Add coach error:", error);
+      res.status(500).json({ error: error.message || "Failed to add coach" });
+    }
+  });
+
+  // Update a coach
+  app.patch("/api/teams/:teamId/coaches/:coachId", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const teamId = parseInt(req.params.teamId);
+      const coachId = parseInt(req.params.coachId);
+      if (isNaN(teamId) || isNaN(coachId)) {
+        return res.status(400).json({ error: "Invalid team or coach ID" });
+      }
+
+      // Verify user owns the team
+      const [team] = await db.select().from(teams).where(
+        and(eq(teams.id, teamId), eq(teams.ownerId, userId))
+      ).limit(1);
+      
+      if (!team) {
+        return res.status(404).json({ error: "Team not found or you don't have access" });
+      }
+
+      const { firstName, lastName, role, displayOrder } = req.body;
+      const updates: any = {};
+      if (firstName !== undefined) updates.firstName = firstName;
+      if (lastName !== undefined) updates.lastName = lastName;
+      if (role !== undefined) updates.role = role;
+      if (displayOrder !== undefined) updates.displayOrder = displayOrder;
+
+      const [coach] = await db.update(teamCoaches)
+        .set(updates)
+        .where(and(eq(teamCoaches.id, coachId), eq(teamCoaches.teamId, teamId)))
+        .returning();
+
+      if (!coach) {
+        return res.status(404).json({ error: "Coach not found" });
+      }
+
+      res.json(coach);
+    } catch (error: any) {
+      console.error("Update coach error:", error);
+      res.status(500).json({ error: error.message || "Failed to update coach" });
+    }
+  });
+
+  // Delete a coach
+  app.delete("/api/teams/:teamId/coaches/:coachId", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const teamId = parseInt(req.params.teamId);
+      const coachId = parseInt(req.params.coachId);
+      if (isNaN(teamId) || isNaN(coachId)) {
+        return res.status(400).json({ error: "Invalid team or coach ID" });
+      }
+
+      // Verify user owns the team
+      const [team] = await db.select().from(teams).where(
+        and(eq(teams.id, teamId), eq(teams.ownerId, userId))
+      ).limit(1);
+      
+      if (!team) {
+        return res.status(404).json({ error: "Team not found or you don't have access" });
+      }
+
+      await db.delete(teamCoaches)
+        .where(and(eq(teamCoaches.id, coachId), eq(teamCoaches.teamId, teamId)));
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Delete coach error:", error);
+      res.status(500).json({ error: error.message || "Failed to delete coach" });
+    }
+  });
+
+  // ================== TEAM ROSTER: PLAYERS ==================
+
+  // Get all players for a team
+  app.get("/api/teams/:teamId/players", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const teamId = parseInt(req.params.teamId);
+      if (isNaN(teamId)) {
+        return res.status(400).json({ error: "Invalid team ID" });
+      }
+
+      // Verify user owns the team
+      const [team] = await db.select().from(teams).where(
+        and(eq(teams.id, teamId), eq(teams.ownerId, userId))
+      ).limit(1);
+      
+      if (!team) {
+        return res.status(404).json({ error: "Team not found or you don't have access" });
+      }
+
+      const players = await db.select()
+        .from(teamPlayers)
+        .where(eq(teamPlayers.teamId, teamId))
+        .orderBy(asc(teamPlayers.displayOrder), asc(teamPlayers.id));
+
+      res.json(players);
+    } catch (error: any) {
+      console.error("Get players error:", error);
+      res.status(500).json({ error: error.message || "Failed to fetch players" });
+    }
+  });
+
+  // Add a player to a team
+  app.post("/api/teams/:teamId/players", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const teamId = parseInt(req.params.teamId);
+      if (isNaN(teamId)) {
+        return res.status(400).json({ error: "Invalid team ID" });
+      }
+
+      // Verify user owns the team
+      const [team] = await db.select().from(teams).where(
+        and(eq(teams.id, teamId), eq(teams.ownerId, userId))
+      ).limit(1);
+      
+      if (!team) {
+        return res.status(404).json({ error: "Team not found or you don't have access" });
+      }
+
+      const { firstName, lastName, position1, position2, mainColor, displayOrder } = req.body;
+      if (!firstName || !lastName) {
+        return res.status(400).json({ error: "First name and last name are required" });
+      }
+
+      const [player] = await db.insert(teamPlayers).values({
+        teamId,
+        firstName,
+        lastName,
+        position1: position1 || null,
+        position2: position2 || null,
+        mainColor: mainColor || null,
+        displayOrder: displayOrder ?? 0,
+      }).returning();
+
+      res.status(201).json(player);
+    } catch (error: any) {
+      console.error("Add player error:", error);
+      res.status(500).json({ error: error.message || "Failed to add player" });
+    }
+  });
+
+  // Update a player
+  app.patch("/api/teams/:teamId/players/:playerId", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const teamId = parseInt(req.params.teamId);
+      const playerId = parseInt(req.params.playerId);
+      if (isNaN(teamId) || isNaN(playerId)) {
+        return res.status(400).json({ error: "Invalid team or player ID" });
+      }
+
+      // Verify user owns the team
+      const [team] = await db.select().from(teams).where(
+        and(eq(teams.id, teamId), eq(teams.ownerId, userId))
+      ).limit(1);
+      
+      if (!team) {
+        return res.status(404).json({ error: "Team not found or you don't have access" });
+      }
+
+      const { firstName, lastName, position1, position2, mainColor, displayOrder } = req.body;
+      const updates: any = {};
+      if (firstName !== undefined) updates.firstName = firstName;
+      if (lastName !== undefined) updates.lastName = lastName;
+      if (position1 !== undefined) updates.position1 = position1;
+      if (position2 !== undefined) updates.position2 = position2;
+      if (mainColor !== undefined) updates.mainColor = mainColor;
+      if (displayOrder !== undefined) updates.displayOrder = displayOrder;
+
+      const [player] = await db.update(teamPlayers)
+        .set(updates)
+        .where(and(eq(teamPlayers.id, playerId), eq(teamPlayers.teamId, teamId)))
+        .returning();
+
+      if (!player) {
+        return res.status(404).json({ error: "Player not found" });
+      }
+
+      res.json(player);
+    } catch (error: any) {
+      console.error("Update player error:", error);
+      res.status(500).json({ error: error.message || "Failed to update player" });
+    }
+  });
+
+  // Delete a player
+  app.delete("/api/teams/:teamId/players/:playerId", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const teamId = parseInt(req.params.teamId);
+      const playerId = parseInt(req.params.playerId);
+      if (isNaN(teamId) || isNaN(playerId)) {
+        return res.status(400).json({ error: "Invalid team or player ID" });
+      }
+
+      // Verify user owns the team
+      const [team] = await db.select().from(teams).where(
+        and(eq(teams.id, teamId), eq(teams.ownerId, userId))
+      ).limit(1);
+      
+      if (!team) {
+        return res.status(404).json({ error: "Team not found or you don't have access" });
+      }
+
+      await db.delete(teamPlayers)
+        .where(and(eq(teamPlayers.id, playerId), eq(teamPlayers.teamId, teamId)));
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Delete player error:", error);
+      res.status(500).json({ error: error.message || "Failed to delete player" });
+    }
+  });
+
+  // Bulk import coaches and players (from CSV or AI-parsed data)
+  app.post("/api/teams/:teamId/roster/import", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const teamId = parseInt(req.params.teamId);
+      if (isNaN(teamId)) {
+        return res.status(400).json({ error: "Invalid team ID" });
+      }
+
+      // Verify user owns the team
+      const [team] = await db.select().from(teams).where(
+        and(eq(teams.id, teamId), eq(teams.ownerId, userId))
+      ).limit(1);
+      
+      if (!team) {
+        return res.status(404).json({ error: "Team not found or you don't have access" });
+      }
+
+      const { coaches, players } = req.body;
+
+      // Import coaches
+      if (coaches && Array.isArray(coaches)) {
+        for (let i = 0; i < coaches.length; i++) {
+          const { firstName, lastName, role } = coaches[i];
+          if (firstName && lastName && role) {
+            await db.insert(teamCoaches).values({
+              teamId,
+              firstName,
+              lastName,
+              role,
+              displayOrder: i,
+            });
+          }
+        }
+      }
+
+      // Import players
+      if (players && Array.isArray(players)) {
+        for (let i = 0; i < players.length; i++) {
+          const { firstName, lastName, position1, position2, mainColor } = players[i];
+          if (firstName && lastName) {
+            await db.insert(teamPlayers).values({
+              teamId,
+              firstName,
+              lastName,
+              position1: position1 || null,
+              position2: position2 || null,
+              mainColor: mainColor || null,
+              displayOrder: i,
+            });
+          }
+        }
+      }
+
+      res.json({ success: true, message: "Roster imported successfully" });
+    } catch (error: any) {
+      console.error("Roster import error:", error);
+      res.status(500).json({ error: error.message || "Failed to import roster" });
+    }
+  });
+
+  // Parse roster from image using AI (Gemini Vision)
+  app.post("/api/teams/:teamId/roster/parse-image", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const teamId = parseInt(req.params.teamId);
+      if (isNaN(teamId)) {
+        return res.status(400).json({ error: "Invalid team ID" });
+      }
+
+      // Verify user owns the team
+      const [team] = await db.select().from(teams).where(
+        and(eq(teams.id, teamId), eq(teams.ownerId, userId))
+      ).limit(1);
+      
+      if (!team) {
+        return res.status(404).json({ error: "Team not found or you don't have access" });
+      }
+
+      const { imageData } = req.body;
+      if (!imageData) {
+        return res.status(400).json({ error: "Image data is required" });
+      }
+
+      // Use Gemini to parse the image
+      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+      
+      const prompt = `Analyze this image of a team roster or player list. Extract any coach and player information you can find.
+
+Return a JSON object with this exact structure:
+{
+  "coaches": [
+    { "firstName": "string", "lastName": "string", "role": "string" }
+  ],
+  "players": [
+    { "firstName": "string", "lastName": "string", "position1": "string or null", "position2": "string or null", "mainColor": "string or null" }
+  ]
+}
+
+For coach roles, use one of: "Head Coach", "Assistant Coach", "Offensive Coordinator", "Defensive Coordinator", "Special Teams", "Assistant"
+
+For player positions, use standard football positions like: QB, RB, WR, TE, OL, DL, LB, DB, K, P, etc.
+
+If you cannot determine a value, use null or omit it. Extract as much information as possible from the image.
+
+Return ONLY the JSON object, no markdown formatting or explanation.`;
+
+      // Parse base64 image data
+      const base64Data = imageData.replace(/^data:image\/\w+;base64,/, "");
+      
+      const result = await model.generateContent([
+        prompt,
+        {
+          inlineData: {
+            mimeType: "image/png",
+            data: base64Data,
+          },
+        },
+      ]);
+
+      const responseText = result.response.text();
+      
+      // Try to parse the JSON response
+      let parsedRoster;
+      try {
+        // Clean up the response text
+        let cleanedResponse = responseText.trim();
+        if (cleanedResponse.startsWith("```json")) {
+          cleanedResponse = cleanedResponse.replace(/^```json\n?/, "").replace(/\n?```$/, "");
+        } else if (cleanedResponse.startsWith("```")) {
+          cleanedResponse = cleanedResponse.replace(/^```\n?/, "").replace(/\n?```$/, "");
+        }
+        parsedRoster = JSON.parse(cleanedResponse);
+      } catch (e) {
+        console.error("Failed to parse AI response:", responseText);
+        return res.status(500).json({ error: "Failed to parse roster from image" });
+      }
+
+      res.json(parsedRoster);
+    } catch (error: any) {
+      console.error("Parse roster image error:", error);
+      res.status(500).json({ error: error.message || "Failed to parse roster from image" });
     }
   });
 
