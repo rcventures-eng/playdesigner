@@ -32,21 +32,51 @@ import {
   Users,
   UserCog
 } from "lucide-react";
-import { COACH_ROLES, type TeamCoach, type TeamPlayer } from "@shared/schema";
+import { 
+  COACH_ROLES, 
+  OFFENSIVE_POSITIONS_BY_FORMAT, 
+  DEFENSIVE_POSITIONS_BY_FORMAT,
+  type TeamCoach, 
+  type TeamPlayer,
+  type GameFormat 
+} from "@shared/schema";
 
 interface TeamRosterCardProps {
   teamId: number;
+  gameFormat?: GameFormat;
 }
 
-const POSITION_OPTIONS = [
-  "QB", "RB", "FB", "WR", "TE", "OL", "C", "LG", "RG", "LT", "RT",
-  "DL", "DE", "DT", "NT", "LB", "ILB", "OLB", "MLB", "CB", "S", "FS", "SS",
-  "K", "P", "LS", "KR", "PR"
-];
+// Helper to determine if a color is dark and needs white text
+function isColorDark(color: string): boolean {
+  if (!color) return false;
+  
+  // Handle color names
+  const darkColorNames = ['black', 'navy', 'darkblue', 'darkgreen', 'darkred', 'maroon', 'purple', 'indigo'];
+  if (darkColorNames.includes(color.toLowerCase())) return true;
+  
+  // Handle hex colors
+  let hex = color.replace('#', '');
+  if (hex.length === 3) {
+    hex = hex.split('').map(c => c + c).join('');
+  }
+  if (hex.length !== 6) return false;
+  
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  
+  // Calculate luminance - if less than 128, it's a dark color
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b);
+  return luminance < 128;
+}
 
-export default function TeamRosterCard({ teamId }: TeamRosterCardProps) {
+export default function TeamRosterCard({ teamId, gameFormat = "5v5" }: TeamRosterCardProps) {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Get positions based on game format
+  const offensivePositions = OFFENSIVE_POSITIONS_BY_FORMAT[gameFormat] || OFFENSIVE_POSITIONS_BY_FORMAT["5v5"];
+  const defensivePositions = DEFENSIVE_POSITIONS_BY_FORMAT[gameFormat] || DEFENSIVE_POSITIONS_BY_FORMAT["5v5"];
   
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadType, setUploadType] = useState<"csv" | "image">("csv");
@@ -66,6 +96,7 @@ export default function TeamRosterCard({ teamId }: TeamRosterCardProps) {
   const [newPlayerLastName, setNewPlayerLastName] = useState("");
   const [newPlayerPosition1, setNewPlayerPosition1] = useState("");
   const [newPlayerPosition2, setNewPlayerPosition2] = useState("");
+  const [newPlayerDefPosition1, setNewPlayerDefPosition1] = useState("");
   const [newPlayerMainColor, setNewPlayerMainColor] = useState("");
 
   const { data: coaches = [], isLoading: coachesLoading } = useQuery<TeamCoach[]>({
@@ -121,7 +152,7 @@ export default function TeamRosterCard({ teamId }: TeamRosterCardProps) {
   });
 
   const addPlayerMutation = useMutation({
-    mutationFn: async (data: { firstName: string; lastName: string; position1?: string; position2?: string; mainColor?: string }) => {
+    mutationFn: async (data: { firstName: string; lastName: string; position1?: string; position2?: string; defPosition1?: string; mainColor?: string }) => {
       const response = await apiRequest("POST", `/api/teams/${teamId}/players`, data);
       return response.json();
     },
@@ -192,6 +223,7 @@ export default function TeamRosterCard({ teamId }: TeamRosterCardProps) {
     setNewPlayerLastName("");
     setNewPlayerPosition1("");
     setNewPlayerPosition2("");
+    setNewPlayerDefPosition1("");
     setNewPlayerMainColor("");
   };
 
@@ -217,6 +249,7 @@ export default function TeamRosterCard({ teamId }: TeamRosterCardProps) {
       lastName: newPlayerLastName,
       position1: newPlayerPosition1 || undefined,
       position2: newPlayerPosition2 || undefined,
+      defPosition1: newPlayerDefPosition1 || undefined,
       mainColor: newPlayerMainColor || undefined,
     });
   };
@@ -540,12 +573,12 @@ export default function TeamRosterCard({ teamId }: TeamRosterCardProps) {
                         value={editingPlayer.position1 || ""}
                         onValueChange={(value) => setEditingPlayer({ ...editingPlayer, position1: value })}
                       >
-                        <SelectTrigger className="w-20 h-8">
-                          <SelectValue placeholder="Pos 1" />
+                        <SelectTrigger className="w-28 h-8">
+                          <SelectValue placeholder="Off Pos 1" />
                         </SelectTrigger>
                         <SelectContent>
-                          {POSITION_OPTIONS.map((pos) => (
-                            <SelectItem key={pos} value={pos}>{pos}</SelectItem>
+                          {offensivePositions.map((pos) => (
+                            <SelectItem key={pos.value} value={pos.value}>{pos.label}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -553,12 +586,25 @@ export default function TeamRosterCard({ teamId }: TeamRosterCardProps) {
                         value={editingPlayer.position2 || ""}
                         onValueChange={(value) => setEditingPlayer({ ...editingPlayer, position2: value })}
                       >
-                        <SelectTrigger className="w-20 h-8">
-                          <SelectValue placeholder="Pos 2" />
+                        <SelectTrigger className="w-28 h-8">
+                          <SelectValue placeholder="Off Pos 2" />
                         </SelectTrigger>
                         <SelectContent>
-                          {POSITION_OPTIONS.map((pos) => (
-                            <SelectItem key={pos} value={pos}>{pos}</SelectItem>
+                          {offensivePositions.map((pos) => (
+                            <SelectItem key={pos.value} value={pos.value}>{pos.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select
+                        value={editingPlayer.defPosition1 || ""}
+                        onValueChange={(value) => setEditingPlayer({ ...editingPlayer, defPosition1: value })}
+                      >
+                        <SelectTrigger className="w-28 h-8">
+                          <SelectValue placeholder="Def Pos" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {defensivePositions.map((pos) => (
+                            <SelectItem key={pos.value} value={pos.value}>{pos.label}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -579,6 +625,7 @@ export default function TeamRosterCard({ teamId }: TeamRosterCardProps) {
                             lastName: editingPlayer.lastName,
                             position1: editingPlayer.position1,
                             position2: editingPlayer.position2,
+                            defPosition1: editingPlayer.defPosition1,
                             mainColor: editingPlayer.mainColor,
                           }
                         })}
@@ -602,7 +649,12 @@ export default function TeamRosterCard({ teamId }: TeamRosterCardProps) {
                         <span className="font-medium">{player.firstName} {player.lastName}</span>
                         {(player.position1 || player.position2) && (
                           <span className="text-muted-foreground text-sm">
-                            • {[player.position1, player.position2].filter(Boolean).join(" / ")}
+                            • Off: {[player.position1, player.position2].filter(Boolean).join(" / ")}
+                          </span>
+                        )}
+                        {player.defPosition1 && (
+                          <span className="text-muted-foreground text-sm">
+                            • Def: {player.defPosition1}
                           </span>
                         )}
                         {player.mainColor && (
@@ -610,7 +662,7 @@ export default function TeamRosterCard({ teamId }: TeamRosterCardProps) {
                             className="px-2 py-0.5 rounded text-xs font-bold"
                             style={{ 
                               backgroundColor: player.mainColor,
-                              color: '#000000'
+                              color: isColorDark(player.mainColor) ? '#FFFFFF' : '#000000'
                             }}
                           >
                             {player.mainColor}
@@ -659,22 +711,32 @@ export default function TeamRosterCard({ teamId }: TeamRosterCardProps) {
                     data-testid="input-player-last-name"
                   />
                   <Select value={newPlayerPosition1} onValueChange={setNewPlayerPosition1}>
-                    <SelectTrigger className="w-20 h-8" data-testid="select-player-position-1">
-                      <SelectValue placeholder="Pos 1" />
+                    <SelectTrigger className="w-28 h-8" data-testid="select-player-position-1">
+                      <SelectValue placeholder="Off Pos 1" />
                     </SelectTrigger>
                     <SelectContent>
-                      {POSITION_OPTIONS.map((pos) => (
-                        <SelectItem key={pos} value={pos}>{pos}</SelectItem>
+                      {offensivePositions.map((pos) => (
+                        <SelectItem key={pos.value} value={pos.value}>{pos.label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                   <Select value={newPlayerPosition2} onValueChange={setNewPlayerPosition2}>
-                    <SelectTrigger className="w-20 h-8" data-testid="select-player-position-2">
-                      <SelectValue placeholder="Pos 2" />
+                    <SelectTrigger className="w-28 h-8" data-testid="select-player-position-2">
+                      <SelectValue placeholder="Off Pos 2" />
                     </SelectTrigger>
                     <SelectContent>
-                      {POSITION_OPTIONS.map((pos) => (
-                        <SelectItem key={pos} value={pos}>{pos}</SelectItem>
+                      {offensivePositions.map((pos) => (
+                        <SelectItem key={pos.value} value={pos.value}>{pos.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={newPlayerDefPosition1} onValueChange={setNewPlayerDefPosition1}>
+                    <SelectTrigger className="w-28 h-8" data-testid="select-player-def-position-1">
+                      <SelectValue placeholder="Def Pos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {defensivePositions.map((pos) => (
+                        <SelectItem key={pos.value} value={pos.value}>{pos.label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

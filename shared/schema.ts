@@ -31,11 +31,15 @@ export const insertUserSchema = createInsertSchema(users).pick({
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
+export const GAME_FORMATS = ["5v5", "7v7", "9v9", "11v11"] as const;
+export type GameFormat = typeof GAME_FORMATS[number];
+
 export const teams = pgTable("teams", {
   id: serial("id").primaryKey(),
   ownerId: varchar("owner_id").notNull().references(() => users.id),
   name: text("name").notNull(),
   year: text("year").default("2025"),
+  gameFormat: text("game_format").default("5v5"),
   coverImageUrl: text("cover_image_url"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -185,6 +189,7 @@ export const teamPlayers = pgTable("team_players", {
   lastName: text("last_name").notNull(),
   position1: text("position_1"),
   position2: text("position_2"),
+  defPosition1: text("def_position_1"),
   mainColor: text("main_color"),
   displayOrder: integer("display_order").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow(),
@@ -209,3 +214,90 @@ export const COACH_ROLES = [
 ] as const;
 
 export type CoachRole = typeof COACH_ROLES[number];
+
+// Position mappings by game format - Offensive positions
+export const OFFENSIVE_POSITIONS_BY_FORMAT: Record<GameFormat, { value: string; label: string }[]> = {
+  "5v5": [
+    { value: "QB", label: "QB" },
+    { value: "RB", label: "RB" },
+    { value: "X", label: "X (Outside Receiver 1)" },
+    { value: "Y", label: "Y (Slot Receiver)" },
+    { value: "Z", label: "Z (Outside Receiver 2)" },
+  ],
+  "7v7": [
+    { value: "QB", label: "QB" },
+    { value: "RB", label: "RB" },
+    { value: "X", label: "X (Outside Receiver 1)" },
+    { value: "Y", label: "Y (Slot Receiver)" },
+    { value: "Z", label: "Z (Outside Receiver 2)" },
+    { value: "H", label: "H (H-Back)" },
+    { value: "C", label: "C (Center)" },
+  ],
+  "9v9": [
+    { value: "QB", label: "QB" },
+    { value: "RB", label: "RB" },
+    { value: "FB", label: "FB" },
+    { value: "X", label: "X (Outside Receiver 1)" },
+    { value: "Y", label: "Y (Slot Receiver)" },
+    { value: "Z", label: "Z (Outside Receiver 2)" },
+    { value: "TE", label: "TE" },
+    { value: "C", label: "C (Center)" },
+    { value: "OL", label: "OL" },
+  ],
+  "11v11": [
+    { value: "QB", label: "QB" },
+    { value: "RB", label: "RB" },
+    { value: "FB", label: "FB" },
+    { value: "WR", label: "WR" },
+    { value: "X", label: "X (Split End)" },
+    { value: "Y", label: "Y (Slot)" },
+    { value: "Z", label: "Z (Flanker)" },
+    { value: "TE", label: "TE" },
+    { value: "LT", label: "LT" },
+    { value: "LG", label: "LG" },
+    { value: "C", label: "C" },
+    { value: "RG", label: "RG" },
+    { value: "RT", label: "RT" },
+  ],
+};
+
+// Position mappings by game format - Defensive positions
+export const DEFENSIVE_POSITIONS_BY_FORMAT: Record<GameFormat, { value: string; label: string }[]> = {
+  "5v5": [
+    { value: "LB", label: "LB (Linebacker)" },
+    { value: "CB", label: "CB (Cornerback)" },
+    { value: "S", label: "S (Safety)" },
+    { value: "RUSH", label: "RUSH (Pass Rusher)" },
+  ],
+  "7v7": [
+    { value: "LB", label: "LB (Linebacker)" },
+    { value: "CB", label: "CB (Cornerback)" },
+    { value: "S", label: "S (Safety)" },
+    { value: "FS", label: "FS (Free Safety)" },
+    { value: "SS", label: "SS (Strong Safety)" },
+    { value: "RUSH", label: "RUSH (Pass Rusher)" },
+  ],
+  "9v9": [
+    { value: "DL", label: "DL (Defensive Line)" },
+    { value: "DE", label: "DE (Defensive End)" },
+    { value: "DT", label: "DT (Defensive Tackle)" },
+    { value: "LB", label: "LB (Linebacker)" },
+    { value: "MLB", label: "MLB (Middle Linebacker)" },
+    { value: "OLB", label: "OLB (Outside Linebacker)" },
+    { value: "CB", label: "CB (Cornerback)" },
+    { value: "S", label: "S (Safety)" },
+  ],
+  "11v11": [
+    { value: "DE", label: "DE (Defensive End)" },
+    { value: "DT", label: "DT (Defensive Tackle)" },
+    { value: "NT", label: "NT (Nose Tackle)" },
+    { value: "OLB", label: "OLB (Outside Linebacker)" },
+    { value: "ILB", label: "ILB (Inside Linebacker)" },
+    { value: "MLB", label: "MLB (Middle Linebacker)" },
+    { value: "CB", label: "CB (Cornerback)" },
+    { value: "FS", label: "FS (Free Safety)" },
+    { value: "SS", label: "SS (Strong Safety)" },
+    { value: "NB", label: "NB (Nickelback)" },
+    { value: "DB", label: "DB (Dime Back)" },
+  ],
+};

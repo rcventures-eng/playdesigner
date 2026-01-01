@@ -1201,13 +1201,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Ensure tags is a proper array (handle stringified JSON)
-      let parsedTags = tags;
+      let parsedTags: string[] | unknown = tags;
       if (typeof parsedTags === "string") {
+        const tagString = parsedTags;
         try {
-          parsedTags = JSON.parse(parsedTags);
+          parsedTags = JSON.parse(tagString);
         } catch {
           // Try splitting by comma as fallback for legacy data
-          parsedTags = parsedTags.split(",").map((t: string) => t.trim()).filter(Boolean);
+          parsedTags = tagString.split(",").map((t: string) => t.trim()).filter(Boolean);
         }
       }
       if (!Array.isArray(parsedTags)) {
@@ -2595,7 +2596,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Team not found or you don't have access" });
       }
 
-      const { firstName, lastName, position1, position2, mainColor, displayOrder } = req.body;
+      const { firstName, lastName, position1, position2, defPosition1, mainColor, displayOrder } = req.body;
       if (!firstName || !lastName) {
         return res.status(400).json({ error: "First name and last name are required" });
       }
@@ -2606,6 +2607,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastName,
         position1: position1 || null,
         position2: position2 || null,
+        defPosition1: defPosition1 || null,
         mainColor: mainColor || null,
         displayOrder: displayOrder ?? 0,
       }).returning();
@@ -2636,12 +2638,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Team not found or you don't have access" });
       }
 
-      const { firstName, lastName, position1, position2, mainColor, displayOrder } = req.body;
+      const { firstName, lastName, position1, position2, defPosition1, mainColor, displayOrder } = req.body;
       const updates: any = {};
       if (firstName !== undefined) updates.firstName = firstName;
       if (lastName !== undefined) updates.lastName = lastName;
       if (position1 !== undefined) updates.position1 = position1;
       if (position2 !== undefined) updates.position2 = position2;
+      if (defPosition1 !== undefined) updates.defPosition1 = defPosition1;
       if (mainColor !== undefined) updates.mainColor = mainColor;
       if (displayOrder !== undefined) updates.displayOrder = displayOrder;
 
@@ -2729,7 +2732,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Import players
       if (players && Array.isArray(players)) {
         for (let i = 0; i < players.length; i++) {
-          const { firstName, lastName, position1, position2, mainColor } = players[i];
+          const { firstName, lastName, position1, position2, defPosition1, mainColor } = players[i];
           if (firstName && lastName) {
             await db.insert(teamPlayers).values({
               teamId,
@@ -2737,6 +2740,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               lastName,
               position1: position1 || null,
               position2: position2 || null,
+              defPosition1: defPosition1 || null,
               mainColor: mainColor || null,
               displayOrder: i,
             });

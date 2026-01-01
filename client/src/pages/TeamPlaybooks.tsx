@@ -576,7 +576,7 @@ export default function TeamPlaybooks() {
                   )}
                   
                   {/* Team Roster Card */}
-                  <TeamRosterCard teamId={selectedTeam.id} />
+                  <TeamRosterCard teamId={selectedTeam.id} gameFormat={(selectedTeam as any).gameFormat || "5v5"} />
                 </div>
 
                 {/* Right Column: Plays Rail (YouTube Playlist Style) - Now 50% width */}
