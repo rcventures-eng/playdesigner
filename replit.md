@@ -8,6 +8,16 @@ The Football Play Designer is a free, web-based, single-page application for ama
 
 Preferred communication style: Simple, everyday language.
 
+### Playwright Testing Guardrails
+
+To avoid excessive costs from repeated test failures:
+-   **3 attempts max** for any single feature/bug - if it fails 3 times with similar errors, stop and reassess
+-   **5 total tests** per session before pausing to ask if user wants to continue
+-   **Skip Playwright for debugging** - use it for verification after a fix is confirmed working
+-   **Better debugging approach**: Trace code flow by reading files first, check logs, fix the issue, then run one Playwright test to confirm
+-   **When to use Playwright**: Final validation, user-facing flows, visual verification
+-   **When NOT to use Playwright**: Debugging pointer/canvas interactions (timing-sensitive), hunting for root cause, simple code changes
+
 ## System Architecture
 
 ### Frontend
