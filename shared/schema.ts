@@ -203,6 +203,27 @@ export const insertTeamPlayerSchema = createInsertSchema(teamPlayers).omit({
 export type InsertTeamPlayer = z.infer<typeof insertTeamPlayerSchema>;
 export type TeamPlayer = typeof teamPlayers.$inferSelect;
 
+// Team splits (Squad 1, Squad 2) - assigns players to squads
+export const teamSplits = pgTable("team_splits", {
+  id: serial("id").primaryKey(),
+  teamId: integer("team_id").notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  playerId: integer("player_id").notNull().references(() => teamPlayers.id, { onDelete: 'cascade' }),
+  squadName: text("squad_name").notNull(), // "Squad 1" or "Squad 2"
+  displayOrder: integer("display_order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertTeamSplitSchema = createInsertSchema(teamSplits).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertTeamSplit = z.infer<typeof insertTeamSplitSchema>;
+export type TeamSplit = typeof teamSplits.$inferSelect;
+
+export const SQUAD_NAMES = ["Squad 1", "Squad 2"] as const;
+export type SquadName = typeof SQUAD_NAMES[number];
+
 // Coach role options for dropdown
 export const COACH_ROLES = [
   "Head Coach",

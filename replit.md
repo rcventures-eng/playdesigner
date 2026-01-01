@@ -55,7 +55,7 @@ Allows users to create, edit, and manage team playbooks, including uploading cov
 
 The Team Roster feature allows coaches to manage their coaching staff and players for each team playbook:
 -   **Coaching Staff Section**: Add/edit/delete coaches with First Name, Last Name, and Role (Head Coach, Assistant, Offensive Coordinator, Defensive Coordinator, Volunteer)
--   **Players Section**: Add/edit/delete players with First Name, Last Name, Position 1, Position 2, and Main Color
+-   **Players Section**: Add/edit/delete players with First Name, Last Name, Position 1, Position 2, Defensive Position, and up to 4 Main Colors (comma-separated)
 -   **Upload Options**: Import rosters via CSV file or screenshot image (uses Gemini AI for OCR parsing)
 -   **Preview Modal**: Review parsed data before confirming import
 -   **Database Tables**: `teamCoaches` and `teamPlayers` with proper foreign key relationships to teams
@@ -65,7 +65,22 @@ The Team Roster feature allows coaches to manage their coaching staff and player
     -   POST `/api/teams/:teamId/roster/import` - Bulk import coaches and players
     -   POST `/api/teams/:teamId/roster/parse-image` - AI-powered image parsing
 -   **UI Component**: `TeamRosterCard.tsx` displays below team cover image on Team Playbooks page
--   **Design**: Uses shadcn Card components, design tokens for dark mode compatibility, and comprehensive data-testid coverage for testing
+-   **Design**: Uses shadcn Card components with white background, gray borders, and comprehensive data-testid coverage for testing
+
+### Team Splits (Squad Assignments)
+
+The Splits section allows coaches to organize players into two squads for practice planning:
+-   **Squad 1 and Squad 2**: Two side-by-side squads displayed in a grid layout
+-   **Player Assignment**: Assign up to 6 players per squad from the roster via dropdown selection
+-   **Visual Indicators**: Shows player name, positions (offensive/defensive), and color badges
+-   **Remove Players**: X button to remove players from a squad
+-   **Unassigned Players**: Only players not already assigned to a squad appear in the dropdown
+-   **Database Table**: `teamSplits` with foreign keys to `teams` and `teamPlayers` (cascade delete)
+-   **API Endpoints**:
+    -   GET `/api/teams/:teamId/splits` - Get all squad assignments with player info
+    -   POST `/api/teams/:teamId/splits` - Add player to a squad (validates 6-player limit)
+    -   DELETE `/api/teams/:teamId/splits/:splitId` - Remove player from squad
+-   **Use Case**: Helps coaches plan how to divide players if the full roster shows up for practice
 
 ### Google Drive Export (All Users)
 

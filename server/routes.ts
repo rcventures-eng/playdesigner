@@ -5,7 +5,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { FOOTBALL_CONFIG, FORMATIONS, resolveColorKey } from "../shared/football-config";
 import { LOGIC_DICTIONARY } from "../shared/logic-dictionary";
 import { db } from "./db";
-import { aiGenerationLogs, users, teams, plays, passwordResetTokens, featureRequests, playTeams, teamCoaches, teamPlayers, insertUserSchema, insertTeamSchema, insertPlaySchema, insertFeatureRequestSchema, insertTeamCoachSchema, insertTeamPlayerSchema } from "@shared/schema";
+import { aiGenerationLogs, users, teams, plays, passwordResetTokens, featureRequests, playTeams, teamCoaches, teamPlayers, teamSplits, insertUserSchema, insertTeamSchema, insertPlaySchema, insertFeatureRequestSchema, insertTeamCoachSchema, insertTeamPlayerSchema, SQUAD_NAMES } from "@shared/schema";
 import { desc, eq, and, gt, asc, sql, or } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
@@ -2836,6 +2836,157 @@ Return ONLY the JSON object, no markdown formatting or explanation.`;
     } catch (error: any) {
       console.error("Parse roster image error:", error);
       res.status(500).json({ error: error.message || "Failed to parse roster from image" });
+    }
+  });
+
+  // ============ TEAM SPLITS (SQUAD ASSIGNMENTS) ROUTES ============
+
+  // Get all splits for a team
+  app.get("/api/teams/:teamId/splits", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const teamId = parseInt(req.params.teamId);
+      if (isNaN(teamId)) {
+        return res.status(400).json({ error: "Invalid team ID" });
+      }
+
+      // Verify user owns the team
+      const [team] = await db.select().from(teams).where(
+        and(eq(teams.id, teamId), eq(teams.ownerId, userId))
+      ).limit(1);
+      
+      if (!team) {
+        return res.status(404).json({ error: "Team not found or you don't have access" });
+      }
+
+      // Get splits with player info
+      const splits = await db
+        .select({
+          id: teamSplits.id,
+          teamId: teamSplits.teamId,
+          playerId: teamSplits.playerId,
+          squadName: teamSplits.squadName,
+          displayOrder: teamSplits.displayOrder,
+          createdAt: teamSplits.createdAt,
+          player: {
+            id: teamPlayers.id,
+            firstName: teamPlayers.firstName,
+            lastName: teamPlayers.lastName,
+            position1: teamPlayers.position1,
+            position2: teamPlayers.position2,
+            defPosition1: teamPlayers.defPosition1,
+            mainColor: teamPlayers.mainColor,
+          }
+        })
+        .from(teamSplits)
+        .innerJoin(teamPlayers, eq(teamSplits.playerId, teamPlayers.id))
+        .where(eq(teamSplits.teamId, teamId))
+        .orderBy(asc(teamSplits.squadName), asc(teamSplits.displayOrder));
+
+      res.json(splits);
+    } catch (error: any) {
+      console.error("Get splits error:", error);
+      res.status(500).json({ error: error.message || "Failed to fetch splits" });
+    }
+  });
+
+  // Add a player to a squad
+  app.post("/api/teams/:teamId/splits", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const teamId = parseInt(req.params.teamId);
+      if (isNaN(teamId)) {
+        return res.status(400).json({ error: "Invalid team ID" });
+      }
+
+      const { playerId, squadName } = req.body;
+      if (!playerId || !squadName) {
+        return res.status(400).json({ error: "Player ID and squad name are required" });
+      }
+
+      if (!SQUAD_NAMES.includes(squadName)) {
+        return res.status(400).json({ error: "Invalid squad name" });
+      }
+
+      // Verify user owns the team
+      const [team] = await db.select().from(teams).where(
+        and(eq(teams.id, teamId), eq(teams.ownerId, userId))
+      ).limit(1);
+      
+      if (!team) {
+        return res.status(404).json({ error: "Team not found or you don't have access" });
+      }
+
+      // Verify player belongs to this team
+      const [player] = await db.select().from(teamPlayers).where(
+        and(eq(teamPlayers.id, playerId), eq(teamPlayers.teamId, teamId))
+      ).limit(1);
+
+      if (!player) {
+        return res.status(404).json({ error: "Player not found in this team" });
+      }
+
+      // Check if player is already in this squad
+      const [existingSplit] = await db.select().from(teamSplits).where(
+        and(eq(teamSplits.playerId, playerId), eq(teamSplits.squadName, squadName))
+      ).limit(1);
+
+      if (existingSplit) {
+        return res.status(400).json({ error: "Player is already in this squad" });
+      }
+
+      // Check squad capacity (max 6 per squad)
+      const squadCount = await db.select({ count: sql<number>`count(*)` })
+        .from(teamSplits)
+        .where(and(eq(teamSplits.teamId, teamId), eq(teamSplits.squadName, squadName)));
+      
+      if (squadCount[0]?.count >= 6) {
+        return res.status(400).json({ error: "Squad is full (maximum 6 players)" });
+      }
+
+      // Get display order for new entry
+      const displayOrder = squadCount[0]?.count || 0;
+
+      const [split] = await db.insert(teamSplits).values({
+        teamId,
+        playerId,
+        squadName,
+        displayOrder,
+      }).returning();
+
+      res.json(split);
+    } catch (error: any) {
+      console.error("Add split error:", error);
+      res.status(500).json({ error: error.message || "Failed to add player to squad" });
+    }
+  });
+
+  // Remove a player from a squad
+  app.delete("/api/teams/:teamId/splits/:splitId", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const teamId = parseInt(req.params.teamId);
+      const splitId = parseInt(req.params.splitId);
+      if (isNaN(teamId) || isNaN(splitId)) {
+        return res.status(400).json({ error: "Invalid team or split ID" });
+      }
+
+      // Verify user owns the team
+      const [team] = await db.select().from(teams).where(
+        and(eq(teams.id, teamId), eq(teams.ownerId, userId))
+      ).limit(1);
+      
+      if (!team) {
+        return res.status(404).json({ error: "Team not found or you don't have access" });
+      }
+
+      await db.delete(teamSplits)
+        .where(and(eq(teamSplits.id, splitId), eq(teamSplits.teamId, teamId)));
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Remove split error:", error);
+      res.status(500).json({ error: error.message || "Failed to remove player from squad" });
     }
   });
 

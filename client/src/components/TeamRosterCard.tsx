@@ -36,10 +36,13 @@ import {
   COACH_ROLES, 
   OFFENSIVE_POSITIONS_BY_FORMAT, 
   DEFENSIVE_POSITIONS_BY_FORMAT,
+  SQUAD_NAMES,
   type TeamCoach, 
   type TeamPlayer,
+  type TeamSplit,
   type GameFormat 
 } from "@shared/schema";
+import { UsersRound } from "lucide-react";
 
 interface TeamRosterCardProps {
   teamId: number;
@@ -208,12 +211,71 @@ export default function TeamRosterCard({ teamId, gameFormat = "5v5" }: TeamRoste
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/teams", teamId, "players"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/teams", teamId, "splits"] });
       toast({ title: "Player removed" });
     },
     onError: (error: Error) => {
       toast({ title: "Failed to remove player", description: error.message, variant: "destructive" });
     },
   });
+
+  // Splits (Squad assignments) query and mutations
+  type SplitWithPlayer = {
+    id: number;
+    teamId: number;
+    playerId: number;
+    squadName: string;
+    displayOrder: number;
+    createdAt: string;
+    player: {
+      id: number;
+      firstName: string;
+      lastName: string;
+      position1: string | null;
+      position2: string | null;
+      defPosition1: string | null;
+      mainColor: string | null;
+    };
+  };
+
+  const { data: splits = [], isLoading: splitsLoading } = useQuery<SplitWithPlayer[]>({
+    queryKey: ["/api/teams", teamId, "splits"],
+  });
+
+  const addToSquadMutation = useMutation({
+    mutationFn: async (data: { playerId: number; squadName: string }) => {
+      const response = await apiRequest("POST", `/api/teams/${teamId}/splits`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/teams", teamId, "splits"] });
+      toast({ title: "Player added to squad" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to add to squad", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const removeFromSquadMutation = useMutation({
+    mutationFn: async (splitId: number) => {
+      await apiRequest("DELETE", `/api/teams/${teamId}/splits/${splitId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/teams", teamId, "splits"] });
+      toast({ title: "Player removed from squad" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to remove from squad", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Get players assigned to each squad
+  const squad1Players = splits.filter(s => s.squadName === "Squad 1");
+  const squad2Players = splits.filter(s => s.squadName === "Squad 2");
+  
+  // Get players not yet assigned to a squad
+  const assignedPlayerIds = splits.map(s => s.playerId);
+  const unassignedPlayers = players.filter(p => !assignedPlayerIds.includes(p.id));
 
   const importRosterMutation = useMutation({
     mutationFn: async (data: { coaches: any[]; players: any[] }) => {
@@ -790,6 +852,152 @@ export default function TeamRosterCard({ teamId, gameFormat = "5v5" }: TeamRoste
                   </Button>
                 </div>
               )}
+            </div>
+          )}
+        </div>
+
+        {/* Splits Section */}
+        <div className="border-t border-gray-200 pt-4">
+          <div className="flex items-center gap-2 text-primary mb-3">
+            <UsersRound className="w-4 h-4" />
+            <span className="font-semibold">Splits</span>
+          </div>
+
+          {splitsLoading ? (
+            <div className="text-muted-foreground text-sm py-2">Loading...</div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              {/* Squad 1 */}
+              <div className="bg-gray-50 rounded-lg p-3" data-testid="squad-1-container">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium text-gray-900">Squad 1</span>
+                  <span className="text-xs text-gray-500">{squad1Players.length}/6</span>
+                </div>
+                <div className="space-y-2">
+                  {squad1Players.map((split) => (
+                    <div
+                      key={split.id}
+                      className="flex items-center justify-between bg-white rounded px-2 py-1.5 border border-gray-200"
+                      data-testid={`squad1-player-${split.playerId}`}
+                    >
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <span className="font-medium text-sm truncate">
+                          {split.player.firstName} {split.player.lastName}
+                        </span>
+                        {(split.player.position1 || split.player.defPosition1) && (
+                          <span className="text-xs text-gray-500 truncate">
+                            {[split.player.position1, split.player.defPosition1].filter(Boolean).join(" / ")}
+                          </span>
+                        )}
+                        {parseColors(split.player.mainColor).slice(0, 2).map((color, idx) => (
+                          <span
+                            key={idx}
+                            className="w-3 h-3 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: color }}
+                            title={color}
+                          />
+                        ))}
+                      </div>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6 flex-shrink-0"
+                        onClick={() => removeFromSquadMutation.mutate(split.id)}
+                        data-testid={`button-remove-squad1-${split.playerId}`}
+                      >
+                        <X className="w-3 h-3 text-muted-foreground" />
+                      </Button>
+                    </div>
+                  ))}
+                  {squad1Players.length < 6 && unassignedPlayers.length > 0 && (
+                    <Select
+                      onValueChange={(playerId) => {
+                        addToSquadMutation.mutate({ playerId: parseInt(playerId), squadName: "Squad 1" });
+                      }}
+                    >
+                      <SelectTrigger className="h-8 bg-white border-gray-300 text-sm" data-testid="select-add-squad1">
+                        <SelectValue placeholder="+ Add player" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {unassignedPlayers.map((player) => (
+                          <SelectItem key={player.id} value={player.id.toString()}>
+                            {player.firstName} {player.lastName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  {squad1Players.length === 0 && unassignedPlayers.length === 0 && (
+                    <div className="text-xs text-gray-400 text-center py-2">No players available</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Squad 2 */}
+              <div className="bg-gray-50 rounded-lg p-3" data-testid="squad-2-container">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium text-gray-900">Squad 2</span>
+                  <span className="text-xs text-gray-500">{squad2Players.length}/6</span>
+                </div>
+                <div className="space-y-2">
+                  {squad2Players.map((split) => (
+                    <div
+                      key={split.id}
+                      className="flex items-center justify-between bg-white rounded px-2 py-1.5 border border-gray-200"
+                      data-testid={`squad2-player-${split.playerId}`}
+                    >
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <span className="font-medium text-sm truncate">
+                          {split.player.firstName} {split.player.lastName}
+                        </span>
+                        {(split.player.position1 || split.player.defPosition1) && (
+                          <span className="text-xs text-gray-500 truncate">
+                            {[split.player.position1, split.player.defPosition1].filter(Boolean).join(" / ")}
+                          </span>
+                        )}
+                        {parseColors(split.player.mainColor).slice(0, 2).map((color, idx) => (
+                          <span
+                            key={idx}
+                            className="w-3 h-3 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: color }}
+                            title={color}
+                          />
+                        ))}
+                      </div>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6 flex-shrink-0"
+                        onClick={() => removeFromSquadMutation.mutate(split.id)}
+                        data-testid={`button-remove-squad2-${split.playerId}`}
+                      >
+                        <X className="w-3 h-3 text-muted-foreground" />
+                      </Button>
+                    </div>
+                  ))}
+                  {squad2Players.length < 6 && unassignedPlayers.length > 0 && (
+                    <Select
+                      onValueChange={(playerId) => {
+                        addToSquadMutation.mutate({ playerId: parseInt(playerId), squadName: "Squad 2" });
+                      }}
+                    >
+                      <SelectTrigger className="h-8 bg-white border-gray-300 text-sm" data-testid="select-add-squad2">
+                        <SelectValue placeholder="+ Add player" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {unassignedPlayers.map((player) => (
+                          <SelectItem key={player.id} value={player.id.toString()}>
+                            {player.firstName} {player.lastName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  {squad2Players.length === 0 && unassignedPlayers.length === 0 && (
+                    <div className="text-xs text-gray-400 text-center py-2">No players available</div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </div>
