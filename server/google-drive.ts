@@ -443,13 +443,10 @@ export async function generateTeamDoc(
   });
   currentIndex += 1;
 
-  // Add each play - only images, no text labels (metadata is rendered on the image)
-  for (let i = 0; i < plays.length; i++) {
-    const play = plays[i];
-    
-    // Insert the play image (metadata is rendered directly on the image header)
+  // Upload all play images to Drive first (batch upload for efficiency)
+  const uploadedImages: { playId: number; imageUrl: string }[] = [];
+  for (const play of plays) {
     if (play.imageBase64) {
-      // Upload image to Drive first
       const imageBuffer = Buffer.from(play.imageBase64, 'base64');
       const imageFile = await drive.files.create({
         requestBody: {
@@ -460,7 +457,7 @@ export async function generateTeamDoc(
           mimeType: 'image/png',
           body: Readable.from(imageBuffer)
         },
-        fields: 'id, webContentLink'
+        fields: 'id'
       });
 
       // Make the image publicly accessible
@@ -472,58 +469,200 @@ export async function generateTeamDoc(
         }
       });
 
-      // Get direct download link
-      const imageUrl = `https://drive.google.com/uc?id=${imageFile.data.id}`;
+      uploadedImages.push({
+        playId: play.id,
+        imageUrl: `https://drive.google.com/uc?id=${imageFile.data.id}`
+      });
+    }
+  }
 
-      // Calculate image dimensions based on playsPerPage
-      // Field aspect ratio is 694:392 ≈ 1.77:1
-      // Standard US Letter page: 612 PT x 792 PT with 1" margins = 540 PT x 720 PT usable
-      // Image width based on plays per page layout:
-      // 1 play/page: 540 PT width (full usable width)
-      // 2 plays/page: 510 PT width (increased to utilize extra vertical space)
-      // 4 plays/page: 260 PT width (2x2 grid)
-      // 8 plays/page: 260 PT width (2x4 grid, compact)
-      const imageWidthByLayout: Record<number, number> = {
-        1: 540,
-        2: 510,
-        4: 260,
-        8: 260
-      };
-      const imageWidth = imageWidthByLayout[playsPerPage] || 510;
-      const imageHeight = play.imageWidth && play.imageHeight
-        ? Math.round(imageWidth * (play.imageHeight / play.imageWidth))
-        : Math.round(imageWidth * (392 / 694)); // Default to field aspect ratio
+  // Create a map for quick lookup
+  const imageUrlMap = new Map(uploadedImages.map(img => [img.playId, img.imageUrl]));
+
+  // Calculate image dimensions based on playsPerPage
+  // Field aspect ratio is 694:392 ≈ 1.77:1
+  // Standard US Letter page: 612 PT x 792 PT with 1" margins = 540 PT x 720 PT usable
+  const imageWidthByLayout: Record<number, number> = {
+    1: 540,   // 1 play/page: full usable width
+    2: 510,   // 2 plays/page: stacked vertically
+    4: 252,   // 4 plays/page: 2x2 grid (leaving room for cell padding)
+    8: 252    // 8 plays/page: 2x4 grid
+  };
+  const imageWidth = imageWidthByLayout[playsPerPage] || 510;
+  const defaultImageHeight = Math.round(imageWidth * (392 / 694)); // Default to field aspect ratio
+
+  // For 4 or 8 plays per page, use table-based 2x2 Tecmo Bowl grid layout
+  if (playsPerPage === 4 || playsPerPage === 8) {
+    const playsPerTablePage = playsPerPage;
+    
+    // Process plays in groups of playsPerPage
+    for (let pageStart = 0; pageStart < plays.length; pageStart += playsPerTablePage) {
+      const pagePlays = plays.slice(pageStart, pageStart + playsPerTablePage);
+      
+      // Insert a 2-column table with appropriate rows
+      // Each table row has 2 cells (left and right columns)
+      const tableRows = Math.ceil(pagePlays.length / 2);
       
       requests.push({
-        insertInlineImage: {
+        insertTable: {
           location: { index: currentIndex },
-          uri: imageUrl,
-          objectSize: {
-            width: { magnitude: imageWidth, unit: 'PT' },
-            height: { magnitude: imageHeight, unit: 'PT' }
+          rows: tableRows,
+          columns: 2
+        }
+      });
+      
+      // Execute current requests to get the table structure
+      // We need to do this in batches because table insertion changes document structure
+      if (requests.length > 0) {
+        await docs.documents.batchUpdate({
+          documentId: docId,
+          requestBody: { requests }
+        });
+        requests.length = 0; // Clear requests array
+      }
+      
+      // Get the updated document to find table cell indices
+      const docContent = await docs.documents.get({ documentId: docId });
+      const body = docContent.data.body?.content || [];
+      
+      // Find the last table in the document
+      let lastTable: any = null;
+      for (const element of body) {
+        if (element.table) {
+          lastTable = element;
+        }
+      }
+      
+      if (lastTable && lastTable.table) {
+        // Insert images into table cells
+        // Table structure: rows -> tableCells -> content
+        const tableElement = lastTable.table;
+        
+        for (let playIdx = 0; playIdx < pagePlays.length; playIdx++) {
+          const play = pagePlays[playIdx];
+          const rowIdx = Math.floor(playIdx / 2);
+          const colIdx = playIdx % 2;
+          
+          const imageUrl = imageUrlMap.get(play.id);
+          if (!imageUrl) continue;
+          
+          // Get the cell's content start index
+          const tableRow = tableElement.tableRows?.[rowIdx];
+          const tableCell = tableRow?.tableCells?.[colIdx];
+          const cellContent = tableCell?.content?.[0];
+          
+          if (cellContent?.paragraph) {
+            const cellStartIndex = cellContent.startIndex;
+            
+            const imageHeight = play.imageWidth && play.imageHeight
+              ? Math.round(imageWidth * (play.imageHeight / play.imageWidth))
+              : defaultImageHeight;
+            
+            requests.push({
+              insertInlineImage: {
+                location: { index: cellStartIndex },
+                uri: imageUrl,
+                objectSize: {
+                  width: { magnitude: imageWidth, unit: 'PT' },
+                  height: { magnitude: imageHeight, unit: 'PT' }
+                }
+              }
+            });
           }
         }
-      });
-      currentIndex += 1;
-    }
-
-    // Add spacing between plays
-    requests.push({
-      insertText: {
-        location: { index: currentIndex },
-        text: '\n\n'
+        
+        // Execute image insertions for this table
+        if (requests.length > 0) {
+          await docs.documents.batchUpdate({
+            documentId: docId,
+            requestBody: { requests }
+          });
+          requests.length = 0;
+        }
       }
-    });
-    currentIndex += 2;
+      
+      // Add page break after each table (except for the last one)
+      if (pageStart + playsPerTablePage < plays.length) {
+        // Get fresh document state to find correct insertion point
+        const docAfterTable = await docs.documents.get({ documentId: docId });
+        const bodyAfterTable = docAfterTable.data.body?.content || [];
+        
+        // Find the end of document - insert newline + page break there
+        // The last element's endIndex is where we should insert
+        const lastElement = bodyAfterTable[bodyAfterTable.length - 1];
+        currentIndex = (lastElement?.endIndex || 2) - 1;
+        
+        requests.push({
+          insertText: {
+            location: { index: currentIndex },
+            text: '\n'
+          }
+        });
+        
+        requests.push({
+          insertPageBreak: {
+            location: { index: currentIndex + 1 }
+          }
+        });
+        
+        // Execute page break
+        await docs.documents.batchUpdate({
+          documentId: docId,
+          requestBody: { requests }
+        });
+        requests.length = 0;
+        
+        // Get updated document state - the next table goes AFTER the page break
+        // A page break is 1 character, so we need index after the break
+        const docAfterBreak = await docs.documents.get({ documentId: docId });
+        const bodyAfterBreak = docAfterBreak.data.body?.content || [];
+        const lastElementAfterBreak = bodyAfterBreak[bodyAfterBreak.length - 1];
+        // Use endIndex - 1 to insert at the start of the trailing paragraph
+        currentIndex = (lastElementAfterBreak?.endIndex || 2) - 1;
+      }
+    }
+  } else {
+    // For 1 or 2 plays per page, use simple vertical stacking (original behavior)
+    for (let i = 0; i < plays.length; i++) {
+      const play = plays[i];
+      const imageUrl = imageUrlMap.get(play.id);
+      
+      if (imageUrl) {
+        const imageHeight = play.imageWidth && play.imageHeight
+          ? Math.round(imageWidth * (play.imageHeight / play.imageWidth))
+          : defaultImageHeight;
+        
+        requests.push({
+          insertInlineImage: {
+            location: { index: currentIndex },
+            uri: imageUrl,
+            objectSize: {
+              width: { magnitude: imageWidth, unit: 'PT' },
+              height: { magnitude: imageHeight, unit: 'PT' }
+            }
+          }
+        });
+        currentIndex += 1;
+      }
 
-    // Page break based on playsPerPage setting (except for the last one)
-    if ((i + 1) % playsPerPage === 0 && i < plays.length - 1) {
+      // Add spacing between plays
       requests.push({
-        insertPageBreak: {
-          location: { index: currentIndex }
+        insertText: {
+          location: { index: currentIndex },
+          text: '\n\n'
         }
       });
-      currentIndex += 1;
+      currentIndex += 2;
+
+      // Page break based on playsPerPage setting (except for the last one)
+      if ((i + 1) % playsPerPage === 0 && i < plays.length - 1) {
+        requests.push({
+          insertPageBreak: {
+            location: { index: currentIndex }
+          }
+        });
+        currentIndex += 1;
+      }
     }
   }
 
