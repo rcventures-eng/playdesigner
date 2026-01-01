@@ -24,6 +24,22 @@ The core play design functionality uses HTML5 Canvas and SVG. Features include:
 -   **Defensive Assignments**: Supports advanced assignments like Blitz, Man Coverage (linked to offensive players), and Zone Coverage (resizable shapes).
 -   **Export Functionality**: Generates downloadable PNGs of the canvas content.
 
+### Play Notes Feature
+
+The Play Notes feature allows coaches to add movable text annotations directly on plays:
+-   **Notes Toggle**: Yellow Apple Notes-styled button activates note drawing mode
+-   **Creation**: Draw a rectangle on the canvas to create a note (minimum 40x20 pixels)
+-   **Edit Mode**: Notes enter edit mode immediately after creation with 500ms blur protection
+-   **Textarea Focus**: Uses programmatic focus with requestAnimationFrame for reliable editing
+-   **Dragging**: Click and drag notes to reposition them anywhere on the field
+-   **Resizing**: Resize handle (SE corner) appears when note is selected
+-   **Selection**: Click to select a note; Delete/Backspace removes selected note
+-   **Persistence**: Notes are saved with plays in the `data` JSON column
+-   **White Field Failsafe**: Notes use light gray background on white fields for visibility
+-   **Export**: Notes are included in play exports but excluded from thumbnails
+-   **Event Handling**: Textarea events use stopPropagation to prevent canvas interference
+-   **Data Model**: `PlayNote` type with id, x, y, width, height, text properties
+
 ### AI Play Creator
 
 The AI Beta tab features an AI Play Creator powered by Google Gemini 2.0 Flash.
