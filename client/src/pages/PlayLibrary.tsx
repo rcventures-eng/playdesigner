@@ -48,6 +48,7 @@ import {
   ArrowRight,
   Crosshair,
   TrendingUp,
+  FlipHorizontal2,
 } from "lucide-react";
 import { TagPopover } from "@/components/TagPopover";
 import { SITUATIONAL_TAGS } from "@shared/logic-dictionary";
@@ -1083,6 +1084,20 @@ export default function PlayLibrary() {
                         triggerClassName="p-1.5 rounded-full bg-white/80 text-gray-500 hover:bg-white hover:text-orange-500 transition-colors"
                       />
                     )}
+                    {/* Flip button - only for user's own plays, not templates */}
+                    {!play.isPublic && user && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/?playId=${play.id}&flip=true`);
+                        }}
+                        className="p-1.5 rounded-full bg-white/80 text-gray-500 hover:bg-white hover:text-purple-600 transition-colors"
+                        data-testid={`button-flip-${play.id}`}
+                        title="Flip Play"
+                      >
+                        <FlipHorizontal2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                   
                   {/* Play Preview */}
@@ -1215,6 +1230,20 @@ export default function PlayLibrary() {
                   <Edit className="w-4 h-4 mr-2" />
                   Edit in Play Designer
                 </Button>
+                {doubleClickedPlay && (
+                  <Button
+                    onClick={() => {
+                      setShowPlayDialog(false);
+                      navigate(`/?playId=${doubleClickedPlay.id}&flip=true`);
+                    }}
+                    variant="outline"
+                    className="w-full justify-start"
+                    data-testid="button-flip-dialog"
+                  >
+                    <FlipHorizontal2 className="w-4 h-4 mr-2" />
+                    Flip Play
+                  </Button>
+                )}
                 {doubleClickedPlay && (
                   <div className="w-full">
                     <TagPopover

@@ -407,12 +407,54 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
             setLoadedPlayId(playId);
             setIsFavorite(play.isFavorite || false);
             
+            // Check if flip was requested via URL parameter
+            const shouldFlip = urlParams.get('flip') === 'true';
+            if (shouldFlip) {
+              const centerX = FIELD.WIDTH / 2;
+              
+              // Apply flip to the loaded state
+              const flippedPlayers = (loadedState.players || []).map(player => ({
+                ...player,
+                x: centerX + (centerX - player.x)
+              }));
+              const flippedRoutes = (loadedState.routes || []).map(route => ({
+                ...route,
+                points: route.points.map(point => ({
+                  x: centerX + (centerX - point.x),
+                  y: point.y
+                }))
+              }));
+              const flippedShapes = (loadedState.shapes || []).map(shape => ({
+                ...shape,
+                x: centerX + (centerX - shape.x) - shape.width
+              }));
+              const flippedFootballs = (loadedState.footballs || []).map(football => ({
+                ...football,
+                x: centerX + (centerX - football.x)
+              }));
+              const flippedNotes = (loadedState.notes || []).map(note => ({
+                ...note,
+                x: centerX + (centerX - note.x) - note.width
+              }));
+              
+              // Update state with flipped data
+              setPlayers(flippedPlayers);
+              setRoutes(flippedRoutes);
+              setShapes(flippedShapes);
+              setFootballs(flippedFootballs);
+              setNotes(flippedNotes);
+              
+              // Clear the loaded play ID since this is a new flipped version (not saved yet)
+              setLoadedPlayId(null);
+            }
+            
             // Clear the URL parameter without reloading
             window.history.replaceState({}, '', '/');
             
+            const flipMessage = shouldFlip ? " (Flipped)" : "";
             toast({
-              title: "Play Loaded",
-              description: `"${play.name}" is ready for editing.`,
+              title: shouldFlip ? "Play Flipped" : "Play Loaded",
+              description: `"${play.name}"${flipMessage} is ready for editing.`,
             });
           })
           .catch((err) => {
