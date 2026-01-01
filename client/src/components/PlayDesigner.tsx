@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Download, Copy, Plus, Trash2, Circle as CircleIcon, MoveHorizontal, PenTool, Square as SquareIcon, Type, Hexagon, RotateCcw, Flag, Camera, X, Loader2, Sparkles, Save, Heart, Tag, Magnet, StickyNote } from "lucide-react";
+import { Download, Copy, Plus, Trash2, Circle as CircleIcon, MoveHorizontal, PenTool, Square as SquareIcon, Type, Hexagon, RotateCcw, Flag, Camera, X, Loader2, Sparkles, Save, Heart, Tag, Magnet, StickyNote, FlipHorizontal2 } from "lucide-react";
 import { toPng } from "html-to-image";
 import { useToast } from "@/hooks/use-toast";
 import { getQueryFn, apiRequest, queryClient } from "@/lib/queryClient";
@@ -921,6 +921,46 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
       notes: JSON.parse(JSON.stringify(notes)),
       metadata: JSON.parse(JSON.stringify(metadata))
     }]);
+  };
+
+  // Flip play horizontally around the center line (vertical axis through QB)
+  // Player labels stay the same, only positions are mirrored
+  const flipPlay = () => {
+    saveToHistory();
+    const centerX = FIELD.WIDTH / 2;
+    
+    // Flip players (mirror X position, keep label)
+    setPlayers(prev => prev.map(player => ({
+      ...player,
+      x: centerX + (centerX - player.x)
+    })));
+    
+    // Flip routes (mirror all X positions in points)
+    setRoutes(prev => prev.map(route => ({
+      ...route,
+      points: route.points.map(point => ({
+        x: centerX + (centerX - point.x),
+        y: point.y
+      }))
+    })));
+    
+    // Flip shapes (mirror X position)
+    setShapes(prev => prev.map(shape => ({
+      ...shape,
+      x: centerX + (centerX - shape.x) - shape.width
+    })));
+    
+    // Flip footballs (mirror X position)
+    setFootballs(prev => prev.map(football => ({
+      ...football,
+      x: centerX + (centerX - football.x)
+    })));
+    
+    // Flip notes (mirror X position)
+    setNotes(prev => prev.map(note => ({
+      ...note,
+      x: centerX + (centerX - note.x) - note.width
+    })));
   };
 
   const addPlayer = (color: string) => {
@@ -4869,6 +4909,19 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
               )}
 
             </div>
+          </div>
+          {/* Flip Play button - positioned below the canvas */}
+          <div className="flex justify-center mt-2" style={{ width: FIELD.WIDTH }}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={flipPlay}
+              className="flex items-center gap-2 bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+              data-testid="button-flip-play"
+            >
+              <FlipHorizontal2 className="h-4 w-4" />
+              Flip Play
+            </Button>
           </div>
           </div>
           
