@@ -70,6 +70,20 @@ function isColorDark(color: string): boolean {
   return luminance < 128;
 }
 
+// Helper to parse multiple colors from comma-separated string (max 3)
+function parseColors(colorString: string | null | undefined): string[] {
+  if (!colorString) return [];
+  
+  // Split by comma, trim whitespace, filter empty, limit to 3
+  const colors = colorString
+    .split(',')
+    .map(c => c.trim())
+    .filter(c => c.length > 0)
+    .slice(0, 3);
+  
+  return colors;
+}
+
 export default function TeamRosterCard({ teamId, gameFormat = "5v5" }: TeamRosterCardProps) {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -657,17 +671,19 @@ export default function TeamRosterCard({ teamId, gameFormat = "5v5" }: TeamRoste
                             • Def: {player.defPosition1}
                           </span>
                         )}
-                        {player.mainColor && (
+                        {parseColors(player.mainColor).map((color, idx) => (
                           <span 
+                            key={idx}
                             className="px-2 py-0.5 rounded text-xs font-bold"
                             style={{ 
-                              backgroundColor: player.mainColor,
-                              color: isColorDark(player.mainColor) ? '#FFFFFF' : '#000000'
+                              backgroundColor: color,
+                              color: isColorDark(color) ? '#FFFFFF' : '#000000'
                             }}
+                            data-testid={`player-color-badge-${player.id}-${idx}`}
                           >
-                            {player.mainColor}
+                            {color}
                           </span>
-                        )}
+                        ))}
                       </div>
                       <div className="flex items-center gap-1">
                         <Button
