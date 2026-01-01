@@ -459,7 +459,7 @@ export default function TeamRosterCard({ teamId, gameFormat = "5v5" }: TeamRoste
                     <>
                       <div className="flex-1">
                         <span className="font-medium">{coach.firstName} {coach.lastName}</span>
-                        <span className="text-muted-foreground text-sm ml-2">• {coach.role}</span>
+                        <span className="text-gray-600 text-sm font-semibold ml-2">• {coach.role}</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <Button
@@ -662,12 +662,12 @@ export default function TeamRosterCard({ teamId, gameFormat = "5v5" }: TeamRoste
                       <div className="flex-1 flex items-center gap-2 flex-wrap">
                         <span className="font-medium">{player.firstName} {player.lastName}</span>
                         {(player.position1 || player.position2) && (
-                          <span className="text-muted-foreground text-sm">
+                          <span className="text-gray-600 text-sm font-semibold">
                             • Off: {[player.position1, player.position2].filter(Boolean).join(" / ")}
                           </span>
                         )}
                         {player.defPosition1 && (
-                          <span className="text-muted-foreground text-sm">
+                          <span className="text-gray-600 text-sm font-semibold">
                             • Def: {player.defPosition1}
                           </span>
                         )}
