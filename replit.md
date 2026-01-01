@@ -51,6 +51,22 @@ Drizzle ORM with PostgreSQL manages data for `users`, `teams`, `plays`, `ai_logs
 
 Allows users to create, edit, and manage team playbooks, including uploading cover images and associating plays with teams. The `play_teams` junction table enables many-to-many relationships, allowing a single play to be assigned to multiple team playbooks simultaneously.
 
+### Team Roster Management
+
+The Team Roster feature allows coaches to manage their coaching staff and players for each team playbook:
+-   **Coaching Staff Section**: Add/edit/delete coaches with First Name, Last Name, and Role (Head Coach, Assistant, Offensive Coordinator, Defensive Coordinator, Volunteer)
+-   **Players Section**: Add/edit/delete players with First Name, Last Name, Position 1, Position 2, and Main Color
+-   **Upload Options**: Import rosters via CSV file or screenshot image (uses Gemini AI for OCR parsing)
+-   **Preview Modal**: Review parsed data before confirming import
+-   **Database Tables**: `teamCoaches` and `teamPlayers` with proper foreign key relationships to teams
+-   **API Endpoints**:
+    -   GET/POST/PATCH/DELETE `/api/teams/:teamId/coaches` - Coach CRUD operations
+    -   GET/POST/PATCH/DELETE `/api/teams/:teamId/players` - Player CRUD operations
+    -   POST `/api/teams/:teamId/roster/import` - Bulk import coaches and players
+    -   POST `/api/teams/:teamId/roster/parse-image` - AI-powered image parsing
+-   **UI Component**: `TeamRosterCard.tsx` displays below team cover image on Team Playbooks page
+-   **Design**: Uses shadcn Card components, design tokens for dark mode compatibility, and comprehensive data-testid coverage for testing
+
 ### Google Drive Export (All Users)
 
 Coaches can connect their personal Google Drive accounts and export team playbooks:
