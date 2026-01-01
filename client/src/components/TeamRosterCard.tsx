@@ -50,16 +50,22 @@ interface TeamRosterCardProps {
 function isColorDark(color: string): boolean {
   if (!color) return false;
   
-  // Handle color names
-  const darkColorNames = ['black', 'navy', 'darkblue', 'darkgreen', 'darkred', 'maroon', 'purple', 'indigo'];
-  if (darkColorNames.includes(color.toLowerCase())) return true;
+  const lowerColor = color.toLowerCase().trim();
+  
+  // Explicitly light colors - need black text
+  const lightColorNames = ['yellow', 'white', 'cyan', 'lime', 'aqua', 'lightyellow', 'lightgreen', 'lightblue', 'pink', 'orange', 'gold', 'beige', 'ivory', 'lavender', 'coral', 'peach', 'cream', 'tan', 'wheat', 'khaki', 'lemon'];
+  if (lightColorNames.includes(lowerColor)) return false;
+  
+  // Explicitly dark colors - need white text
+  const darkColorNames = ['black', 'navy', 'darkblue', 'darkgreen', 'darkred', 'maroon', 'purple', 'indigo', 'blue', 'green', 'red', 'brown', 'gray', 'grey', 'teal', 'olive'];
+  if (darkColorNames.includes(lowerColor)) return true;
   
   // Handle hex colors
   let hex = color.replace('#', '');
   if (hex.length === 3) {
     hex = hex.split('').map(c => c + c).join('');
   }
-  if (hex.length !== 6) return false;
+  if (hex.length !== 6) return true; // Default to dark (white text) for unknown colors
   
   const r = parseInt(hex.substring(0, 2), 16);
   const g = parseInt(hex.substring(2, 4), 16);
