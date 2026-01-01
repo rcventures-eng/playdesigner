@@ -587,6 +587,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
       routes: JSON.parse(JSON.stringify(routes)),
       shapes: JSON.parse(JSON.stringify(shapes)),
       footballs: JSON.parse(JSON.stringify(footballs)),
+      notes: JSON.parse(JSON.stringify(notes)),
       metadata: JSON.parse(JSON.stringify(metadata)),
       history: JSON.parse(JSON.stringify(history)),
     };
@@ -1224,6 +1225,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
         routes: newRoutes,
         shapes: newShapes,
         footballs: newFootballs,
+        notes: [],
         metadata: newMetadata,
         history: [],
       }
@@ -3466,6 +3468,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                             routes: JSON.parse(JSON.stringify(routes)),
                             shapes: JSON.parse(JSON.stringify(shapes)),
                             footballs: JSON.parse(JSON.stringify(footballs)),
+                            notes: JSON.parse(JSON.stringify(notes)),
                             metadata: JSON.parse(JSON.stringify(metadata))
                           }]);
                           setFootballs(prev => prev.map(f => 
@@ -3962,7 +3965,6 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
               onPointerMove={(e) => {
                 handleCanvasPointerMove(e);
                 handleShapePointerMove(e);
-                handleNotePointerMove(e);
               }}
               onPointerUp={(e) => {
                 handleCanvasMouseUp();
