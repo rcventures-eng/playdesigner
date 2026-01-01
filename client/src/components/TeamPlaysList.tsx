@@ -4,6 +4,14 @@ import { GripVertical } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { PlayPreview } from "@/components/PlayPreview";
+import { CONCEPT_OPTIONS } from "@/components/TagPopover";
+
+// Format concept value to display label (e.g., "play-action" -> "Play-Action")
+function formatConceptLabel(concept: string | null | undefined): string | null {
+  if (!concept) return null;
+  const option = CONCEPT_OPTIONS.find(o => o.value === concept);
+  return option?.label || concept;
+}
 
 interface PlayItem {
   id: number;
@@ -172,7 +180,7 @@ export default function TeamPlaysList({ teamId, plays, onPlayClick }: TeamPlaysL
                 {play.name}
               </div>
               <div className="text-sm text-gray-500 truncate">
-                {[play.formation, play.concept, play.situation].filter(Boolean).join(" • ") || play.type}
+                {[play.formation, formatConceptLabel(play.concept), play.situation].filter(Boolean).join(" • ") || play.type}
               </div>
             </div>
 
