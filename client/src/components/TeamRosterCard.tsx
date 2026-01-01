@@ -314,14 +314,13 @@ export default function TeamRosterCard({ teamId }: TeamRosterCardProps) {
   };
 
   return (
-    <Card className="mt-6" data-testid="team-roster-card">
-      <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
-        <CardTitle className="text-lg">Team Roster</CardTitle>
+    <Card className="mt-6 bg-background border-2 border-primary/20" data-testid="team-roster-card">
+      <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3 bg-primary/5 rounded-t-lg">
+        <CardTitle className="text-lg text-primary">Team Roster</CardTitle>
         <Button
-          variant="outline"
+          variant="default"
           size="sm"
           onClick={() => setShowUploadModal(true)}
-          className="text-primary border-primary"
           data-testid="button-upload-roster"
         >
           <Upload className="w-4 h-4 mr-2" />
@@ -329,17 +328,18 @@ export default function TeamRosterCard({ teamId }: TeamRosterCardProps) {
         </Button>
       </CardHeader>
 
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-6 pt-6">
         <div>
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <UserCog className="w-5 h-5 text-muted-foreground" />
-              <h4 className="font-medium">Coaching Staff</h4>
+              <UserCog className="w-5 h-5 text-primary" />
+              <h4 className="font-semibold text-primary">Coaching Staff</h4>
             </div>
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={() => setShowAddCoach(true)}
+              className="border-primary text-primary hover:bg-primary/10"
               data-testid="button-add-coach"
             >
               <Plus className="w-4 h-4 mr-1" />
@@ -495,13 +495,14 @@ export default function TeamRosterCard({ teamId }: TeamRosterCardProps) {
         <div>
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-muted-foreground" />
-              <h4 className="font-medium">Players</h4>
+              <Users className="w-5 h-5 text-primary" />
+              <h4 className="font-semibold text-primary">Players</h4>
             </div>
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={() => setShowAddPlayer(true)}
+              className="border-primary text-primary hover:bg-primary/10"
               data-testid="button-add-player"
             >
               <Plus className="w-4 h-4 mr-1" />
@@ -597,17 +598,22 @@ export default function TeamRosterCard({ teamId }: TeamRosterCardProps) {
                     </div>
                   ) : (
                     <>
-                      <div className="flex-1 flex items-center gap-2">
-                        {player.mainColor && (
-                          <div 
-                            className="w-4 h-4 rounded-full border border-border" 
-                            style={{ backgroundColor: player.mainColor }}
-                          />
-                        )}
+                      <div className="flex-1 flex items-center gap-2 flex-wrap">
                         <span className="font-medium">{player.firstName} {player.lastName}</span>
                         {(player.position1 || player.position2) && (
                           <span className="text-muted-foreground text-sm">
                             • {[player.position1, player.position2].filter(Boolean).join(" / ")}
+                          </span>
+                        )}
+                        {player.mainColor && (
+                          <span 
+                            className="px-2 py-0.5 rounded text-xs font-bold"
+                            style={{ 
+                              backgroundColor: player.mainColor,
+                              color: '#000000'
+                            }}
+                          >
+                            {player.mainColor}
                           </span>
                         )}
                       </div>
