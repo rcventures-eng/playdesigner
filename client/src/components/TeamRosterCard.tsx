@@ -70,16 +70,16 @@ function isColorDark(color: string): boolean {
   return luminance < 128;
 }
 
-// Helper to parse multiple colors from comma-separated string (max 3)
+// Helper to parse multiple colors from comma-separated string (max 4)
 function parseColors(colorString: string | null | undefined): string[] {
   if (!colorString) return [];
   
-  // Split by comma, trim whitespace, filter empty, limit to 3
+  // Split by comma, trim whitespace, filter empty, limit to 4
   const colors = colorString
     .split(',')
     .map(c => c.trim())
     .filter(c => c.length > 0)
-    .slice(0, 3);
+    .slice(0, 4);
   
   return colors;
 }
