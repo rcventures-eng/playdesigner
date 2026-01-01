@@ -361,8 +361,8 @@ export default function TeamRosterCard({ teamId, gameFormat = "5v5" }: TeamRoste
   };
 
   return (
-    <Card className="mt-6 bg-background border-2 border-primary/20" data-testid="team-roster-card">
-      <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3 bg-primary/5 rounded-t-lg">
+    <Card className="mt-6 bg-white border border-gray-200 shadow-sm" data-testid="team-roster-card">
+      <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3 bg-white border-b border-gray-100">
         <CardTitle className="text-lg text-primary">Team Roster</CardTitle>
         <Button
           variant="default"
@@ -375,7 +375,7 @@ export default function TeamRosterCard({ teamId, gameFormat = "5v5" }: TeamRoste
         </Button>
       </CardHeader>
 
-      <CardContent className="space-y-6 pt-6">
+      <CardContent className="space-y-6 pt-6 bg-white text-gray-900">
         <div>
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
@@ -403,7 +403,7 @@ export default function TeamRosterCard({ teamId, gameFormat = "5v5" }: TeamRoste
               {coaches.map((coach) => (
                 <div
                   key={coach.id}
-                  className="flex items-center justify-between bg-muted rounded-md px-3 py-2"
+                  className="flex items-center justify-between bg-gray-50 rounded-md px-3 py-2"
                   data-testid={`coach-row-${coach.id}`}
                 >
                   {editingCoach?.id === coach.id ? (
@@ -566,7 +566,7 @@ export default function TeamRosterCard({ teamId, gameFormat = "5v5" }: TeamRoste
               {players.map((player) => (
                 <div
                   key={player.id}
-                  className="flex items-center justify-between bg-muted rounded-md px-3 py-2"
+                  className="flex items-center justify-between bg-gray-50 rounded-md px-3 py-2"
                   data-testid={`player-row-${player.id}`}
                 >
                   {editingPlayer?.id === player.id ? (
