@@ -3340,53 +3340,52 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                       </Select>
                     </div>
                   )}
-                </div>
-              )}
-              
-              {/* Expert Toggle - at root level, symmetrical with Advanced */}
-              <button
-                type="button"
-                onClick={() => setExpertExpanded(!expertExpanded)}
-                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors py-0.5"
-                data-testid="button-toggle-expert"
-              >
-                {expertExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                <span>Expert</span>
-                {!expertExpanded && (metadata.formation || metadata.personnel) && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary ml-1" />
-                )}
-              </button>
-              
-              {/* Expert Section - Formation & Personnel */}
-              {expertExpanded && (
-                <div className="space-y-1.5">
-                  {/* Formation field for offense/ai-beta */}
-                  {(playType === "offense" || playType === "ai-beta") && (
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor="formation" className="text-xs w-14 flex-shrink-0">Formation</Label>
-                      <Input
-                        id="formation"
-                        data-testid="input-formation"
-                        placeholder="I-Formation, Shotgun..."
-                        value={metadata.formation}
-                        onChange={(e) => setMetadata({ ...metadata, formation: e.target.value })}
-                        className="h-8 text-sm flex-1"
-                      />
-                    </div>
-                  )}
+                  {/* Expert Toggle - only visible when Advanced is expanded */}
+                  <button
+                    type="button"
+                    onClick={() => setExpertExpanded(!expertExpanded)}
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors py-0.5"
+                    data-testid="button-toggle-expert"
+                  >
+                    {expertExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                    <span>Expert</span>
+                    {!expertExpanded && (metadata.formation || metadata.personnel) && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary ml-1" />
+                    )}
+                  </button>
                   
-                  {/* Personnel field - all play types */}
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="personnel" className="text-xs w-14 flex-shrink-0">Personnel</Label>
-                    <Input
-                      id="personnel"
-                      data-testid="input-personnel"
-                      placeholder={playType === "defense" ? "4-3, 3-4, Nickel..." : playType === "special" ? "Special teams..." : "1RB, 3WR, 1TE..."}
-                      value={metadata.personnel}
-                      onChange={(e) => setMetadata({ ...metadata, personnel: e.target.value })}
-                      className="h-8 text-sm flex-1"
-                    />
-                  </div>
+                  {/* Expert Section - Formation & Personnel */}
+                  {expertExpanded && (
+                    <>
+                      {/* Formation field for offense/ai-beta */}
+                      {(playType === "offense" || playType === "ai-beta") && (
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor="formation" className="text-xs w-14 flex-shrink-0">Formation</Label>
+                          <Input
+                            id="formation"
+                            data-testid="input-formation"
+                            placeholder="I-Formation, Shotgun..."
+                            value={metadata.formation}
+                            onChange={(e) => setMetadata({ ...metadata, formation: e.target.value })}
+                            className="h-8 text-sm flex-1"
+                          />
+                        </div>
+                      )}
+                      
+                      {/* Personnel field - all play types */}
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="personnel" className="text-xs w-14 flex-shrink-0">Personnel</Label>
+                        <Input
+                          id="personnel"
+                          data-testid="input-personnel"
+                          placeholder={playType === "defense" ? "4-3, 3-4, Nickel..." : playType === "special" ? "Special teams..." : "1RB, 3WR, 1TE..."}
+                          value={metadata.personnel}
+                          onChange={(e) => setMetadata({ ...metadata, personnel: e.target.value })}
+                          className="h-8 text-sm flex-1"
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </Card>
