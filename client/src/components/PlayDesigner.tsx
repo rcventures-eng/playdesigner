@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Download, Copy, Plus, Trash2, Circle as CircleIcon, MoveHorizontal, PenTool, Square as SquareIcon, Type, Hexagon, RotateCcw, Flag, Camera, X, Loader2, Sparkles, Save, Heart, Tag, Magnet, StickyNote, FlipHorizontal2 } from "lucide-react";
+import { Download, Copy, Plus, Trash2, Circle as CircleIcon, MoveHorizontal, PenTool, Square as SquareIcon, Type, Hexagon, RotateCcw, Flag, Camera, X, Loader2, Sparkles, Save, Heart, Tag, Magnet, StickyNote, FlipHorizontal2, ChevronDown, ChevronUp } from "lucide-react";
 import { toPng } from "html-to-image";
 import { useToast } from "@/hooks/use-toast";
 import { getQueryFn, apiRequest, queryClient } from "@/lib/queryClient";
@@ -221,6 +221,19 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   const [includeOffense, setIncludeOffense] = useState(true);
   const [includeDefense, setIncludeDefense] = useState(false);
   const [isSituational, setIsSituational] = useState(false);
+  // Progressive disclosure states - initialized from localStorage for sticky behavior
+  const [advancedExpanded, setAdvancedExpanded] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('playDesigner_advancedExpanded') === 'true';
+    }
+    return false;
+  });
+  const [expertExpanded, setExpertExpanded] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('playDesigner_expertExpanded') === 'true';
+    }
+    return false;
+  });
   const [selectedGameFormat, setSelectedGameFormat] = useState<GameFormat | null>(null);
   const [specialPrompt, setSpecialPrompt] = useState("");
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
@@ -329,6 +342,15 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   
+  // Persist progressive disclosure state to localStorage
+  useEffect(() => {
+    localStorage.setItem('playDesigner_advancedExpanded', String(advancedExpanded));
+  }, [advancedExpanded]);
+  
+  useEffect(() => {
+    localStorage.setItem('playDesigner_expertExpanded', String(expertExpanded));
+  }, [expertExpanded]);
+  
   // Track loaded play ID for editing
   const [loadedPlayId, setLoadedPlayId] = useState<number | null>(null);
   const [isLoadingPlay, setIsLoadingPlay] = useState(false);
@@ -406,6 +428,16 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
             
             setLoadedPlayId(playId);
             setIsFavorite(play.isFavorite || false);
+            
+            // Auto-expand Advanced/Expert sections if loaded play has data in those fields
+            const hasAdvancedData = loadedMetadata.concept || loadedMetadata.situation || loadedMetadata.defenseConcept;
+            const hasExpertData = loadedMetadata.formation || loadedMetadata.personnel;
+            if (hasAdvancedData) {
+              setAdvancedExpanded(true);
+            }
+            if (hasExpertData) {
+              setExpertExpanded(true);
+            }
             
             // Check if flip was requested via URL parameter
             const shouldFlip = urlParams.get('flip') === 'true';
@@ -3193,82 +3225,59 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
           </div>
 
           <div className="flex-1 overflow-y-auto pt-2 px-4 pb-2 space-y-2">
-            <Card className="p-3 space-y-2">
+            <Card className="p-3 space-y-1.5">
               <h3 className="font-semibold text-sm text-foreground">Play Tag Details</h3>
-              <div className="space-y-2">
-                <div>
-                  <Label htmlFor="play-name" className="text-xs">Name</Label>
-                  <Input
-                    id="play-name"
-                    data-testid="input-play-name"
-                    placeholder="Play Name..."
-                    value={metadata.name}
-                    onChange={(e) => setMetadata({ ...metadata, name: e.target.value })}
-                    className="h-8 text-sm"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="formation" className="text-xs">{playType === "defense" ? "Concept" : "Formation"}</Label>
+              
+              {/* Name Field - Always visible, inline layout */}
+              <div className="flex items-center gap-2">
+                <Label htmlFor="play-name" className="text-xs w-14 flex-shrink-0">Name</Label>
+                <Input
+                  id="play-name"
+                  data-testid="input-play-name"
+                  placeholder="Play Name..."
+                  value={metadata.name}
+                  onChange={(e) => setMetadata({ ...metadata, name: e.target.value })}
+                  className="h-8 text-sm flex-1"
+                />
+              </div>
+              
+              {/* Advanced Toggle */}
+              <button
+                type="button"
+                onClick={() => setAdvancedExpanded(!advancedExpanded)}
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors py-0.5"
+                data-testid="button-toggle-advanced"
+              >
+                {advancedExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                <span>Advanced</span>
+                {/* Indicator dot when collapsed but has data */}
+                {!advancedExpanded && (metadata.concept || metadata.situation || (playType === "defense" && metadata.defenseConcept)) && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary ml-1" />
+                )}
+              </button>
+              
+              {/* Advanced Section - Concept & Situation */}
+              {advancedExpanded && (
+                <div className="space-y-1.5 pl-4 border-l-2 border-muted">
+                  {/* Concept field for offense/ai-beta */}
                   {(playType === "offense" || playType === "ai-beta") && (
-                    <Input
-                      id="formation"
-                      data-testid="input-formation"
-                      placeholder="I-Formation, Shotgun..."
-                      value={metadata.formation}
-                      onChange={(e) => setMetadata({ ...metadata, formation: e.target.value })}
-                      className="h-8 text-sm"
-                    />
-                  )}
-                  {playType === "defense" && (
-                    <Select value={metadata.defenseConcept} onValueChange={(v) => setMetadata({ ...metadata, defenseConcept: v === "clear_selection" ? "" : v })}>
-                      <SelectTrigger id="defense-concept" data-testid="select-defense-concept" className="h-8 text-sm">
-                        <SelectValue placeholder="Select Concept" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="clear_selection">None</SelectItem>
-                        <SelectItem value="man-to-man">Man-to-Man</SelectItem>
-                        <SelectItem value="zone">Zone</SelectItem>
-                        <SelectItem value="zone-blitz">Zone Blitz</SelectItem>
-                        <SelectItem value="blitz">Blitz</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                  {playType === "special" && (
-                    <Select value={metadata.formation} onValueChange={(v) => setMetadata({ ...metadata, formation: v })}>
-                      <SelectTrigger id="formation" data-testid="select-formation" className="h-8 text-sm">
-                        <SelectValue placeholder="Select formation" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="field-goal">Field Goal</SelectItem>
-                        <SelectItem value="punt">Punt</SelectItem>
-                        <SelectItem value="kickoff">Kickoff</SelectItem>
-                        <SelectItem value="kickoff-return">Kickoff Return</SelectItem>
-                        <SelectItem value="punt-return">Punt Return</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-                {(playType === "offense" || playType === "ai-beta") && (
-                  <>
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 w-14 flex-shrink-0">
                         <Label htmlFor="concept" className="text-xs">Concept</Label>
-                        <div className="flex items-center gap-1.5">
-                          <input
-                            type="checkbox"
-                            id="situational"
-                            checked={isSituational}
-                            onChange={(e) => {
-                              setIsSituational(e.target.checked);
-                              if (!e.target.checked) {
-                                setMetadata({ ...metadata, concept: "" });
-                              }
-                            }}
-                            className="rounded h-3 w-3"
-                            data-testid="checkbox-situational"
-                          />
-                          <Label htmlFor="situational" className="text-xs text-muted-foreground">Situational</Label>
-                        </div>
+                        <input
+                          type="checkbox"
+                          id="situational"
+                          checked={isSituational}
+                          onChange={(e) => {
+                            setIsSituational(e.target.checked);
+                            if (!e.target.checked) {
+                              setMetadata({ ...metadata, concept: "" });
+                            }
+                          }}
+                          className="rounded h-2.5 w-2.5"
+                          data-testid="checkbox-situational"
+                          title="Toggle Situational mode"
+                        />
                       </div>
                       <Select 
                         value={isSituational ? metadata.situation : metadata.concept} 
@@ -3281,8 +3290,8 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                           }
                         }}
                       >
-                        <SelectTrigger id="concept" data-testid="select-concept" className="h-8 text-sm">
-                          <SelectValue placeholder={isSituational ? "Select Situation" : "Select Concept"} />
+                        <SelectTrigger id="concept" data-testid="select-concept" className="h-8 text-sm flex-1">
+                          <SelectValue placeholder={isSituational ? "Situation..." : "Concept..."} />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="clear_selection">None</SelectItem>
@@ -3306,46 +3315,95 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                         </SelectContent>
                       </Select>
                     </div>
-                    <div>
-                      <Label htmlFor="personnel" className="text-xs">Personnel</Label>
-                      <Input
-                        id="personnel"
-                        data-testid="input-personnel"
-                        placeholder="1RB, 3WR, 1TE..."
-                        value={metadata.personnel}
-                        onChange={(e) => setMetadata({ ...metadata, personnel: e.target.value })}
-                        className="h-8 text-sm"
-                      />
+                  )}
+                  
+                  {/* Defense Concept dropdown */}
+                  {playType === "defense" && (
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="defense-concept" className="text-xs w-14 flex-shrink-0">Concept</Label>
+                      <Select value={metadata.defenseConcept} onValueChange={(v) => setMetadata({ ...metadata, defenseConcept: v === "clear_selection" ? "" : v })}>
+                        <SelectTrigger id="defense-concept" data-testid="select-defense-concept" className="h-8 text-sm flex-1">
+                          <SelectValue placeholder="Concept..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="clear_selection">None</SelectItem>
+                          <SelectItem value="man-to-man">Man-to-Man</SelectItem>
+                          <SelectItem value="zone">Zone</SelectItem>
+                          <SelectItem value="zone-blitz">Zone Blitz</SelectItem>
+                          <SelectItem value="blitz">Blitz</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                  </>
-                )}
-                {playType === "defense" && (
-                  <div>
-                    <Label htmlFor="personnel" className="text-xs">Personnel</Label>
-                    <Input
-                      id="personnel"
-                      data-testid="input-personnel"
-                      placeholder="4-3, 3-4, Nickel..."
-                      value={metadata.personnel}
-                      onChange={(e) => setMetadata({ ...metadata, personnel: e.target.value })}
-                      className="h-8 text-sm"
-                    />
-                  </div>
-                )}
-                {playType === "special" && (
-                  <div>
-                    <Label htmlFor="personnel" className="text-xs">Personnel</Label>
-                    <Input
-                      id="personnel"
-                      data-testid="input-personnel"
-                      placeholder="Special teams setup..."
-                      value={metadata.personnel}
-                      onChange={(e) => setMetadata({ ...metadata, personnel: e.target.value })}
-                      className="h-8 text-sm"
-                    />
-                  </div>
-                )}
-              </div>
+                  )}
+                  
+                  {/* Special Teams Formation dropdown */}
+                  {playType === "special" && (
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="formation" className="text-xs w-14 flex-shrink-0">Type</Label>
+                      <Select value={metadata.formation} onValueChange={(v) => setMetadata({ ...metadata, formation: v })}>
+                        <SelectTrigger id="formation" data-testid="select-formation" className="h-8 text-sm flex-1">
+                          <SelectValue placeholder="Select..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="field-goal">Field Goal</SelectItem>
+                          <SelectItem value="punt">Punt</SelectItem>
+                          <SelectItem value="kickoff">Kickoff</SelectItem>
+                          <SelectItem value="kickoff-return">Kickoff Return</SelectItem>
+                          <SelectItem value="punt-return">Punt Return</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  
+                  {/* Expert Toggle - only show when Advanced is expanded */}
+                  <button
+                    type="button"
+                    onClick={() => setExpertExpanded(!expertExpanded)}
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors py-0.5"
+                    data-testid="button-toggle-expert"
+                  >
+                    {expertExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                    <span>Expert</span>
+                    {/* Indicator dot when collapsed but has data */}
+                    {!expertExpanded && (metadata.formation || metadata.personnel) && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary ml-1" />
+                    )}
+                  </button>
+                  
+                  {/* Expert Section - Formation & Personnel */}
+                  {expertExpanded && (
+                    <div className="space-y-1.5 pl-4 border-l-2 border-muted">
+                      {/* Formation field for offense/ai-beta */}
+                      {(playType === "offense" || playType === "ai-beta") && (
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor="formation" className="text-xs w-14 flex-shrink-0">Formation</Label>
+                          <Input
+                            id="formation"
+                            data-testid="input-formation"
+                            placeholder="I-Formation, Shotgun..."
+                            value={metadata.formation}
+                            onChange={(e) => setMetadata({ ...metadata, formation: e.target.value })}
+                            className="h-8 text-sm flex-1"
+                          />
+                        </div>
+                      )}
+                      
+                      {/* Personnel field - all play types */}
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="personnel" className="text-xs w-14 flex-shrink-0">Personnel</Label>
+                        <Input
+                          id="personnel"
+                          data-testid="input-personnel"
+                          placeholder={playType === "defense" ? "4-3, 3-4, Nickel..." : playType === "special" ? "Special teams..." : "1RB, 3WR, 1TE..."}
+                          value={metadata.personnel}
+                          onChange={(e) => setMetadata({ ...metadata, personnel: e.target.value })}
+                          className="h-8 text-sm flex-1"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </Card>
 
             <Card className="p-3 space-y-2">
