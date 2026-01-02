@@ -3224,6 +3224,85 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
           </div>
 
           <div className="flex-1 overflow-y-auto pt-2 px-4 pb-2 space-y-2">
+            {/* Game Format Card - First */}
+            <Card className="p-3 space-y-2">
+              <div className="flex justify-between items-center gap-2">
+                <h3 className="font-semibold text-sm text-foreground">Preloaded Game Format</h3>
+                {playType === "defense" && (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="include-offense"
+                      checked={includeOffense}
+                      onChange={(e) => setIncludeOffense(e.target.checked)}
+                      className="rounded"
+                      data-testid="checkbox-include-offense"
+                    />
+                    <Label htmlFor="include-offense" className="text-xs">Add Offense?</Label>
+                  </div>
+                )}
+                {(playType === "offense" || playType === "ai-beta") && (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="include-defense"
+                      checked={includeDefense}
+                      onChange={(e) => setIncludeDefense(e.target.checked)}
+                      className="rounded"
+                      data-testid="checkbox-include-defense"
+                    />
+                    <Label htmlFor="include-defense" className="text-xs">Add Defense?</Label>
+                  </div>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  data-testid="button-format-5on5"
+                  onClick={() => handleGameFormatClick("5v5")}
+                  className="h-9 justify-center items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white border-0 text-[11px] font-medium whitespace-nowrap"
+                >
+                  <Flag className="h-3.5 w-3.5 text-red-500" />
+                  5-on-5 Flag
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  data-testid="button-format-7on7"
+                  onClick={() => handleGameFormatClick("7v7")}
+                  className="h-9 justify-center items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white border-0 text-[11px] font-medium whitespace-nowrap"
+                >
+                  <Flag className="h-3.5 w-3.5 text-red-500" />
+                  7-on-7 Flag
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  data-testid="button-format-9on9"
+                  onClick={() => handleGameFormatClick("9v9")}
+                  className="h-9 justify-center items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white border-0 text-[11px] font-medium whitespace-nowrap"
+                >
+                  <Flag className="h-3.5 w-3.5 text-red-500" />
+                  9-on-9 Flag
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  data-testid="button-format-11on11"
+                  onClick={() => handleGameFormatClick("11v11")}
+                  className="h-9 justify-center items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white border-0 text-[11px] font-medium whitespace-nowrap"
+                >
+                  <svg className="h-3.5 w-3.5" viewBox="0 0 20 40" fill="currentColor">
+                    <ellipse cx="10" cy="20" rx="9.5" ry="19.5" fill="#8B4513" stroke="#654321" strokeWidth="1" />
+                    <line x1="10" y1="2" x2="10" y2="38" stroke="#FFFFFF" strokeWidth="1.2" />
+                  </svg>
+                  11-on-11 Tackle
+                </Button>
+              </div>
+            </Card>
+
+            {/* Play Tag Details Card - Second */}
             <Card className="p-3 space-y-1.5">
               <h3 className="font-semibold text-sm text-foreground">Play Tag Details</h3>
               
@@ -3469,85 +3548,6 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                     Shape
                   </Button>
                 )}
-              </div>
-
-              <Separator />
-
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <h3 className="font-semibold text-sm text-foreground">Preloaded Game Format</h3>
-                  {playType === "defense" && (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="include-offense"
-                        checked={includeOffense}
-                        onChange={(e) => setIncludeOffense(e.target.checked)}
-                        className="rounded"
-                        data-testid="checkbox-include-offense"
-                      />
-                      <Label htmlFor="include-offense" className="text-xs">Add Offense?</Label>
-                    </div>
-                  )}
-                  {(playType === "offense" || playType === "ai-beta") && (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="include-defense"
-                        checked={includeDefense}
-                        onChange={(e) => setIncludeDefense(e.target.checked)}
-                        className="rounded"
-                        data-testid="checkbox-include-defense"
-                      />
-                      <Label htmlFor="include-defense" className="text-xs">Add Defense?</Label>
-                    </div>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    data-testid="button-format-5on5"
-                    onClick={() => handleGameFormatClick("5v5")}
-                    className="h-9 justify-center items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white border-0 text-[11px] font-medium whitespace-nowrap"
-                  >
-                    <Flag className="h-3.5 w-3.5 text-red-500" />
-                    5-on-5 Flag
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    data-testid="button-format-7on7"
-                    onClick={() => handleGameFormatClick("7v7")}
-                    className="h-9 justify-center items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white border-0 text-[11px] font-medium whitespace-nowrap"
-                  >
-                    <Flag className="h-3.5 w-3.5 text-red-500" />
-                    7-on-7 Flag
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    data-testid="button-format-9on9"
-                    onClick={() => handleGameFormatClick("9v9")}
-                    className="h-9 justify-center items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white border-0 text-[11px] font-medium whitespace-nowrap"
-                  >
-                    <Flag className="h-3.5 w-3.5 text-red-500" />
-                    9-on-9 Flag
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    data-testid="button-format-11on11"
-                    onClick={() => handleGameFormatClick("11v11")}
-                    className="h-9 justify-center items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white border-0 text-[11px] font-medium whitespace-nowrap"
-                  >
-                    <svg className="h-3.5 w-3.5" viewBox="0 0 20 40" fill="currentColor">
-                      <ellipse cx="10" cy="20" rx="9.5" ry="19.5" fill="#8B4513" stroke="#654321" strokeWidth="1" />
-                      <line x1="10" y1="2" x2="10" y2="38" stroke="#FFFFFF" strokeWidth="1.2" />
-                    </svg>
-                    11-on-11 Tackle
-                  </Button>
-                </div>
               </div>
 
               <Separator />
