@@ -3558,7 +3558,10 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                 <Button
                   size="sm"
                   variant={tool === "select" ? "default" : "secondary"}
-                  onClick={() => setTool("select")}
+                  onClick={() => {
+                    setTool("select");
+                    setNotesEnabled(false);
+                  }}
                   data-testid="button-tool-select"
                   className="flex justify-center items-center gap-1"
                 >
