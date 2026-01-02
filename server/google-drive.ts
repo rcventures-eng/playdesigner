@@ -538,7 +538,10 @@ export async function generateTeamDoc(
         // Table structure: rows -> tableCells -> content
         const tableElement = lastTable.table;
         
-        for (let playIdx = 0; playIdx < pagePlays.length; playIdx++) {
+        // CRITICAL: Process cells in REVERSE order (last cell first)
+        // Each image insertion shifts document indices, so we must insert 
+        // from highest index to lowest to avoid invalidating remaining indices
+        for (let playIdx = pagePlays.length - 1; playIdx >= 0; playIdx--) {
           const play = pagePlays[playIdx];
           const rowIdx = Math.floor(playIdx / 2);
           const colIdx = playIdx % 2;
@@ -558,26 +561,23 @@ export async function generateTeamDoc(
               ? Math.round(imageWidth * (play.imageHeight / play.imageWidth))
               : defaultImageHeight;
             
-            requests.push({
-              insertInlineImage: {
-                location: { index: cellStartIndex },
-                uri: imageUrl,
-                objectSize: {
-                  width: { magnitude: imageWidth, unit: 'PT' },
-                  height: { magnitude: imageHeight, unit: 'PT' }
-                }
+            // Execute each image insertion individually to avoid index conflicts
+            await docs.documents.batchUpdate({
+              documentId: docId,
+              requestBody: { 
+                requests: [{
+                  insertInlineImage: {
+                    location: { index: cellStartIndex },
+                    uri: imageUrl,
+                    objectSize: {
+                      width: { magnitude: imageWidth, unit: 'PT' },
+                      height: { magnitude: imageHeight, unit: 'PT' }
+                    }
+                  }
+                }]
               }
             });
           }
-        }
-        
-        // Execute image insertions for this table
-        if (requests.length > 0) {
-          await docs.documents.batchUpdate({
-            documentId: docId,
-            requestBody: { requests }
-          });
-          requests.length = 0;
         }
       }
       
