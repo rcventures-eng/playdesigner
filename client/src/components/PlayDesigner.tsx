@@ -234,6 +234,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     return false;
   });
   const [addPlayersExpanded, setAddPlayersExpanded] = useState(false);
+  const [advancedExportExpanded, setAdvancedExportExpanded] = useState(false);
   const [selectedGameFormat, setSelectedGameFormat] = useState<GameFormat | null>(null);
   const [specialPrompt, setSpecialPrompt] = useState("");
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
@@ -248,8 +249,8 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     personnel: "",
     situation: "",
   });
-  const [exportWidth, setExportWidth] = useState(String(FIELD.WIDTH));
-  const [exportHeight, setExportHeight] = useState(String(FIELD.HEIGHT));
+  const [exportWidth, setExportWidth] = useState("694");
+  const [exportHeight, setExportHeight] = useState("392");
   const [isDragging, setIsDragging] = useState(false);
   const isDraggingRef = useRef(false);  // Immediate sync ref for dragging state
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -3831,53 +3832,71 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
             </Card>
 
             <Card className="p-3 space-y-2">
-              <h3 className="font-semibold text-sm text-foreground">Export</h3>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label htmlFor="export-width" className="text-xs">Width (px)</Label>
-                  <Input
-                    id="export-width"
-                    data-testid="input-export-width"
-                    type="number"
-                    value={exportWidth}
-                    onChange={(e) => setExportWidth(e.target.value)}
-                    className="h-8 text-sm"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="export-height" className="text-xs">Height (px)</Label>
-                  <Input
-                    id="export-height"
-                    data-testid="input-export-height"
-                    type="number"
-                    value={exportHeight}
-                    onChange={(e) => setExportHeight(e.target.value)}
-                    className="h-8 text-sm"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
+              {/* Header row: Title + Download button on same line */}
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="font-semibold text-sm text-foreground">Single Play Export Options</h3>
                 <Button
                   size="sm"
                   variant="default"
                   onClick={exportAsImage}
                   data-testid="button-export"
-                  className="w-full"
+                  className="text-xs"
                 >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download as Image
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={copyToClipboard}
-                  data-testid="button-copy"
-                  className="w-full"
-                >
-                  <Copy className="h-4 w-4 mr-2" />
-                  Copy to Clipboard
+                  <Download className="h-3.5 w-3.5 mr-1" />
+                  Download Play as Image
                 </Button>
               </div>
+              
+              {/* Advanced Export Options toggle */}
+              <button
+                type="button"
+                onClick={() => setAdvancedExportExpanded(!advancedExportExpanded)}
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                data-testid="toggle-advanced-export"
+              >
+                <ChevronDown className={`h-3 w-3 transition-transform ${advancedExportExpanded ? 'rotate-180' : ''}`} />
+                Advanced Export Options
+              </button>
+              
+              {/* Collapsible advanced section */}
+              {advancedExportExpanded && (
+                <div className="space-y-2 pt-1">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label htmlFor="export-width" className="text-xs">Width (px)</Label>
+                      <Input
+                        id="export-width"
+                        data-testid="input-export-width"
+                        type="number"
+                        value={exportWidth}
+                        onChange={(e) => setExportWidth(e.target.value)}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="export-height" className="text-xs">Height (px)</Label>
+                      <Input
+                        id="export-height"
+                        data-testid="input-export-height"
+                        type="number"
+                        value={exportHeight}
+                        onChange={(e) => setExportHeight(e.target.value)}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={copyToClipboard}
+                    data-testid="button-copy"
+                    className="w-full"
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy to Clipboard
+                  </Button>
+                </div>
+              )}
             </Card>
 
             {(selectedPlayer || selectedRoute || selectedShape || selectedFootball) && (
