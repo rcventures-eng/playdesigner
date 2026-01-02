@@ -556,7 +556,6 @@ export async function generateTeamDoc(
           for (let col = 0; col < numCols; col++) {
             borderRemovalRequests.push({
               updateTableCellStyle: {
-                tableStartLocation: { index: lastTableStartIndex },
                 tableRange: {
                   tableCellLocation: {
                     tableStartLocation: { index: lastTableStartIndex },
