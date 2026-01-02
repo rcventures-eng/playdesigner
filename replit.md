@@ -51,6 +51,8 @@ The system supports comprehensive team management, including:
 
 Users can connect their personal Google Drive accounts via OAuth 2.0 to export team playbooks. Exports support Google Docs (handout format, 2 plays per page with metadata) and Google Slides (one play per slide). The system handles play selection, reordering, and secure token storage.
 
+**Single Play Export to Drive**: Users can export individual plays directly to Google Drive from the Play Designer. The feature uses a 3-state flow: (1) unauthenticated users see a sign-up modal, (2) authenticated users without Drive connection are redirected to OAuth, (3) connected users can upload directly. The button shows dynamic text based on state and displays a success link with the file name after upload.
+
 ### Play Management Features
 
 Plays can be archived (`isArchived` flag) instead of deleted, with dedicated views and authorization. A global template system allows admins to share public starter plays, tracking origins via `clonedFromId`.
