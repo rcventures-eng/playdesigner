@@ -253,11 +253,15 @@ export default function GoogleDriveExportModal({
             situation: p.situation ?? undefined,
           }));
           
+          // Use higher resolution (3x) for 4-play grid layout to ensure crisp images at larger display size
+          const pixelRatio = (generateDoc && docsPlaysPerPage >= 4) ? 3 : 2;
+          
           playImages = await renderPlaysToImages(
             playsForRendering,
             (current, total) => {
               setRenderingProgress({ current, total });
-            }
+            },
+            pixelRatio
           );
           console.log(`Rendered ${Object.keys(playImages).length} play images`);
         } catch (error) {

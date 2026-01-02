@@ -500,7 +500,8 @@ export async function renderPlayToBase64(
   playData: PlayData | null,
   playType: "offense" | "defense" | "special",
   playName?: string,
-  metadata?: PlayMetadata
+  metadata?: PlayMetadata,
+  pixelRatio: number = 2
 ): Promise<RenderedPlayImage> {
   return new Promise((resolve, reject) => {
     const container = document.createElement("div");
@@ -529,15 +530,15 @@ export async function renderPlayToBase64(
 
         const dataUrl = await toPng(element, {
           quality: 1.0,
-          pixelRatio: 2,
+          pixelRatio: pixelRatio,
           backgroundColor: '#16a34a',
         });
 
         const base64 = dataUrl.replace(/^data:image\/png;base64,/, '');
         
         // Get actual rendered dimensions (native * pixelRatio)
-        const width = FIELD.WIDTH * 2;
-        const height = FIELD.HEIGHT * 2;
+        const width = FIELD.WIDTH * pixelRatio;
+        const height = FIELD.HEIGHT * pixelRatio;
         
         root.unmount();
         document.body.removeChild(container);
@@ -568,7 +569,8 @@ export async function renderPlaysToImages(
     concept?: string;
     situation?: string;
   }>,
-  onProgress?: (current: number, total: number) => void
+  onProgress?: (current: number, total: number) => void,
+  pixelRatio: number = 2
 ): Promise<Record<number, PlayImageData>> {
   const images: Record<number, PlayImageData> = {};
   
@@ -591,7 +593,7 @@ export async function renderPlaysToImages(
         situation: play.situation,
       };
       
-      const result = await renderPlayToBase64(playData, playType, play.name, metadata);
+      const result = await renderPlayToBase64(playData, playType, play.name, metadata, pixelRatio);
       images[play.id] = result;
     } catch (error) {
       console.error(`Failed to render play ${play.id} (${play.name}):`, error);

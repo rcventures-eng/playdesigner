@@ -481,14 +481,15 @@ export async function generateTeamDoc(
 
   // Calculate image dimensions based on playsPerPage
   // Field aspect ratio is 694:392 ≈ 1.77:1
-  // Standard US Letter page: 612 PT x 792 PT with 1" margins = 540 PT x 720 PT usable
+  // Standard US Letter page: 612 PT x 792 PT with 1" margins = 468 PT x 648 PT usable
+  // For 2-column layout: 468 / 2 = 234 PT per column, minus small gap = ~230 PT
   const imageWidthByLayout: Record<number, number> = {
-    1: 540,   // 1 play/page: full usable width
-    2: 510,   // 2 plays/page: stacked vertically
-    4: 252,   // 4 plays/page: 2x2 grid (leaving room for cell padding)
-    8: 252    // 8 plays/page: 2x4 grid
+    1: 468,   // 1 play/page: full usable width
+    2: 468,   // 2 plays/page: stacked vertically, full width
+    4: 230,   // 4 plays/page: 2x2 grid (half page width minus small gap)
+    8: 230    // 8 plays/page: 2x4 grid
   };
-  const imageWidth = imageWidthByLayout[playsPerPage] || 510;
+  const imageWidth = imageWidthByLayout[playsPerPage] || 468;
   const defaultImageHeight = Math.round(imageWidth * (392 / 694)); // Default to field aspect ratio
 
   // For 4 or 8 plays per page, use table-based 2x2 Tecmo Bowl grid layout
@@ -527,17 +528,83 @@ export async function generateTeamDoc(
       
       // Find the last table in the document
       let lastTable: any = null;
+      let lastTableStartIndex: number | undefined;
       for (const element of body) {
         if (element.table) {
           lastTable = element;
+          lastTableStartIndex = element.startIndex ?? undefined;
         }
       }
       
       if (lastTable && lastTable.table) {
-        // Insert images into table cells
-        // Table structure: rows -> tableCells -> content
         const tableElement = lastTable.table;
+        const numRows = tableElement.tableRows?.length || 0;
+        const numCols = 2;
         
+        // Remove table borders - apply to all cells
+        // Create border style with 0 width for all sides
+        const zeroBorder = {
+          color: { color: { rgbColor: { red: 1, green: 1, blue: 1 } } },
+          width: { magnitude: 0, unit: 'PT' },
+          dashStyle: 'SOLID'
+        };
+        
+        const borderRemovalRequests: any[] = [];
+        
+        // Apply zero borders to each cell individually
+        for (let row = 0; row < numRows; row++) {
+          for (let col = 0; col < numCols; col++) {
+            borderRemovalRequests.push({
+              updateTableCellStyle: {
+                tableStartLocation: { index: lastTableStartIndex },
+                tableRange: {
+                  tableCellLocation: {
+                    tableStartLocation: { index: lastTableStartIndex },
+                    rowIndex: row,
+                    columnIndex: col
+                  },
+                  rowSpan: 1,
+                  columnSpan: 1
+                },
+                tableCellStyle: {
+                  borderTop: zeroBorder,
+                  borderBottom: zeroBorder,
+                  borderLeft: zeroBorder,
+                  borderRight: zeroBorder,
+                  paddingTop: { magnitude: 2, unit: 'PT' },
+                  paddingBottom: { magnitude: 2, unit: 'PT' },
+                  paddingLeft: { magnitude: 2, unit: 'PT' },
+                  paddingRight: { magnitude: 2, unit: 'PT' }
+                },
+                fields: 'borderTop,borderBottom,borderLeft,borderRight,paddingTop,paddingBottom,paddingLeft,paddingRight'
+              }
+            });
+          }
+        }
+        
+        // Execute border removal
+        if (borderRemovalRequests.length > 0) {
+          await docs.documents.batchUpdate({
+            documentId: docId,
+            requestBody: { requests: borderRemovalRequests }
+          });
+        }
+        
+        // Need to re-fetch document after border styling changes indices
+        const docAfterBorders = await docs.documents.get({ documentId: docId });
+        const bodyAfterBorders = docAfterBorders.data.body?.content || [];
+        
+        // Find the table again after border updates
+        let tableForImages: any = null;
+        for (const element of bodyAfterBorders) {
+          if (element.table) {
+            tableForImages = element;
+          }
+        }
+        
+        if (!tableForImages) continue;
+        
+        // Insert images into table cells
         // CRITICAL: Process cells in REVERSE order (last cell first)
         // Each image insertion shifts document indices, so we must insert 
         // from highest index to lowest to avoid invalidating remaining indices
@@ -550,7 +617,7 @@ export async function generateTeamDoc(
           if (!imageUrl) continue;
           
           // Get the cell's content start index
-          const tableRow = tableElement.tableRows?.[rowIdx];
+          const tableRow = tableForImages.table.tableRows?.[rowIdx];
           const tableCell = tableRow?.tableCells?.[colIdx];
           const cellContent = tableCell?.content?.[0];
           
