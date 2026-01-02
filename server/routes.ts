@@ -2990,6 +2990,70 @@ Return ONLY the JSON object, no markdown formatting or explanation.`;
     }
   });
 
+  // ================== SINGLE PLAY GOOGLE DRIVE EXPORT ==================
+
+  // Export a single play image to Google Drive
+  app.post("/api/plays/export-single-to-drive", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const { imageBase64, playName } = req.body;
+      
+      if (!imageBase64 || typeof imageBase64 !== 'string') {
+        return res.status(400).json({ error: "imageBase64 is required" });
+      }
+      
+      if (!playName || typeof playName !== 'string') {
+        return res.status(400).json({ error: "playName is required" });
+      }
+      
+      // Fetch user with tokens
+      const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      
+      // Check Google Drive connection
+      const { isGoogleDriveConnected, uploadSinglePlayImage } = await import("./google-drive");
+      
+      if (!isGoogleDriveConnected(user.googleDriveTokens as any)) {
+        return res.status(403).json({ 
+          error: "Google Drive not connected", 
+          code: "DRIVE_NOT_CONNECTED" 
+        });
+      }
+      
+      // Generate filename with timestamp
+      const timestamp = new Date().toISOString().slice(0, 10);
+      const sanitizedName = playName.replace(/[^a-zA-Z0-9\s-]/g, '').slice(0, 50);
+      const fileName = `${sanitizedName}_${timestamp}.png`;
+      
+      // Update tokens callback
+      const updateTokens = async (newTokens: any) => {
+        await db.update(users)
+          .set({ googleDriveTokens: newTokens })
+          .where(eq(users.id, userId));
+      };
+      
+      // Upload to Google Drive
+      const result = await uploadSinglePlayImage(
+        user.googleDriveTokens as any,
+        imageBase64,
+        fileName,
+        updateTokens
+      );
+      
+      res.json({ 
+        success: true, 
+        fileUrl: result.fileUrl,
+        fileId: result.fileId,
+        fileName 
+      });
+    } catch (error: any) {
+      console.error("Export single play to Drive error:", error);
+      res.status(500).json({ error: error.message || "Failed to export play to Google Drive" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

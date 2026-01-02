@@ -11,7 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Download, Copy, Plus, Trash2, Circle as CircleIcon, MoveHorizontal, PenTool, Square as SquareIcon, Type, Hexagon, RotateCcw, Flag, Camera, X, Loader2, Sparkles, Save, Heart, Tag, Magnet, StickyNote, FlipHorizontal2, ChevronDown, ChevronUp } from "lucide-react";
+import { Download, Copy, Plus, Trash2, Circle as CircleIcon, MoveHorizontal, PenTool, Square as SquareIcon, Type, Hexagon, RotateCcw, Flag, Camera, X, Loader2, Sparkles, Save, Heart, Tag, Magnet, StickyNote, FlipHorizontal2, ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
+import { SiGoogledrive } from "react-icons/si";
 import { toPng } from "html-to-image";
 import { useToast } from "@/hooks/use-toast";
 import { getQueryFn, apiRequest, queryClient } from "@/lib/queryClient";
@@ -562,6 +563,16 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   const [isFavorite, setIsFavorite] = useState(false);
   const [postToGlobalLibrary, setPostToGlobalLibrary] = useState(false);
   const [signUpMessage, setSignUpMessage] = useState("");
+  
+  // Google Drive export status (only check when logged in)
+  const { data: driveStatus } = useQuery<{ connected: boolean }>({
+    queryKey: ["/api/google-drive/status"],
+    queryFn: getQueryFn<{ connected: boolean }>({ on401: "returnNull" }),
+    enabled: isLoggedIn,
+  });
+  const isDriveConnected = driveStatus?.connected ?? false;
+  const [isExportingToDrive, setIsExportingToDrive] = useState(false);
+  const [driveExportResult, setDriveExportResult] = useState<{ fileUrl: string; fileName: string } | null>(null);
   
   // Wrapper to clear signUpMessage when modal closes
   const handleShowSignUpChange = (open: boolean) => {
@@ -2861,6 +2872,84 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
       });
     }
   };
+  
+  // Export to Google Drive - handles 3 user states
+  const exportToGoogleDrive = async () => {
+    // State 1: Not logged in - show sign up modal
+    if (!isLoggedIn) {
+      setSignUpMessage("Exporting to Google Drive requires an RC Football account.");
+      handleShowSignUpChange(true);
+      return;
+    }
+    
+    // State 2: Logged in but Drive not connected - redirect to OAuth
+    if (!isDriveConnected) {
+      try {
+        const response = await fetch("/api/auth/google-drive/authorize", {
+          credentials: "include",
+        });
+        if (!response.ok) {
+          throw new Error("Failed to start authorization");
+        }
+        const data = await response.json();
+        if (data.authUrl) {
+          window.location.href = data.authUrl;
+        }
+      } catch (error) {
+        toast({
+          title: "Connection Failed",
+          description: "Failed to connect to Google Drive. Please try again.",
+          variant: "destructive",
+        });
+      }
+      return;
+    }
+    
+    // State 3: Logged in and Drive connected - export the play
+    if (!canvasRef.current) return;
+    
+    setIsExportingToDrive(true);
+    setDriveExportResult(null);
+    
+    try {
+      const targetWidth = parseInt(exportWidth);
+      const targetHeight = parseInt(exportHeight);
+      const dataUrl = await generateScaledExport(targetWidth, targetHeight);
+      
+      // Extract base64 data (remove data:image/png;base64, prefix)
+      const base64Data = dataUrl.split(',')[1];
+      const playName = metadata.name || "Untitled Play";
+      
+      const response = await apiRequest("POST", "/api/plays/export-single-to-drive", {
+        imageBase64: base64Data,
+        playName,
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to export to Google Drive");
+      }
+      
+      setDriveExportResult({
+        fileUrl: result.fileUrl,
+        fileName: result.fileName,
+      });
+      
+      toast({
+        title: "Exported to Google Drive!",
+        description: `"${result.fileName}" saved to your Drive.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Export Failed",
+        description: error.message || "Failed to export to Google Drive",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExportingToDrive(false);
+    }
+  };
 
   const getRoutePath = (route: Route) => {
     if (route.points.length < 2) return "";
@@ -3895,6 +3984,43 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                     <Copy className="h-4 w-4 mr-2" />
                     Copy to Clipboard
                   </Button>
+                  
+                  {/* Export to Google Drive button */}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={exportToGoogleDrive}
+                    disabled={isExportingToDrive}
+                    data-testid="button-export-drive"
+                    className="w-full"
+                  >
+                    {isExportingToDrive ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <SiGoogledrive className="h-4 w-4 mr-2" />
+                    )}
+                    {!isLoggedIn 
+                      ? "Export to Google Drive" 
+                      : !isDriveConnected 
+                        ? "Connect Google Drive" 
+                        : isExportingToDrive 
+                          ? "Exporting..." 
+                          : "Export to Google Drive"}
+                  </Button>
+                  
+                  {/* Success link after export */}
+                  {driveExportResult && (
+                    <a
+                      href={driveExportResult.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 underline"
+                      data-testid="link-drive-export"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      Open "{driveExportResult.fileName}" in Drive
+                    </a>
+                  )}
                 </div>
               )}
             </Card>

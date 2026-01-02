@@ -1055,3 +1055,34 @@ export async function exportPlaybookToGoogleDrive(
 export function isGoogleDriveConnected(tokens: GoogleDriveTokens | null | undefined): boolean {
   return !!(tokens && tokens.access_token && tokens.refresh_token);
 }
+
+// Upload a single play image to Google Drive and return the file URL
+export async function uploadSinglePlayImage(
+  tokens: GoogleDriveTokens,
+  imageBase64: string,
+  fileName: string,
+  updateTokensCallback?: (newTokens: GoogleDriveTokens) => Promise<void>
+): Promise<{ fileUrl: string; fileId: string }> {
+  const drive = await getGoogleDriveClientForUser(tokens, updateTokensCallback);
+  
+  // Convert base64 to buffer
+  const imageBuffer = Buffer.from(imageBase64, 'base64');
+  
+  // Create the file in Google Drive
+  const file = await drive.files.create({
+    requestBody: {
+      name: fileName,
+      mimeType: 'image/png'
+    },
+    media: {
+      mimeType: 'image/png',
+      body: Readable.from(imageBuffer)
+    },
+    fields: 'id, webViewLink'
+  });
+  
+  const fileId = file.data.id!;
+  const fileUrl = file.data.webViewLink!;
+  
+  return { fileUrl, fileId };
+}
