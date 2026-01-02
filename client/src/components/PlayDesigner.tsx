@@ -233,6 +233,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     }
     return false;
   });
+  const [addPlayersExpanded, setAddPlayersExpanded] = useState(false);
   const [selectedGameFormat, setSelectedGameFormat] = useState<GameFormat | null>(null);
   const [specialPrompt, setSpecialPrompt] = useState("");
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
@@ -3300,6 +3301,88 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                   11-on-11 Tackle
                 </Button>
               </div>
+              
+              {/* Add Players Toggle - progressive disclosure */}
+              <button
+                type="button"
+                onClick={() => setAddPlayersExpanded(!addPlayersExpanded)}
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors py-0.5"
+                data-testid="button-toggle-add-players"
+              >
+                {addPlayersExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                <span>Add Players / My Format Isn't Listed</span>
+              </button>
+              
+              {/* Add Players Section - collapsed by default */}
+              {addPlayersExpanded && (
+                <div className="space-y-2">
+                  <Label className="text-xs">Add Players</Label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {colors.map((color, idx) => (
+                      <Button
+                        key={color}
+                        size="icon"
+                        data-testid={`button-add-player-${idx}`}
+                        onClick={() => addPlayer(color)}
+                        className="h-9 w-9"
+                        style={{ backgroundColor: color }}
+                      >
+                        <Plus className="h-4 w-4 text-white" />
+                      </Button>
+                    ))}
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      data-testid="button-add-football"
+                      onClick={addFootball}
+                      className="h-9 w-9"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 20 40" fill="currentColor">
+                        <ellipse cx="10" cy="20" rx="9.5" ry="19.5" fill="#8B4513" stroke="#654321" strokeWidth="1" />
+                        <line x1="10" y1="2" x2="10" y2="38" stroke="#FFFFFF" strokeWidth="1.2" />
+                        <line x1="4" y1="13" x2="16" y2="13" stroke="#FFFFFF" strokeWidth="0.6" />
+                        <line x1="3" y1="16.5" x2="17" y2="16.5" stroke="#FFFFFF" strokeWidth="0.6" />
+                        <line x1="2.5" y1="20" x2="17.5" y2="20" stroke="#FFFFFF" strokeWidth="0.6" />
+                        <line x1="3" y1="23.5" x2="17" y2="23.5" stroke="#FFFFFF" strokeWidth="0.6" />
+                        <line x1="4" y1="27" x2="16" y2="27" stroke="#FFFFFF" strokeWidth="0.6" />
+                      </svg>
+                    </Button>
+                  </div>
+                  {footballs.length > 0 && (
+                    <div className="flex items-center gap-2 mt-2">
+                      <input
+                        type="checkbox"
+                        id="play-action"
+                        checked={isPlayAction}
+                        onChange={(e) => {
+                          const newValue = e.target.checked;
+                          setIsPlayAction(newValue);
+                          
+                          // If a football is selected, toggle its hasPlayAction
+                          if (selectedFootball) {
+                            setHistory(prev => [...prev, {
+                              players: JSON.parse(JSON.stringify(players)),
+                              routes: JSON.parse(JSON.stringify(routes)),
+                              shapes: JSON.parse(JSON.stringify(shapes)),
+                              footballs: JSON.parse(JSON.stringify(footballs)),
+                              notes: JSON.parse(JSON.stringify(notes)),
+                              metadata: JSON.parse(JSON.stringify(metadata))
+                            }]);
+                            setFootballs(prev => prev.map(f => 
+                              f.id === selectedFootball 
+                                ? { ...f, hasPlayAction: newValue }
+                                : f
+                            ));
+                          }
+                        }}
+                        className="rounded"
+                        data-testid="checkbox-play-action"
+                      />
+                      <Label htmlFor="play-action" className="text-xs">Play-Action</Label>
+                    </div>
+                  )}
+                </div>
+              )}
             </Card>
 
             {/* Play Tag Details Card - Second */}
@@ -3547,76 +3630,6 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                     <SquareIcon className="h-4 w-4 mr-2" />
                     Shape
                   </Button>
-                )}
-              </div>
-
-              <Separator />
-
-              <div className="space-y-2">
-                <Label className="text-xs">Add Players</Label>
-                <div className="grid grid-cols-4 gap-2">
-                  {colors.map((color, idx) => (
-                    <Button
-                      key={color}
-                      size="icon"
-                      data-testid={`button-add-player-${idx}`}
-                      onClick={() => addPlayer(color)}
-                      className="h-9 w-9"
-                      style={{ backgroundColor: color }}
-                    >
-                      <Plus className="h-4 w-4 text-white" />
-                    </Button>
-                  ))}
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    data-testid="button-add-football"
-                    onClick={addFootball}
-                    className="h-9 w-9"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 20 40" fill="currentColor">
-                      <ellipse cx="10" cy="20" rx="9.5" ry="19.5" fill="#8B4513" stroke="#654321" strokeWidth="1" />
-                      <line x1="10" y1="2" x2="10" y2="38" stroke="#FFFFFF" strokeWidth="1.2" />
-                      <line x1="4" y1="13" x2="16" y2="13" stroke="#FFFFFF" strokeWidth="0.6" />
-                      <line x1="3" y1="16.5" x2="17" y2="16.5" stroke="#FFFFFF" strokeWidth="0.6" />
-                      <line x1="2.5" y1="20" x2="17.5" y2="20" stroke="#FFFFFF" strokeWidth="0.6" />
-                      <line x1="3" y1="23.5" x2="17" y2="23.5" stroke="#FFFFFF" strokeWidth="0.6" />
-                      <line x1="4" y1="27" x2="16" y2="27" stroke="#FFFFFF" strokeWidth="0.6" />
-                    </svg>
-                  </Button>
-                </div>
-                {footballs.length > 0 && (
-                  <div className="flex items-center gap-2 mt-2">
-                    <input
-                      type="checkbox"
-                      id="play-action"
-                      checked={isPlayAction}
-                      onChange={(e) => {
-                        const newValue = e.target.checked;
-                        setIsPlayAction(newValue);
-                        
-                        // If a football is selected, toggle its hasPlayAction
-                        if (selectedFootball) {
-                          setHistory(prev => [...prev, {
-                            players: JSON.parse(JSON.stringify(players)),
-                            routes: JSON.parse(JSON.stringify(routes)),
-                            shapes: JSON.parse(JSON.stringify(shapes)),
-                            footballs: JSON.parse(JSON.stringify(footballs)),
-                            notes: JSON.parse(JSON.stringify(notes)),
-                            metadata: JSON.parse(JSON.stringify(metadata))
-                          }]);
-                          setFootballs(prev => prev.map(f => 
-                            f.id === selectedFootball 
-                              ? { ...f, hasPlayAction: newValue }
-                              : f
-                          ));
-                        }
-                      }}
-                      className="rounded"
-                      data-testid="checkbox-play-action"
-                    />
-                    <Label htmlFor="play-action" className="text-xs">Play-Action</Label>
-                  </div>
                 )}
               </div>
 
