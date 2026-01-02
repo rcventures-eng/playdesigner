@@ -3843,7 +3843,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                   className="text-xs"
                 >
                   <Download className="h-3.5 w-3.5 mr-1" />
-                  Download Play as Image
+                  Download Play
                 </Button>
               </div>
               
