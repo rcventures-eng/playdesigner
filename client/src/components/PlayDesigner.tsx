@@ -1125,7 +1125,6 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     setRoutes([]);
     setShapes([]);
     setFootballs([]);
-    setMetadata(prev => ({ ...prev, name: "", formation: "", concept: "", personnel: "" }));
     setSelectedPlayer(null);
     setSelectedRoute(null);
     setSelectedShape(null);
@@ -1142,7 +1141,6 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     setRoutes([]);
     setShapes([]);
     setFootballs([]);
-    setMetadata(prev => ({ ...prev, name: "", formation: "", concept: "", personnel: "" }));
     setSelectedPlayer(null);
     setSelectedRoute(null);
     setSelectedShape(null);
@@ -1159,7 +1157,6 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     setRoutes([]);
     setShapes([]);
     setFootballs([]);
-    setMetadata(prev => ({ ...prev, name: "", formation: "", concept: "", personnel: "" }));
     setSelectedPlayer(null);
     setSelectedRoute(null);
     setSelectedShape(null);
@@ -1176,7 +1173,6 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     setRoutes([]);
     setShapes([]);
     setFootballs([]);
-    setMetadata(prev => ({ ...prev, name: "", formation: "", concept: "", personnel: "" }));
     setSelectedPlayer(null);
     setSelectedRoute(null);
     setSelectedShape(null);
@@ -1301,13 +1297,12 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     const newRoutes: Route[] = [];
     const newShapes: Shape[] = [];
     const newFootballs: Football[] = [];
-    const newMetadata = { ...metadata, name: "", formation: "", personnel: "" };
     
     setPlayers(newPlayers);
     setRoutes(newRoutes);
     setShapes(newShapes);
     setFootballs(newFootballs);
-    setMetadata(newMetadata);
+    // Preserve metadata - don't clear it when changing game format
     setSelectedPlayer(null);
     setSelectedRoute(null);
     setSelectedShape(null);
@@ -1323,7 +1318,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
         shapes: newShapes,
         footballs: newFootballs,
         notes: [],
-        metadata: newMetadata,
+        metadata: metadata, // Preserve current metadata
         history: [],
       }
     };
