@@ -26,171 +26,46 @@ The frontend is a React and TypeScript application built with Vite, utilizing sh
 
 ### Canvas and Drawing System
 
-The core play design functionality uses HTML5 Canvas and SVG. Features include:
--   **Field Elements**: Configurable field elements (line of scrimmage, yard lines, hash marks), draggable football, and play-action marker.
--   **Player & Route Interaction**: Drag-and-drop for players, click-to-draw for routes, and comprehensive player interactions via a long-press menu. Routes shift with players, and advanced route editing includes control handles and undo checkpoints.
--   **Resolution Independence**: Responsive scaling ensures consistent coordinate handling across devices.
--   **Player Rendering**: Differentiates offensive (filled circles) and defensive (X shapes) players.
--   **Defensive Assignments**: Supports advanced assignments like Blitz, Man Coverage (linked to offensive players), and Zone Coverage (resizable shapes).
--   **Export Functionality**: Generates downloadable PNGs of the canvas content.
--   **Flip Play**: Mirrors the entire play horizontally around the field center line (X=347).
-
-### Flip Play Feature
-
-The Flip Play feature allows coaches to quickly mirror their plays horizontally:
--   **In Play Designer**: "Flip Play" button below the canvas with FlipHorizontal2 icon
--   **In Play Library**: Flip icon on play cards and "Flip Play" button in the double-click dialog
--   **URL Parameter**: `/?playId=123&flip=true` loads a play pre-flipped
--   **Non-Permanent**: Flip doesn't auto-save; user must save manually to persist flipped version
--   **Template Restriction**: Flip button hidden for public templates (isPublic plays)
--   **What Flips**: Players, routes, shapes, footballs, and notes are mirrored around centerX
--   **Labels Preserved**: Player labels (e.g., "LT", "QB") remain unchanged
--   **State Caching**: Flipped state is stored in playTypeStatesRef to survive tab switches
--   **Undo Support**: Flip is added to history so it can be undone
-
-### Play Notes Feature
-
-The Play Notes feature allows coaches to add movable text annotations directly on plays:
--   **Notes Toggle**: Yellow Apple Notes-styled button activates note drawing mode
--   **Creation**: Draw a rectangle on the canvas to create a note (minimum 40x20 pixels)
--   **Edit Mode**: Notes enter edit mode immediately after creation with 500ms blur protection
--   **Textarea Focus**: Uses programmatic focus with requestAnimationFrame for reliable editing
--   **Dragging**: Click and drag notes to reposition them anywhere on the field
--   **Resizing**: Resize handle (SE corner) appears when note is selected
--   **Selection**: Click to select a note; Delete/Backspace removes selected note
--   **Persistence**: Notes are saved with plays in the `data` JSON column
--   **White Field Failsafe**: Notes use light gray background on white fields for visibility
--   **Export**: Notes are included in play exports but excluded from thumbnails
--   **Event Handling**: Textarea events use stopPropagation to prevent canvas interference
--   **Data Model**: `PlayNote` type with id, x, y, width, height, text properties
+The core play design functionality uses HTML5 Canvas and SVG. Key features include configurable field elements, drag-and-drop player positioning, click-to-draw routes with advanced editing, resolution independence, and distinct rendering for offensive and defensive players. It also supports defensive assignments (Blitz, Man, Zone), play notes (movable text annotations), and export to downloadable PNGs. The "Flip Play" feature mirrors plays horizontally for strategic variations.
 
 ### AI Play Creator
 
-The AI Beta tab features an AI Play Creator powered by Google Gemini 2.0 Flash.
--   **Input**: Generates plays from natural language descriptions or hand-drawn diagrams (via image uploads).
--   **Visual Enhancements**: Includes a SportsCenter-style scrolling ticker for suggestion chips.
--   **Backend Validation**: Infers play characteristics (`isPrimary`, `isMotion`) and validates defensive routes.
-
-### Shared Configuration
-
-`shared/football-config.ts` acts as a single source of truth for design parameters and game logic. `shared/logic-dictionary.ts` provides a `LOGIC_DICTIONARY` for AI Play Creator, defining strategies and route patterns, and `SITUATIONAL_TAGS` for format-specific play tagging.
-
-### Situational Tagging System
-
-Supports dynamic situational tagging for plays based on game format (e.g., 5v5, 11v11), with options like "Open Field," "Red Zone," and "Goal Line." Tags are integrated into AI prompts for contextual generation.
+The AI Beta tab leverages Google Gemini 2.0 Flash to generate plays from natural language descriptions or hand-drawn diagrams (image uploads). It includes visual enhancements and validates inferred play characteristics and defensive routes. A shared `LOGIC_DICTIONARY` and `SITUATIONAL_TAGS` define AI strategies and contextual play tagging.
 
 ### Backend
 
-The backend uses Express.js with TypeScript, providing API routes for AI play generation, user authentication, team management, and play management.
+The backend is an Express.js and TypeScript application, providing API routes for AI play generation, user authentication, team and play management.
 
 ### Data Storage
 
-Drizzle ORM with PostgreSQL manages data for `users`, `teams`, `plays`, `ai_logs`, and other related entities. The `plays` table links to users and optionally to teams.
+Drizzle ORM with PostgreSQL is used for data management across entities like `users`, `teams`, `plays`, and `ai_logs`.
 
-### Team Playbook Management
+### Team Management
 
-Allows users to create, edit, and manage team playbooks, including uploading cover images and associating plays with teams. The `play_teams` junction table enables many-to-many relationships, allowing a single play to be assigned to multiple team playbooks simultaneously.
+The system supports comprehensive team management, including:
+-   **Team Playbook Management**: Create, edit, and manage team playbooks, associate plays, and upload cover images. Plays can be assigned to multiple teams via a junction table.
+-   **Team Roster Management**: Add/edit/delete coaches and players, import rosters via CSV or AI-powered image parsing, and store data in dedicated `teamCoaches` and `teamPlayers` tables.
+-   **Team Splits (Squad Assignments)**: Organize players into two squads for practice planning, with visual indicators and assignment management, stored in a `teamSplits` table.
 
-### Team Roster Management
+### Google Drive Export
 
-The Team Roster feature allows coaches to manage their coaching staff and players for each team playbook:
--   **Coaching Staff Section**: Add/edit/delete coaches with First Name, Last Name, and Role (Head Coach, Assistant, Offensive Coordinator, Defensive Coordinator, Volunteer)
--   **Players Section**: Add/edit/delete players with First Name, Last Name, Position 1, Position 2, Defensive Position, and up to 4 Main Colors (comma-separated)
--   **Upload Options**: Import rosters via CSV file or screenshot image (uses Gemini AI for OCR parsing)
--   **Preview Modal**: Review parsed data before confirming import
--   **Database Tables**: `teamCoaches` and `teamPlayers` with proper foreign key relationships to teams
--   **API Endpoints**:
-    -   GET/POST/PATCH/DELETE `/api/teams/:teamId/coaches` - Coach CRUD operations
-    -   GET/POST/PATCH/DELETE `/api/teams/:teamId/players` - Player CRUD operations
-    -   POST `/api/teams/:teamId/roster/import` - Bulk import coaches and players
-    -   POST `/api/teams/:teamId/roster/parse-image` - AI-powered image parsing
--   **UI Component**: `TeamRosterCard.tsx` displays below team cover image on Team Playbooks page
--   **Design**: Uses shadcn Card components with white background, gray borders, and comprehensive data-testid coverage for testing
+Users can connect their personal Google Drive accounts via OAuth 2.0 to export team playbooks. Exports support Google Docs (handout format, 2 plays per page with metadata) and Google Slides (one play per slide). The system handles play selection, reordering, and secure token storage.
 
-### Team Splits (Squad Assignments)
+### Play Management Features
 
-The Splits section allows coaches to organize players into two squads for practice planning:
--   **Squad 1 and Squad 2**: Two side-by-side squads displayed in a grid layout
--   **Player Assignment**: Assign up to 6 players per squad from the roster via dropdown selection
--   **Visual Indicators**: Shows player name, positions (offensive/defensive), and color badges
--   **Remove Players**: X button to remove players from a squad
--   **Unassigned Players**: Only players not already assigned to a squad appear in the dropdown
--   **Database Table**: `teamSplits` with foreign keys to `teams` and `teamPlayers` (cascade delete)
--   **API Endpoints**:
-    -   GET `/api/teams/:teamId/splits` - Get all squad assignments with player info
-    -   POST `/api/teams/:teamId/splits` - Add player to a squad (validates 6-player limit)
-    -   DELETE `/api/teams/:teamId/splits/:splitId` - Remove player from squad
--   **Use Case**: Helps coaches plan how to divide players if the full roster shows up for practice
+Plays can be archived (`isArchived` flag) instead of deleted, with dedicated views and authorization. A global template system allows admins to share public starter plays, tracking origins via `clonedFromId`.
 
-### Google Drive Export (All Users)
+### Authentication
 
-Coaches can connect their personal Google Drive accounts and export team playbooks:
--   **Per-User OAuth**: Each coach connects their own Google Drive via OAuth 2.0 flow
--   **Export Modal**: Accessible via "Sync to Drive" button on Team Playbooks page (`/playbooks`)
--   **Formats**: Google Docs (handout format with 2 plays per page) and Google Slides (one play per slide)
--   **Play Selection**: Choose which plays to include in export with select all/deselect all options
--   **Drag-and-Drop Reordering**: Plays can be reordered in the export modal before exporting
--   **Connect/Disconnect**: Users can manage their Google Drive connection from the export modal
--   **Token Storage**: OAuth tokens stored securely in user's `googleDriveTokens` column with automatic refresh
--   **Google Docs Formatting**:
-    -   Cover page: Team Name → Cover Image (if available) → Year → Total Plays (all centered)
-    -   Play images render with metadata header (name, formation, concept, situation) - no separate text labels
-    -   2 plays per page layout with proper spacing and page breaks
-    -   Images rendered at high quality (2x pixel ratio, 468 PT width)
--   **Play Image Rendering**: `PlaySVGForExport` component renders metadata boxes in header (matching Play Designer appearance)
--   **API Endpoints**: 
-    -   `GET /api/google-drive/status` - Check user's connection status
-    -   `GET /api/auth/google-drive/authorize` - Start OAuth flow
-    -   `GET /api/auth/google-drive/callback` - OAuth callback with CSRF protection
-    -   `POST /api/google-drive/disconnect` - Disconnect user's Google Drive
-    -   `POST /api/teams/:teamId/export-to-drive` - Export playbook (team owner only)
-    -   `GET /api/teams/:teamId/plays-for-export` - Get plays for export modal (includes situation field)
--   **Security**: State parameter validated against session to prevent CSRF attacks
--   **Files**: `server/google-drive.ts` (service), `client/src/components/GoogleDriveExportModal.tsx` (UI), `client/src/lib/renderPlayToImage.tsx` (image rendering)
+Session-based authentication uses `express-session` with `connect-pg-simple` and `bcryptjs` for registration, login, logout, and user info. The UI adapts based on authentication and user roles (e.g., admin).
 
-### Play-Team Assignment
+### User Profile and Admin Dashboard
 
-The TagPopover component includes a "Team Playbooks" section that allows users to:
--   Assign plays to multiple team playbooks via checkbox toggles
--   View all their team playbooks with assignment status
--   "Create your first Team Playbook" link when no playbooks exist
--   API endpoints: GET/POST/DELETE `/api/plays/:id/teams/:teamId` with owner/admin authorization
+A `/profile` page allows users to manage their avatar and preferences. An `/admin` dashboard provides protected access for managing AI Logic, formation presets, AI logs, and user accounts.
 
-### Play Archiving System
+### UI/UX Patterns
 
-Plays can be archived (`isArchived` flag) instead of deleted, with dedicated archive views and authorization controls.
-
-### Authentication System
-
-Session-based authentication uses `express-session` with `connect-pg-simple` and `bcryptjs`. It includes registration, login, logout, and user information retrieval. The UI adapts based on authentication status and user roles (e.g., admin).
-
-### Coach Profile Page
-
-A dedicated `/profile` page for users to manage their avatar, and editable fields like favorite NFL team/coach, and offensive/defensive scheme preferences. Updates are handled via a `PATCH /api/user/profile` endpoint with Zod validation.
-
-### Admin Dashboard
-
-A protected `/admin` interface for managing AI Logic (`LOGIC_DICTIONARY`), formation presets, AI generation logs, and user accounts. Admin access is controlled by an `isAdmin` flag and `verifyAdmin` middleware. Features include a sortable, paginated user table and email management.
-
-### Play Type Tabs
-
-Supports "Offense," "Defense," "Special," and "AI Beta" tabs, each maintaining independent state and allowing combination of formations.
-
-### Right Sidebar Directions Panel
-
-A fixed-width sidebar provides guided instructions, "Pro Tips," and calls-to-action.
-
-### Play Library Page
-
-A light-themed `/plays` page for managing saved plays. It features a collapsible sidebar for filters, a gallery grid with play cards, sorting options, and actions like sharing, exporting, and creating new plays. Unauthenticated users can browse public templates, while authenticated users can save and clone plays.
-
-### Global Template System
-
-An admin-controlled public play library allows sharing starter content. Plays can be marked `isPublic`, and `clonedFromId` tracks template origins.
-
-### Feature Request System
-
-A user feedback system accessible from the right sidebar. It collects user type, feature description, and use case, storing them in a `feature_requests` table. Submissions are validated, protected against spam, and trigger email notifications to administrators via Resend.
+The application uses progressive disclosure for play tag details, displaying only essential fields initially and revealing advanced options upon user interaction. A fixed-width right sidebar provides guided instructions and "Pro Tips." The Play Library page (`/plays`) offers a gallery view with filters and sorting, allowing both authenticated and unauthenticated users to browse public templates.
 
 ## External Dependencies
 
