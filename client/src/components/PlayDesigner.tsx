@@ -3619,6 +3619,21 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                   <StickyNote className="h-4 w-4" />
                   Notes
                 </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={addFootball}
+                  data-testid="button-add-football-tools"
+                  className="flex justify-center items-center gap-0.5 text-[8px] font-medium px-1"
+                  style={{
+                    background: 'linear-gradient(145deg, #8B4513 0%, #654321 100%)',
+                    color: 'white',
+                    border: '1px solid #5D3A1A',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                  }}
+                >
+                  <span className="whitespace-nowrap">Add 🏈 | Play-Action</span>
+                </Button>
                 {playType === "defense" && (
                   <Button
                     size="sm"
@@ -3632,6 +3647,36 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                   </Button>
                 )}
               </div>
+
+              {/* Contextual Play-Action toggle when football is selected */}
+              {selectedFootball && (
+                <div className="flex items-center gap-2 p-2 bg-amber-900/30 border border-amber-600/30 rounded-md">
+                  <input
+                    type="checkbox"
+                    id="play-action-selected"
+                    checked={footballs.find(f => f.id === selectedFootball)?.hasPlayAction || false}
+                    onChange={(e) => {
+                      const newValue = e.target.checked;
+                      setHistory(prev => [...prev, {
+                        players: JSON.parse(JSON.stringify(players)),
+                        routes: JSON.parse(JSON.stringify(routes)),
+                        shapes: JSON.parse(JSON.stringify(shapes)),
+                        footballs: JSON.parse(JSON.stringify(footballs)),
+                        notes: JSON.parse(JSON.stringify(notes)),
+                        metadata: JSON.parse(JSON.stringify(metadata))
+                      }]);
+                      setFootballs(prev => prev.map(f => 
+                        f.id === selectedFootball 
+                          ? { ...f, hasPlayAction: newValue }
+                          : f
+                      ));
+                    }}
+                    className="rounded"
+                    data-testid="checkbox-play-action-selected"
+                  />
+                  <Label htmlFor="play-action-selected" className="text-xs text-amber-200">Play-Action?</Label>
+                </div>
+              )}
 
               {tool === "shape" && playType === "defense" && (
                 <>
