@@ -1239,12 +1239,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get public templates (no auth required)
+  // Disable browser caching to ensure users always see the latest Global Library plays
   app.get("/api/public/templates", async (req, res) => {
     try {
       const publicPlays = await db.select().from(plays).where(
         eq(plays.isPublic, true)
       ).orderBy(desc(plays.createdAt));
 
+      // Prevent stale browser cache so newly added public plays appear after refresh
+      res.set('Cache-Control', 'no-cache, must-revalidate');
       res.json(publicPlays);
     } catch (error: any) {
       console.error("Get public templates error:", error);
