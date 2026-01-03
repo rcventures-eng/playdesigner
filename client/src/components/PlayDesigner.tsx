@@ -4209,6 +4209,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
             style={{
               transform: `scale(${scale})`,
               transformOrigin: "center center",
+              marginTop: playType === "ai-beta" ? "2rem" : undefined,
             }}
           >
             {/* Quick Action Icons Strip - Outside canvasRef for export exclusion */}
