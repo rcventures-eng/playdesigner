@@ -3399,7 +3399,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                 data-testid="button-toggle-add-players"
               >
                 {addPlayersExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                <span>Add Players / My Format Isn't Listed</span>
+                {!addPlayersExpanded && <span>Add Players / My Format Isn't Listed</span>}
               </button>
               
               {/* Add Players Section - collapsed by default */}
@@ -3499,7 +3499,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                 data-testid="button-toggle-advanced"
               >
                 {advancedExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                <span>Advanced</span>
+                {!advancedExpanded && <span>Advanced</span>}
                 {!advancedExpanded && (metadata.concept || metadata.situation || (playType === "defense" && metadata.defenseConcept)) && (
                   <span className="w-1.5 h-1.5 rounded-full bg-primary ml-1" />
                 )}
@@ -3599,7 +3599,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                     data-testid="button-toggle-expert"
                   >
                     {expertExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                    <span>Expert</span>
+                    {!expertExpanded && <span>Expert</span>}
                     {!expertExpanded && (metadata.formation || metadata.personnel) && (
                       <span className="w-1.5 h-1.5 rounded-full bg-primary ml-1" />
                     )}
@@ -3943,7 +3943,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                 data-testid="toggle-advanced-export"
               >
                 <ChevronDown className={`h-3 w-3 transition-transform ${advancedExportExpanded ? 'rotate-180' : ''}`} />
-                Advanced Export Options
+                {!advancedExportExpanded && <span>Advanced Export Options</span>}
               </button>
               
               {/* Collapsible advanced section */}
