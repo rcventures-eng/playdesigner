@@ -4067,18 +4067,31 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                   🏈 What's the play call coach?
                 </h2>
                 
-                {/* Glassmorphic Input Container - Textarea only */}
+                {/* Glassmorphic Input Container - Textarea with submit button */}
                 <div className="w-full bg-slate-900/80 backdrop-blur-sm border border-white/20 rounded-xl p-3 shadow-xl">
-                  {/* Fixed height wrapper to force textarea constraint */}
-                  <div className="w-full h-12">
+                  {/* Fixed height wrapper with textarea and submit button */}
+                  <div className="w-full h-12 flex items-center gap-2">
                     <textarea
                       placeholder="Explain the play..."
                       value={specialPrompt}
                       onChange={(e) => setSpecialPrompt(e.target.value)}
-                      className="!h-full !min-h-0 w-full bg-transparent text-white placeholder-white/50 outline-none p-2 resize-none"
+                      className="!h-full !min-h-0 flex-1 bg-transparent text-white placeholder-white/50 outline-none p-2 resize-none"
                       style={{ height: '100%' }}
                       data-testid="ai-input"
                     />
+                    {/* Submit button - inside textarea container */}
+                    <button
+                      onClick={() => handleGeneratePlay(uploadedImage || undefined)}
+                      disabled={isGenerating || (!specialPrompt.trim() && !uploadedImage)}
+                      className="h-full bg-orange-500 hover:bg-orange-600 disabled:bg-orange-400 disabled:cursor-not-allowed text-white px-4 rounded-lg transition-colors font-bold text-sm whitespace-nowrap flex items-center justify-center"
+                      data-testid="ai-submit-button"
+                    >
+                      {isGenerating ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : (
+                        "READY, SET, HIKE!"
+                      )}
+                    </button>
                   </div>
                 </div>
                 
@@ -4142,7 +4155,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                     );
                   })()}
                   
-                  {/* Right side: Upload and Submit */}
+                  {/* Right side: Upload only (Submit moved to textarea) */}
                   <div className="flex items-center gap-1 flex-shrink-0">
                     {/* Hidden file input */}
                     <input
@@ -4164,21 +4177,6 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                         <Loader2 className="h-2 w-2 animate-spin" />
                       ) : (
                         <>Upload Play</>
-                      )}
-                    </button>
-                    {/* Submit button */}
-                    <button
-                      onClick={() => handleGeneratePlay(uploadedImage || undefined)}
-                      disabled={isGenerating || (!specialPrompt.trim() && !uploadedImage)}
-                      className="bg-orange-500 hover:bg-orange-600 disabled:bg-orange-400 disabled:cursor-not-allowed text-white p-1 rounded-lg transition-colors"
-                      data-testid="ai-submit-button"
-                    >
-                      {isGenerating ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="#4a8c4f">
-                          <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                        </svg>
                       )}
                     </button>
                   </div>
