@@ -1086,24 +1086,24 @@ export default function PlayLibrary() {
                         triggerClassName="p-1.5 rounded-full bg-white/80 text-gray-500 hover:bg-white hover:text-orange-500 transition-colors"
                       />
                     )}
-                    {/* Flip button - only for user's own plays, not templates */}
+                    {/* Clone button - only for user's own plays, not templates */}
                     {!play.isPublic && user && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/?playId=${play.id}&flip=true`);
+                          clonePlayMutation.mutate(play);
                         }}
-                        className="p-1.5 rounded-full bg-white/80 text-gray-500 hover:bg-white hover:text-purple-600 transition-colors"
-                        data-testid={`button-flip-${play.id}`}
-                        title="Flip Play"
+                        className="p-1.5 rounded-full bg-white/80 text-gray-500 hover:bg-white hover:text-blue-600 transition-colors"
+                        data-testid={`button-clone-own-${play.id}`}
+                        title="Duplicate Play"
                       >
-                        <FlipHorizontal2 className="w-4 h-4" />
+                        <Copy className="w-4 h-4" />
                       </button>
                     )}
                   </div>
                   
                   {/* Play Preview */}
-                  <div className="h-64 bg-gray-100 flex items-center justify-center">
+                  <div className="h-64 bg-gray-100 flex items-center justify-center relative">
                     <PlayPreview
                       playData={play.data as any}
                       playType={play.type as PlayType}
@@ -1111,6 +1111,20 @@ export default function PlayLibrary() {
                       formation={play.formation || undefined}
                       scale={0.6}
                     />
+                    {/* Flip button - bottom right, only for user's own plays */}
+                    {!play.isPublic && user && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/?playId=${play.id}&flip=true`);
+                        }}
+                        className="absolute bottom-2 right-2 p-1.5 rounded-full bg-white/80 text-gray-500 hover:bg-white hover:text-purple-600 transition-colors z-10"
+                        data-testid={`button-flip-${play.id}`}
+                        title="Flip Play"
+                      >
+                        <FlipHorizontal2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                   
                   {/* Play Info */}
