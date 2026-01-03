@@ -2675,8 +2675,23 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
         setRoutes(validRoutes);
       }
 
-      // Clear shapes for fresh AI-generated play
-      setShapes([]);
+      // Handle shapes from AI response (zone coverage ovals for defensive plays)
+      if (playData.shapes && Array.isArray(playData.shapes) && playData.shapes.length > 0) {
+        const validShapes = playData.shapes.map((s: any) => ({
+          id: s.id || `shape-${Date.now()}-${Math.random()}`,
+          playerId: s.playerId,
+          type: s.type || "oval",
+          x: Math.max(0, Math.min(FIELD.WIDTH, s.x || 200)),
+          y: Math.max(0, Math.min(FIELD.HEIGHT, s.y || 100)),
+          width: s.width || 180,
+          height: s.height || 100,
+          color: s.color || "#9333ea",
+        }));
+        setShapes(validShapes);
+      } else {
+        // Clear shapes if AI didn't provide any
+        setShapes([]);
+      }
       
       // Handle footballs from AI response (or create default at LOS)
       // Check if AI indicated play action for the footballs

@@ -103,6 +103,22 @@ MOTION DETECTION (OFFENSE ONLY):
 - IMPORTANT: Dotted lines on OFFENSE indicate motion; dotted lines on DEFENSE indicate man coverage (different meaning)
 - isMotion should ONLY be true for offensive players, never defensive
 
+ZONE/SHAPE DETECTION (CRITICAL FOR DEFENSIVE PLAYS):
+Look for oval, ellipse, or circular shapes in the image - these represent COVERAGE ZONES:
+1. IDENTIFY ZONE SHAPES: Any oval/ellipse drawn on the field represents a coverage area
+2. ASSOCIATE WITH PLAYERS: Each zone shape is typically associated with a nearby defensive player (the one responsible for that zone)
+3. COLOR MAPPING:
+   - Purple/violet ovals (#9333ea) = DB/Safety zone coverage
+   - Light blue/cyan ovals (#87CEEB) = LB zone coverage  
+   - Use the same color as the associated player
+4. POSITION AND SIZE: Estimate the zone's center (x, y) and dimensions (width, height) based on the drawing
+5. ZONE SHAPES ARE MANDATORY: If you see ANY ovals or zone markers, you MUST include them in the shapes array
+
+SHAPE SIZING GUIDELINES:
+- Small zones (short coverage): width ~120-150px, height ~80-100px
+- Medium zones (hook/curl): width ~150-200px, height ~100-120px
+- Large zones (deep thirds): width ~200-250px, height ~100-150px
+
 REQUIRED OUTPUT FOR EVERY ROUTE:
 You MUST explicitly set both isPrimary and isMotion for every route in your response:
 - isPrimary: true if this is the primary target, false otherwise
@@ -158,6 +174,18 @@ OUTPUT FORMAT - Return valid JSON with this exact structure:
       "isMotion": false
     }
   ],
+  "shapes": [
+    {
+      "id": "shape-1",
+      "playerId": "player-1",
+      "type": "oval",
+      "x": 150,
+      "y": 100,
+      "width": 180,
+      "height": 100,
+      "color": "#9333ea"
+    }
+  ],
   "footballs": [
     {
       "id": "football-1",
@@ -181,7 +209,10 @@ IMPORTANT RULES:
 3. Route points should create smooth paths matching the drawn route shape
 4. Include at least 2 points per route (start and end)
 5. If the drawing is unclear, default to the closest standard route pattern
-6. Only return the JSON object, no markdown or explanation`;
+6. Only return the JSON object, no markdown or explanation
+7. If you see ANY oval or zone shapes in the image, you MUST include them in the shapes array
+8. Shape IDs should be unique (shape-1, shape-2, etc.) and reference valid playerIds
+9. If no shapes are visible in the image, include an empty shapes array: "shapes": []`;
 };
 
 const generateSystemPrompt = () => {
@@ -286,6 +317,14 @@ ${Object.entries(LOGIC_DICTIONARY.defense.assignments).map(([name, data]) =>
   `- "${name}" (${data.style}): ${data.rule}`
 ).join('\n')}
 
+ZONE COVERAGE SHAPES (for defensive plays with zone coverage):
+When generating ZONE defenses (Cover 2, Cover 3, Cover 4, Cover 5, Tampa 2, etc.), you MUST include oval shapes to show coverage zones:
+- Each defensive player in zone coverage should have an associated oval shape showing their zone responsibility
+- DB/Safety zones (deep coverage): Use color #9333ea (purple), larger ovals (width ~200-230px, height ~100-110px)
+- LB zones (underneath/hook coverage): Use color #87CEEB (light blue), medium ovals (width ~170-190px, height ~95-105px)
+- Position zones ABOVE the player (lower Y values) since defense faces the offense
+- Zone shapes help coaches visualize coverage responsibilities
+
 GAME MECHANICS (set these flags in your response when detected):
 ${Object.entries(LOGIC_DICTIONARY.mechanics).map(([name, data]) => 
   `- "${name}": flag="${data.flag}" - ${data.rule}`
@@ -317,6 +356,18 @@ OUTPUT FORMAT - You MUST return valid JSON with this exact structure:
       "style": "solid",
       "color": "${colors.offense.qb}",
       "points": [{"x": 347, "y": 312}, {"x": 347, "y": 200}, {"x": 400, "y": 150}]
+    }
+  ],
+  "shapes": [
+    {
+      "id": "shape-1",
+      "playerId": "player-1",
+      "type": "oval",
+      "x": 150,
+      "y": 100,
+      "width": 180,
+      "height": 100,
+      "color": "#9333ea"
     }
   ],
   "footballs": [
@@ -351,7 +402,10 @@ IMPORTANT RULES:
 7. Route IDs should be unique and reference valid playerIds
 8. Only return the JSON object, no markdown or explanation
 9. Use the EXACT color hex codes from the configuration above
-10. Match player labels to their colors as defined in LABEL MAPPINGS`;
+10. Match player labels to their colors as defined in LABEL MAPPINGS
+11. For ZONE defenses, ALWAYS include shapes array with oval zones for each zone defender
+12. Shape IDs should be unique (shape-1, shape-2, etc.) and reference valid playerIds
+13. If no shapes are needed (man coverage or offense), include an empty shapes array: "shapes": []`;
 };
 
 // Helper function to get few-shot examples from highly-rated generations
@@ -563,6 +617,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (hasMotionRoutes) {
         playData.mechanics = playData.mechanics || {};
         playData.mechanics.preSnapMotion = true;
+      }
+
+      // Handle shapes (zone coverage ovals for defensive plays)
+      // Remap playerId references to new player IDs
+      if (playData.shapes && Array.isArray(playData.shapes)) {
+        playData.shapes = playData.shapes.map((s: any, i: number) => ({
+          ...s,
+          id: `shape-${ts}-${i}`,
+          playerId: playerIdMap[s.playerId] || s.playerId,
+        }));
+      } else {
+        // Ensure shapes array exists (even if empty)
+        playData.shapes = [];
       }
 
       // Log the successful generation to database with preview data
