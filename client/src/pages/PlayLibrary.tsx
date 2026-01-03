@@ -161,8 +161,10 @@ export default function PlayLibrary() {
   });
   
   // Fetch public templates (always available, no auth required)
+  // Always refetch on mount to ensure users see the latest Global Library plays
   const { data: publicTemplates = [], isLoading: templatesLoading } = useQuery<Play[]>({
     queryKey: ["/api/public/templates"],
+    staleTime: 0, // Always consider stale - refetch on mount to show latest admin-added plays
   });
   
   const userPlays = playsData?.userPlays || [];
