@@ -4095,8 +4095,34 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                   </div>
                 </div>
                 
-                {/* Button row - scrolling ticker on left, upload/submit on right */}
+                {/* Button row - upload on left, scrolling ticker on right */}
                 <div className="flex justify-between items-center gap-2 w-full">
+                  {/* Left side: Upload Drawing button */}
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {/* Hidden file input */}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      ref={fileInputRef}
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      data-testid="file-input-upload"
+                    />
+                    {/* Upload button */}
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploading}
+                      className="bg-orange-500 hover:bg-orange-600 text-white disabled:opacity-50 px-1 py-0.5 rounded text-xs font-medium transition-colors flex items-center justify-center"
+                      data-testid="button-upload-play"
+                    >
+                      {isUploading ? (
+                        <Loader2 className="h-2 w-2 animate-spin" />
+                      ) : (
+                        <>Upload Drawing</>
+                      )}
+                    </button>
+                  </div>
+                  
                   {/* SportsCenter-style scrolling ticker */}
                   {(() => {
                     const suggestionChips = [
@@ -4109,7 +4135,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                     return (
                       <div 
                         className="flex-1 overflow-hidden relative ticker-container"
-                        style={{ maxWidth: 'calc(100% - 80px)' }}
+                        style={{ maxWidth: 'calc(100% - 100px)' }}
                         data-testid="suggestion-ticker"
                       >
                         <style>{`
@@ -4154,32 +4180,6 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                       </div>
                     );
                   })()}
-                  
-                  {/* Right side: Upload only (Submit moved to textarea) */}
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    {/* Hidden file input */}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      ref={fileInputRef}
-                      onChange={handleFileSelect}
-                      className="hidden"
-                      data-testid="file-input-upload"
-                    />
-                    {/* Upload button */}
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={isUploading}
-                      className="bg-orange-500 hover:bg-orange-600 text-white disabled:opacity-50 px-1 py-0.5 rounded text-xs font-medium transition-colors flex items-center justify-center"
-                      data-testid="button-upload-play"
-                    >
-                      {isUploading ? (
-                        <Loader2 className="h-2 w-2 animate-spin" />
-                      ) : (
-                        <>Upload Play</>
-                      )}
-                    </button>
-                  </div>
                 </div>
                 
                 {/* Thumbnail Preview */}
