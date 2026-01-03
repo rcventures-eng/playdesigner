@@ -12,7 +12,6 @@ import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Download, Copy, Plus, Trash2, Circle as CircleIcon, MoveHorizontal, PenTool, Square as SquareIcon, Type, Hexagon, RotateCcw, Flag, Camera, X, Loader2, Sparkles, Save, Heart, Tag, Magnet, StickyNote, FlipHorizontal2, ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
-import { SiGoogledrive } from "react-icons/si";
 import { toPng } from "html-to-image";
 import { useToast } from "@/hooks/use-toast";
 import { getQueryFn, apiRequest, queryClient } from "@/lib/queryClient";
@@ -3997,7 +3996,14 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                     {isExportingToDrive ? (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin text-gray-700" />
                     ) : (
-                      <SiGoogledrive className="h-4 w-4 mr-2" />
+                      <svg className="h-4 w-4 mr-2" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg">
+                        <path fill="#0F9D58" d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z"/>
+                        <path fill="#FBBC04" d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3L1.2 48.9c-.8 1.4-1.2 2.95-1.2 4.5h27.5z"/>
+                        <path fill="#4285F4" d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H59.8l5.85 11.5z"/>
+                        <path fill="#4285F4" d="M43.65 25 57.4 1.2C56.05.4 54.5 0 52.9 0H34.4c-1.6 0-3.15.45-4.5 1.2z"/>
+                        <path fill="#0F9D58" d="M59.8 53H27.5l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z"/>
+                        <path fill="#FBBC04" d="M73.4 26.5 60.65 4.5c-.8-1.4-1.95-2.5-3.3-3.3L43.6 25l16.2 28h27.5c0-1.55-.4-3.1-1.2-4.5z"/>
+                      </svg>
                     )}
                     {!isLoggedIn 
                       ? "Export to Google Drive" 
