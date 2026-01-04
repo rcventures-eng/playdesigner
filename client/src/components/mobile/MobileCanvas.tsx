@@ -26,6 +26,7 @@ interface MobileCanvasProps {
 }
 
 const LONG_PRESS_DURATION = 500;
+const PLAYER_HIT_RADIUS = 24;
 
 export function MobileCanvas({
   players,
@@ -53,28 +54,33 @@ export function MobileCanvas({
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const { field, colors } = FOOTBALL_CONFIG;
-
-  const adjustedLosY = field.losY - 60;
+  const [isTouchingPlayer, setIsTouchingPlayer] = useState(false);
 
   useEffect(() => {
     const updateScale = () => {
       if (!containerRef.current) return;
       const containerWidth = containerRef.current.clientWidth;
       const containerHeight = containerRef.current.clientHeight;
-      const scaleX = containerWidth / field.width;
-      const scaleY = containerHeight / field.height;
-      const newScale = Math.min(scaleX, scaleY) * 1.15;
+      
+      // Scale to fit width exactly (edge-to-edge), maintain aspect ratio
+      const newScale = containerWidth / field.width;
       setScale(newScale);
+      
+      // Center the view on the line of scrimmage (where players are)
+      // field.losY = 284 is where the LOS and players are positioned
+      const scaledLosY = field.losY * newScale;
+      const offsetY = containerHeight / 2 - scaledLosY;
+      
       setOffset({
-        x: (containerWidth - field.width * newScale) / 2,
-        y: (containerHeight - field.height * newScale) / 2 - 30,
+        x: 0,
+        y: offsetY,
       });
     };
 
     updateScale();
     window.addEventListener("resize", updateScale);
     return () => window.removeEventListener("resize", updateScale);
-  }, [field.width, field.height]);
+  }, [field.width, field.height, field.losY]);
 
   const screenToField = useCallback(
     (screenX: number, screenY: number) => {
@@ -90,11 +96,10 @@ export function MobileCanvas({
 
   const findPlayerAtPoint = useCallback(
     (x: number, y: number): DraftPlayer | null => {
-      const hitRadius = 24;
       for (const player of [...players].reverse()) {
         const dx = player.x - x;
         const dy = player.y - y;
-        if (dx * dx + dy * dy <= hitRadius * hitRadius) {
+        if (dx * dx + dy * dy <= PLAYER_HIT_RADIUS * PLAYER_HIT_RADIUS) {
           return player;
         }
       }
@@ -110,7 +115,10 @@ export function MobileCanvas({
       pointerStartRef.current = { x: e.clientX, y: e.clientY };
 
       if (player) {
+        // Only capture pointer when touching a player - allows scroll elsewhere
+        e.preventDefault();
         (e.target as HTMLElement).setPointerCapture(e.pointerId);
+        setIsTouchingPlayer(true);
         
         longPressTimerRef.current = setTimeout(() => {
           setMenuPlayer({
@@ -124,8 +132,12 @@ export function MobileCanvas({
 
         setDraggedPlayerId(player.id);
       } else if (activeRoutePlayerId) {
+        // Drawing route - capture events
+        e.preventDefault();
+        setIsTouchingPlayer(true);
         setCurrentRoutePoints((prev) => [...prev, fieldPos]);
       }
+      // If not touching player and not drawing route, allow default scroll behavior
     },
     [screenToField, findPlayerAtPoint, activeRoutePlayerId]
   );
@@ -202,6 +214,7 @@ export function MobileCanvas({
     }
 
     setDraggedPlayerId(null);
+    setIsTouchingPlayer(false);
     pointerStartRef.current = null;
   }, [activeRoutePlayerId, currentRoutePoints, routes, onRoutesChange, routeStyle, isPrimaryRoute]);
 
@@ -297,8 +310,8 @@ export function MobileCanvas({
     ctx.strokeStyle = "white";
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.moveTo(field.sidePadding, adjustedLosY);
-    ctx.lineTo(field.width - field.sidePadding, adjustedLosY);
+    ctx.moveTo(field.sidePadding, field.losY);
+    ctx.lineTo(field.width - field.sidePadding, field.losY);
     ctx.stroke();
 
     routes.forEach((route) => {
@@ -363,7 +376,7 @@ export function MobileCanvas({
     });
 
     ctx.restore();
-  }, [players, routes, currentRoutePoints, scale, offset, field, colors, activeRoutePlayerId, adjustedLosY]);
+  }, [players, routes, currentRoutePoints, scale, offset, field, colors, activeRoutePlayerId]);
 
   return (
     <div className="flex flex-col h-full" data-testid="mobile-canvas">
@@ -424,7 +437,8 @@ export function MobileCanvas({
 
       <div
         ref={containerRef}
-        className="flex-1 relative touch-none bg-green-900"
+        className={`flex-1 relative ${isTouchingPlayer || activeRoutePlayerId ? 'touch-none' : 'touch-pan-y'}`}
+        style={{ backgroundColor: '#166534' }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
