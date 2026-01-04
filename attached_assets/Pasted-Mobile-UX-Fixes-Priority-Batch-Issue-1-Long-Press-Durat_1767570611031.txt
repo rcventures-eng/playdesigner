@@ -1,0 +1,110 @@
+Mobile UX Fixes - Priority Batch
+Issue 1: Long Press Duration Too Long
+Problem: The long press duration to open the player action menu (Pass/Run/Block) feels too slow on mobile.
+Fix Required:
+
+Reduce the long press threshold from 500ms to 300ms
+This should feel more responsive without causing accidental triggers during normal drag operations
+Test to ensure it doesn't interfere with drag-to-move functionality
+
+typescript// Change from:
+const LONG_PRESS_DURATION = 500;
+
+// To:
+const LONG_PRESS_DURATION = 300;
+
+Issue 2: Player Dragging Conflicts with Field Scroll
+Problem: When dragging a player with a finger, the player often stops moving and the field scrolls instead. This makes repositioning players extremely frustrating on mobile.
+Fix Required:
+
+When a player drag starts, freeze all scroll behavior on the field container until the drag completes
+Implement touch event isolation:
+
+typescriptconst handlePlayerDragStart = (e: PointerEvent, playerId: string) => {
+  e.preventDefault();
+  e.stopPropagation();
+  
+  // Capture pointer to this element
+  (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  
+  // Disable scroll on the field container
+  fieldContainerRef.current.style.overflow = 'hidden';
+  fieldContainerRef.current.style.touchAction = 'none';
+  
+  setDraggingPlayer(playerId);
+};
+
+const handlePlayerDragEnd = (e: PointerEvent) => {
+  // Re-enable scroll
+  fieldContainerRef.current.style.overflow = 'auto';
+  fieldContainerRef.current.style.touchAction = 'auto';
+  
+  // Release pointer capture
+  (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+  
+  setDraggingPlayer(null);
+};
+
+Additionally, add touch-action: none CSS to player circles to prevent browser touch handling
+The scroll should ONLY be re-enabled after the finger is lifted (pointerup/pointercancel)
+
+
+Issue 3: Login Button Opens Signup Form
+Problem: Tapping "Log In" on mobile opens the Sign Up form instead of the Login form.
+Fix Required:
+
+Verify the Login button is calling the correct modal/form handler
+The Login form should ONLY show:
+
+Email Address field
+Password field
+"Log In" submit button
+"Forgot Password?" link (optional)
+
+
+It should NOT show: First Name, Confirm Password, or any signup-specific fields
+Check if there's a shared modal component where the isLogin vs isSignup state is being set incorrectly
+Trace the click handler on the "Log In" button in the header and ensure it sets the correct form mode
+
+
+Issue 4: AI Generation Failing on Valid Prompts
+Problem: The AI play generation returned "Generation incomplete - The AI could not generate a valid play from..." for this prompt:
+
+"Hail Mary all players except the quarterback and running back go deep the running back runs a swing route to the right side flat"
+
+This is a valid, understandable football play description. The AI should be able to parse this.
+Screenshots show:
+
+Image 1: The prompt entered with "Generating..." loading state
+Image 2: Error message "Generation incomplete - The AI could not generate a valid play from..."
+
+Debug Required:
+
+Check the server logs for the /api/generate-play endpoint — what error is Gemini returning?
+Verify the prompt is being sent correctly to the API (not truncated, not malformed)
+Check if the response parsing is failing:
+
+Is Gemini returning valid JSON?
+Is the response structure matching what the parser expects?
+
+
+The error suggests partial success (players appeared on field) but routes weren't generated
+
+Likely Causes:
+
+The AI response may have routes in an unexpected format
+The response parser may be too strict and rejecting valid-ish responses
+There may be a timeout issue on mobile networks
+
+Fix Required:
+
+Add detailed error logging to identify exactly where the failure occurs
+If the AI returns players but no routes, consider showing players anyway with a softer warning: "Play generated, but some routes may need manual adjustment"
+Make the response parser more forgiving — if players are valid, render them even if routes are incomplete
+If possible, retry the generation once automatically before showing an error
+Ensure the error message is not cut off (currently shows "The AI could not generate a valid play fro..." — should be fully visible or truncated gracefully)
+
+
+Summary
+#IssuePriority1Long press too slowMedium2Player drag vs scroll conflictCritical3Login opens signup formHigh4AI generation failingHigh
+Fix order: #2 first (blocking core functionality), then #3 and #4 (both breaking features), then #1 (polish).
