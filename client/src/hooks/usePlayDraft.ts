@@ -17,6 +17,7 @@ export interface DraftRoute {
   routeType?: "blitz" | "man" | "zone";
   isPrimary?: boolean;
   isMotion?: boolean;
+  color?: string;
 }
 
 export interface DraftShape {

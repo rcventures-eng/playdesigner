@@ -1,7 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { X, Sparkles, Mic, Loader2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Sparkles, Mic, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface SpeechRecognitionEvent {
@@ -107,87 +113,80 @@ export function AIPromptOverlay({
     setPrompt(examplePrompt);
   };
 
-  if (!isVisible) return null;
-
   return (
-    <div 
-      className="fixed inset-0 z-50 bg-[#0d0d1a] flex flex-col"
-      data-testid="ai-prompt-overlay"
-    >
-      <div className="flex justify-between items-center p-4">
-        <div className="flex items-center gap-2 text-white">
-          <Sparkles className="w-5 h-5 text-purple-400" />
-          <span className="font-semibold">Describe Your Play</span>
-        </div>
-        <button
-          onClick={onClose}
-          className="text-white/70 hover:text-white p-2"
-          data-testid="button-close-ai"
-        >
-          <X className="w-6 h-6" />
-        </button>
-      </div>
+    <Dialog open={isVisible} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent 
+        className="bg-[#0d0d1a] border-white/10 max-w-[500px] max-h-[90vh] sm:rounded-xl max-sm:inset-0 max-sm:max-w-full max-sm:h-full max-sm:translate-x-0 max-sm:translate-y-0 max-sm:left-0 max-sm:top-0 max-sm:rounded-none max-sm:border-0"
+        data-testid="ai-prompt-overlay"
+      >
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-white">
+            <Sparkles className="w-5 h-5 text-purple-400" />
+            Describe Your Play
+          </DialogTitle>
+        </DialogHeader>
 
-      <div className="flex-1 flex flex-col px-4 pb-4 gap-4">
-        <Textarea
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          placeholder="Example: Trips right, Z runs a deep post, Y runs a drag across the middle..."
-          className="flex-1 min-h-[120px] bg-white/10 border-white/20 text-white placeholder:text-white/50 resize-none"
-          data-testid="input-ai-prompt"
-        />
+        <div className="flex flex-col gap-4">
+          <Textarea
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            placeholder="Example: Trips right, Z runs a deep post, Y runs a drag across the middle..."
+            className="min-h-[120px] sm:min-h-[150px] bg-white/10 border-white/20 text-white placeholder:text-white/50 resize-none"
+            data-testid="input-ai-prompt"
+          />
 
-        <div className="flex gap-2">
-          <Button
-            onClick={handleGenerate}
-            disabled={isGenerating || !prompt.trim()}
-            className="flex-1 bg-green-500 hover:bg-green-600 text-white h-12"
-            data-testid="button-generate-play"
-          >
-            {isGenerating ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              "Generate Play"
-            )}
-          </Button>
-
-          {hasSpeechRecognition && (
+          <div className="flex gap-2">
             <Button
-              onClick={handleVoiceInput}
-              variant="outline"
-              size="icon"
-              className={`h-12 w-12 ${
-                isListening 
-                  ? "bg-red-500 border-red-500 text-white animate-pulse" 
-                  : "border-white/30 text-white hover:bg-white/10"
-              }`}
-              data-testid="button-voice-input"
+              onClick={handleGenerate}
+              disabled={isGenerating || !prompt.trim()}
+              className="flex-1 bg-green-500 hover:bg-green-600 text-white h-12"
+              data-testid="button-generate-play"
             >
-              <Mic className="w-5 h-5" />
+              {isGenerating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                "Generate Play"
+              )}
             </Button>
-          )}
-        </div>
 
-        <div className="space-y-2">
-          <span className="text-xs text-white/60">Quick examples (tap to use)</span>
-          <div className="flex flex-wrap gap-2">
-            {examplePrompts.map((example) => (
-              <button
-                key={example}
-                onClick={() => handleChipClick(example)}
-                className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-full text-sm text-white/80 transition-colors"
-                data-testid={`chip-example-${example.replace(/\s+/g, "-").toLowerCase()}`}
+            {hasSpeechRecognition && (
+              <Button
+                onClick={handleVoiceInput}
+                variant="outline"
+                size="icon"
+                className={`h-12 w-12 ${
+                  isListening 
+                    ? "bg-red-500 border-red-500 text-white animate-pulse" 
+                    : "border-white/30 text-white hover:bg-white/10"
+                }`}
+                data-testid="button-voice-input"
               >
-                {example}
-              </button>
-            ))}
+                <Mic className="w-5 h-5" />
+              </Button>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <span className="text-xs text-white/60">Quick examples (tap to use)</span>
+            <div className="flex flex-wrap gap-2">
+              {examplePrompts.map((example) => (
+                <button
+                  key={example}
+                  onClick={() => handleChipClick(example)}
+                  className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-full text-sm text-white/80 transition-colors"
+                  data-testid={`chip-example-${example.replace(/\s+/g, "-").toLowerCase()}`}
+                >
+                  {example}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

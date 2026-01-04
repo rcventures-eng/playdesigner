@@ -1,0 +1,80 @@
+Issue 13: Login/Signup Form Not Visible on Mobile
+Problem: When the keyboard appears on mobile during login or signup, there isn't enough visible space to see the form fields. The form gets pushed up or obscured.
+Fix Required:
+
+Adjust the login/signup modal layout for mobile devices
+When keyboard is open, ensure the active input field and submit button remain visible
+Consider these approaches:
+
+Use visualViewport API to detect keyboard presence and adjust layout
+Scroll the form into view when an input is focused
+Reduce padding/margins on the modal for mobile
+Make the modal content scrollable within the visible area above keyboard
+
+
+Test on both iPhone and iPad with the on-screen keyboard active
+Ensure user can see what they're typing AND access the submit button
+
+
+Issue 14: Route Colors Must Match Player Colors
+Problem: Routes are currently drawn in a single color (red). On desktop, routes match the color of the player they belong to.
+Fix Required:
+
+Route line color should match the player's color:
+
+Z (blue) → blue route
+Y (yellow) → yellow route
+X (red) → red route
+RB (neon green) → green route
+QB (black) → black route (if applicable)
+
+
+Reference the player's color property when rendering the route
+Additionally, implement these desktop features:
+Primary Receiver Indicator:
+
+If a route is marked as "Primary", show a small circle/dot at the end of the route (same as desktop)
+This indicates the primary read for the QB
+
+Motion Route Styling:
+
+Pre-snap motion (behind line of scrimmage): dotted line
+Post-snap route (after crossing LOS): solid line
+The transition should occur at the line of scrimmage
+Reference desktop implementation in PlayDesigner.tsx for exact styling
+
+
+
+
+Issue 15: AI Generate Play Button Not Working
+Problem: On tablet, tapping the "Generate Play" button in AI mode does nothing. The play is not generated and there's no feedback.
+Fix Required:
+
+Debug the AI generation flow on tablet/mobile
+Check that the API call to /api/generate-play is actually being triggered
+Verify the request payload is correct (prompt text, format, etc.)
+Add loading state to the button while generation is in progress
+Add error handling — if the API fails, show a toast notification with the error
+Console log the request and response for debugging
+Ensure the generated play data is correctly parsed and rendered on the canvas
+Test the full flow: type prompt → tap Generate → see loading → play appears on canvas
+
+
+Issue 16: AI Overlay Too Large on Tablet
+Problem: On iPad/tablet, the AI mode overlay takes over the entire screen. This is excessive — it should be a reasonably-sized modal, not a full-screen takeover.
+Fix Required:
+
+On tablet devices (screen width > 768px), make the AI overlay a centered modal instead of full-screen
+Suggested dimensions for tablet: max-width of 600px, max-height of 400px
+The modal should include:
+
+"Describe Your Play" header
+Text input area (doesn't need to be as tall on tablet)
+Generate Play button + microphone button
+Quick example chips
+Close (X) button
+
+
+On mobile phones (small screens), full-screen overlay is acceptable
+The key point: it should NOT be transparent (Issue #6), but it also doesn't need to cover the entire screen on larger devices
+Add a semi-transparent backdrop behind the modal that closes it when tapped

@@ -83,7 +83,7 @@ export function MobilePlayDesigner() {
         const playersData = "players" in playDataRaw ? playDataRaw.players : undefined;
         const routesData = "routes" in playDataRaw ? playDataRaw.routes : undefined;
 
-        if (playersData) {
+        if (playersData && playersData.length > 0) {
           setPlayers(
             playersData.map((p: FormationPlayer & { id?: string; color?: string }, i: number) => ({
               id: p.id || `ai-player-${i}-${Date.now()}`,
@@ -96,7 +96,7 @@ export function MobilePlayDesigner() {
           );
         }
 
-        if (routesData) {
+        if (routesData && routesData.length > 0) {
           setRoutes(routesData);
         }
 
@@ -109,6 +109,15 @@ export function MobilePlayDesigner() {
           title: "Play generated!",
           description: "Your AI-generated play is ready to edit.",
         });
+      } else {
+        // API returned but with success=false or no play data
+        const errorMsg = (data as unknown as { error?: string })?.error || "The AI could not generate a valid play from your description.";
+        toast({
+          title: "Generation incomplete",
+          description: errorMsg,
+          variant: "destructive",
+        });
+        setShowAIOverlay(false);
       }
     },
     onError: () => {

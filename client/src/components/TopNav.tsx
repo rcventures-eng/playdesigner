@@ -305,7 +305,7 @@ export default function TopNav({ isAdmin, setIsAdmin, showSignUp, setShowSignUp,
 
       {/* Login Modal */}
       <Dialog open={showLoginModal} onOpenChange={(open) => !open && resetModal()}>
-        <DialogContent className="bg-slate-900 border-slate-700 text-white sm:max-w-md" data-testid="modal-login">
+        <DialogContent className="bg-slate-900 border-slate-700 text-white sm:max-w-md max-h-[90vh] overflow-y-auto" data-testid="modal-login">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-center text-orange-400">
               {showForgotPassword 

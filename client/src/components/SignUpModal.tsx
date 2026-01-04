@@ -140,10 +140,16 @@ export default function SignUpModal({ open, onOpenChange, customMessage }: SignU
     onOpenChange(newOpen);
   };
 
+  const scrollIntoViewOnFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    setTimeout(() => {
+      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent 
-        className="bg-slate-900 border-white/10 text-white sm:max-w-md shadow-xl" 
+        className="bg-slate-900 border-white/10 text-white sm:max-w-md shadow-xl max-h-[90vh] overflow-y-auto" 
         data-testid="modal-signup"
       >
         <DialogHeader className="text-center">
@@ -155,7 +161,7 @@ export default function SignUpModal({ open, onOpenChange, customMessage }: SignU
           </p>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+        <form onSubmit={handleSubmit} className="space-y-3 pt-2">
           {error && (
             <div 
               className="bg-red-500/20 border border-red-500/50 rounded-md p-3 text-sm text-red-300"
@@ -175,6 +181,7 @@ export default function SignUpModal({ open, onOpenChange, customMessage }: SignU
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               onBlur={() => setTouched(t => ({ ...t, email: true }))}
+              onFocus={scrollIntoViewOnFocus}
               placeholder="coach@team.com"
               required
               className={`bg-slate-800 border-slate-600 text-white placeholder:text-slate-500 ${
@@ -199,6 +206,7 @@ export default function SignUpModal({ open, onOpenChange, customMessage }: SignU
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               onBlur={() => setTouched(t => ({ ...t, password: true }))}
+              onFocus={scrollIntoViewOnFocus}
               placeholder="Min 8 characters"
               required
               minLength={8}
@@ -224,6 +232,7 @@ export default function SignUpModal({ open, onOpenChange, customMessage }: SignU
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               onBlur={() => setTouched(t => ({ ...t, confirmPassword: true }))}
+              onFocus={scrollIntoViewOnFocus}
               placeholder="Re-enter your password"
               required
               className={`bg-slate-800 border-slate-600 text-white placeholder:text-slate-500 ${
@@ -247,6 +256,7 @@ export default function SignUpModal({ open, onOpenChange, customMessage }: SignU
               type="text"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
+              onFocus={scrollIntoViewOnFocus}
               placeholder="Coach"
               className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500"
               data-testid="input-signup-firstname"
