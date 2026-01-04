@@ -1,0 +1,486 @@
+# Mobile Wizard Workflow - Implementation Prompt
+
+## ⚠️ CRITICAL CONSTRAINT — READ FIRST
+
+**Do NOT modify any existing files.** Create the mobile experience as a completely separate route at `/mobile`. Create a new page file at `client/src/pages/mobile-designer.tsx` and add the route to the router config. Desktop users going to `/` should see exactly what they see today with zero changes.
+
+All new code should be in NEW files only. The only exception is adding a single new route entry to the router — do not change any existing route or component.
+
+---
+
+## Project Context
+
+You are working on the RC Football Play Designer, a web-based application for amateur football coaches to create plays. The project is hosted on Replit at https://replit.com/@artvandelet2002/RCFootball.
+
+**Tech Stack:**
+- Frontend: React + TypeScript + Tailwind CSS + shadcn/ui
+- Backend: Express + Drizzle ORM + PostgreSQL
+- State: TanStack Query
+- Routing: Wouter
+- AI: Google Gemini 2.0 Flash
+
+**Key Files to Reference:**
+- `client/src/components/PlayDesigner.tsx` — Main desktop canvas component (~3000 lines)
+- `shared/football-config.ts` — Field dimensions, player colors, formation coordinates
+- `shared/logic-dictionary.ts` — AI formation/route rules
+- `client/src/pages/home.tsx` — Current home page with PlayDesigner
+- `client/src/components/ui/` — shadcn/ui components
+
+---
+
+## Feature Overview
+
+Build a mobile/tablet-optimized experience for the Play Designer using a 3-step wizard workflow. This is a **separate mobile experience**, not a responsive redesign of the desktop version.
+
+**Core Principles:**
+1. Landscape-first — require horizontal orientation for the canvas
+2. Canvas-first — get users to the field immediately, defer configuration
+3. AI-forward — make AI generation the easy path on mobile
+4. Session persistence — never lose a user's work, even if they haven't signed up yet
+
+---
+
+## Screen 0: Orientation Prompt
+
+**Trigger:** User is on mobile/tablet AND device is in portrait orientation
+
+**Behavior:**
+- Display a full-screen overlay prompting user to rotate device
+- Overlay dismisses automatically when device rotates to landscape
+- Do NOT block the app entirely — this only applies when navigating to the Play Designer
+
+**UI Components:**
+- Animated phone icon rotating from portrait to landscape
+- Headline: "Rotate for Best Experience"
+- Subtext: "The play designer works best in landscape mode. Please rotate your device to continue."
+- Use the actual RC Football logo from project assets in the header
+
+**Technical Implementation:**
+```javascript
+// Detect orientation
+const isPortrait = window.matchMedia("(orientation: portrait)").matches;
+
+// Listen for changes
+window.matchMedia("(orientation: portrait)")
+  .addEventListener("change", (e) => {
+    setShowRotatePrompt(e.matches);
+  });
+```
+
+**Mobile Detection:**
+```javascript
+const isMobileOrTablet = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
+  || (navigator.maxTouchPoints > 0 && window.innerWidth < 1024);
+```
+
+---
+
+## Step 1A: Game Format Selection Overlay
+
+**Trigger:** First time user enters the mobile Play Designer (no format selected yet)
+
+**UI Components:**
+- Semi-transparent dark overlay over the canvas area
+- Headline: "Choose Your Game Format"
+- 2x2 grid of format buttons:
+  - 5-on-5 Flag
+  - 7-on-7 Flag  
+  - 9-on-9 Flag
+  - 11-on-11 Tackle
+- All buttons should be the same green color (#22c55e)
+- Large touch targets (minimum 48px height)
+- Football emoji (🏈) icon on each button
+
+**Behavior:**
+- On selection, dismiss overlay and load players onto field in default formation
+- Store selected format in component state AND sessionStorage (for persistence)
+- Reference `FORMATIONS` from `shared/football-config.ts` for player positions
+
+---
+
+## Step 1B: Play Canvas (Main Screen)
+
+**Layout (top to bottom):**
+
+### Header Bar
+- RC Football logo (left)
+- Log In / Sign Up buttons (right) — or "Hey Coach [Name]" if authenticated
+
+### Toolbar Row
+- **Offense/Defense Toggle:** Segmented control, default to Offense
+- **Format Selector:** Clickable dropdown showing current format (e.g., "5v5 Flag")
+  - Clicking opens a dropdown to switch formats
+  - Switching formats reloads players in new formation positions
+  - Format label should also show formation name when set (e.g., "5v5 Flag · Spread")
+- **AI Mode Button:** Purple gradient button with sparkle icon (✨)
+  - Text: "AI Mode"
+  - Clicking opens the AI Prompt Overlay (Step 1B-AI)
+
+### Field Container
+- Maximize canvas area to fill available space
+- Use the same rendering logic as desktop PlayDesigner
+- Players should be draggable (touch-friendly)
+- Long-press on player opens route drawing or context menu
+- Field uses exact same dimensions/colors from `FOOTBALL_CONFIG`
+
+### Wizard Navigation (bottom)
+- Fixed bottom nav with 3 tabs:
+  - Tab 1: "Field" (icon: grid or canvas icon)
+  - Tab 2: "Details" (icon: tag or label icon)
+  - Tab 3: "Save" (icon: download or save icon)
+- Active tab highlighted with orange (#f97316)
+- Completed tabs show checkmark (✓)
+- Tabs are always visible and tappable
+
+**Player Rendering:**
+Use exact colors from `FOOTBALL_CONFIG`:
+```typescript
+// Offense colors
+QB: "#000000" (black)
+RB: "#39ff14" (neon green)
+Y/Slot: "#eab308" (yellow)
+TE: "#f97316" (orange)
+Z: "#1d4ed8" (blue)
+X: "#ef4444" (red)
+
+// Defense colors
+Linemen: "#FFB6C1" (pink)
+Linebackers: "#87CEEB" (light blue)
+Secondary: "#9333ea" (purple)
+```
+
+---
+
+## Step 1B-AI: AI Prompt Overlay
+
+**Trigger:** User taps "AI Mode" button
+
+**UI Components:**
+- Full-screen overlay with dark background (rgba(0,0,0,0.92))
+- Close button (X) in top-right corner
+- Header: Sparkle icon + "Describe Your Play"
+- Large textarea (3-4 rows):
+  - Placeholder: "Example: Trips right, Z runs a deep post, Y runs a drag across the middle..."
+- Action row:
+  - "Generate Play" button (green, primary) — full width minus voice button
+  - Voice input button (microphone icon, circular) — for speech-to-text
+- Example chips section:
+  - Label: "Quick examples (tap to use)"
+  - 3-4 tappable chips with example prompts:
+    - "Trips right, Z post"
+    - "Bunch left, mesh concept"
+    - "Spread, four verticals"
+  - Tapping a chip populates the textarea
+
+**Behavior:**
+- On "Generate Play":
+  - Call existing `/api/generate-play` endpoint
+  - Show loading state on button
+  - On success, dismiss overlay and render generated play on canvas
+  - On error, show toast notification
+- Voice button:
+  - Use Web Speech API (`webkitSpeechRecognition` or `SpeechRecognition`)
+  - On activation, show visual feedback (pulsing mic)
+  - Transcribed text populates textarea
+  - Graceful fallback if speech API not available (hide button or show tooltip)
+
+**Close Behavior:**
+- Tapping X or tapping outside the overlay returns to manual canvas mode
+- Do NOT clear any existing play on the canvas
+
+---
+
+## Step 1C: Play on Canvas (After Generation/Drawing)
+
+This is the same as Step 1B, but with a play rendered:
+- Players positioned with routes drawn
+- Routes use red (#ef4444) for primary routes
+- Route lines should have arrowheads at endpoints
+- User can tap players to modify routes
+- User can drag players to reposition
+- Format selector updates to show formation name if detected (e.g., "5v5 Flag · Spread")
+
+---
+
+## Step 2: Details & Tags
+
+**Layout (side by side on landscape):**
+
+### Left Column (≈180px)
+- Mini preview of the play canvas
+  - Scaled-down version showing players and routes
+  - Tappable — "Edit" button in corner returns to Step 1
+  - Shows actual play state, not a placeholder
+
+### Right Column (flex: 1)
+- **Play Name** (required)
+  - Text input
+  - Label: "Play Name"
+  - Auto-populated if AI generated (from AI response)
+  
+- **Situation Tags** (optional)
+  - Label: "Situation"
+  - Horizontal scrollable pill buttons:
+    - Red Zone, 3rd & Long, Goal Line, 2-Minute, 1st Down, Short Yardage
+  - Multi-select allowed
+  - Selected pills highlighted orange
+  
+- **Concept Tags** (optional)
+  - Label: "Concept"
+  - Pill buttons:
+    - Mesh, Vertical, Screen, RPO, Play Action, Quick Game
+  - Multi-select allowed
+
+### Wizard Navigation
+- Same bottom nav as Step 1
+- Step 1 shows checkmark (completed)
+- Step 2 highlighted as active
+
+**Validation:**
+- Play Name is required to proceed to Step 3
+- If empty, show inline error and prevent navigation
+
+---
+
+## Step 3: Save & Export
+
+**Layout (side by side on landscape):**
+
+### Left Column (≈180px)
+- Mini preview of the play (same as Step 2)
+- Play name displayed below preview
+- Session notice (for unauthenticated users):
+  - Green border box
+  - Checkmark icon
+  - Text: "Your play is saved in this session."
+
+### Right Column — Action Cards
+
+**For Unauthenticated Users:**
+1. **Download Play** (always available)
+   - Icon: 📥 (green background)
+   - Title: "Download Play"
+   - Subtitle: "Save as PNG image to your device"
+   - Action: Trigger PNG export (use existing `renderPlayToImage` utility)
+
+2. Divider: "or save permanently"
+
+3. **Create Free Account** (highlighted with orange border)
+   - Icon: 👤 (orange background)
+   - Title: "Create Free Account"
+   - Subtitle: "Save unlimited plays, sync across devices"
+   - Action: Open SignUpModal, preserve play in sessionStorage
+
+4. **Log In**
+   - Icon: 🔑
+   - Title: "Log In"
+   - Subtitle: "Already have an account?"
+   - Action: Open login modal, preserve play in sessionStorage
+
+**For Authenticated Users:**
+1. **Save to My Plays** (highlighted with green border)
+   - Icon: 💾 (green background)
+   - Title: "Save to My Plays"
+   - Subtitle: "Add to your personal library"
+   - Action: POST to `/api/plays`
+
+2. **Add to Team Playbook**
+   - Icon: 📁
+   - Title: "Add to Team Playbook"
+   - Subtitle: Show first team name or "Select a team"
+   - Action: If user has teams, show team selector then save. If no teams, prompt to create one.
+
+3. **Download Play**
+   - Icon: 📥
+   - Title: "Download Play"
+   - Subtitle: "Save as PNG image"
+
+4. **Export to Google Drive**
+   - Icon: ☁️
+   - Title: "Export to Google Drive"
+   - Subtitle: "Docs or Slides format"
+   - Action: Open GoogleDriveExportModal
+
+### Wizard Navigation
+- Steps 1 and 2 show checkmarks
+- Step 3 highlighted as active
+
+---
+
+## Critical Technical Requirements
+
+### Session Persistence (IMPORTANT)
+
+The play must NEVER be lost if the user needs to create an account or log in.
+
+**Implementation:**
+```typescript
+// On any play state change, persist to sessionStorage
+useEffect(() => {
+  if (playState.players.length > 0 || playState.routes.length > 0) {
+    sessionStorage.setItem('rc_draft_play', JSON.stringify({
+      players: playState.players,
+      routes: playState.routes,
+      shapes: playState.shapes,
+      playNotes: playState.playNotes,
+      format: selectedFormat,
+      name: playName,
+      tags: selectedTags,
+      timestamp: Date.now()
+    }));
+  }
+}, [playState, selectedFormat, playName, selectedTags]);
+
+// On component mount, restore from sessionStorage
+useEffect(() => {
+  const draft = sessionStorage.getItem('rc_draft_play');
+  if (draft) {
+    const parsed = JSON.parse(draft);
+    // Check if draft is less than 24 hours old
+    if (Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000) {
+      // Restore state
+      setPlayState({ players: parsed.players, routes: parsed.routes, ... });
+      setSelectedFormat(parsed.format);
+      // ...
+    }
+  }
+}, []);
+
+// After successful save or account creation, clear draft
+const clearDraft = () => sessionStorage.removeItem('rc_draft_play');
+```
+
+### Post-Authentication Flow
+
+When user creates account or logs in from Step 3:
+1. Auth modal closes
+2. User is now authenticated
+3. Step 3 UI updates to show authenticated options
+4. Play state is preserved (from sessionStorage)
+5. User can now tap "Save to My Plays"
+
+### Mobile Touch Handling
+
+For drag-and-drop on touch devices:
+```typescript
+// Use pointer events for unified mouse/touch handling
+onPointerDown={handlePointerDown}
+onPointerMove={handlePointerMove}
+onPointerUp={handlePointerUp}
+
+// Prevent scroll while dragging
+const handlePointerDown = (e: PointerEvent) => {
+  e.preventDefault();
+  (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  // ... drag logic
+};
+```
+
+### Route Drawing on Mobile
+
+Long-press to initiate route drawing:
+```typescript
+const LONG_PRESS_DURATION = 500; // ms
+
+const handlePointerDown = (e: PointerEvent, playerId: string) => {
+  longPressTimer.current = setTimeout(() => {
+    // Open route menu for this player
+    setActivePlayerForRoute(playerId);
+    setShowRouteMenu(true);
+  }, LONG_PRESS_DURATION);
+};
+
+const handlePointerUp = () => {
+  clearTimeout(longPressTimer.current);
+};
+```
+
+---
+
+## File Structure — NEW FILES ONLY
+
+```
+client/src/
+├── components/
+│   ├── mobile/
+│   │   ├── MobilePlayDesigner.tsx    # Main mobile wizard container
+│   │   ├── OrientationPrompt.tsx     # Screen 0
+│   │   ├── FormatSelector.tsx        # Step 1A overlay
+│   │   ├── MobileCanvas.tsx          # Step 1B field (reuses desktop rendering logic)
+│   │   ├── AIPromptOverlay.tsx       # Step 1B-AI
+│   │   ├── PlayDetailsForm.tsx       # Step 2
+│   │   ├── SaveExportPanel.tsx       # Step 3
+│   │   └── WizardNavigation.tsx      # Bottom tab bar
+│   └── PlayDesigner.tsx              # EXISTING — DO NOT MODIFY
+├── hooks/
+│   ├── useMobileDetection.ts         # NEW — Mobile/tablet detection
+│   ├── useOrientation.ts             # NEW — Orientation detection
+│   └── usePlayDraft.ts               # NEW — Session persistence logic
+└── pages/
+    ├── home.tsx                      # EXISTING — DO NOT MODIFY
+    └── mobile-designer.tsx           # NEW — Mobile wizard page at /mobile
+```
+
+**Important:** You may IMPORT from existing files (like `football-config.ts`, `queryClient.ts`, UI components) but do NOT edit them.
+
+---
+
+## Routing Setup
+
+Create a new page at `client/src/pages/mobile-designer.tsx` that will be accessible at `/mobile`.
+
+**In `mobile-designer.tsx`:**
+```tsx
+import { MobilePlayDesigner } from '../components/mobile/MobilePlayDesigner';
+
+const MobileDesignerPage = () => {
+  return <MobilePlayDesigner />;
+};
+
+export default MobileDesignerPage;
+```
+
+**Add route to router (typically in `App.tsx`):**
+
+Find where routes are defined (likely using Wouter) and add ONE new route entry:
+```tsx
+<Route path="/mobile" component={MobileDesignerPage} />
+```
+
+Do NOT modify any existing routes. Just add this single new one.
+
+**Result:**
+- `rc-football.com/` → Desktop experience (unchanged)
+- `rc-football.com/mobile` → New mobile wizard experience
+
+---
+
+## Testing Checklist
+
+- [ ] Portrait orientation shows rotate prompt
+- [ ] Landscape orientation dismisses prompt and shows canvas
+- [ ] Format selection loads correct number of players
+- [ ] Switching format reloads players in new positions
+- [ ] AI Mode overlay opens and closes correctly
+- [ ] AI generation renders play on canvas
+- [ ] Voice input works (or gracefully fails on unsupported browsers)
+- [ ] Route drawing works with long-press
+- [ ] Player dragging works smoothly on touch
+- [ ] Play name validation on Step 2
+- [ ] Session persistence survives page refresh
+- [ ] Creating account preserves play
+- [ ] Logging in preserves play
+- [ ] Download exports correct PNG
+- [ ] Save to My Plays creates database record
+- [ ] All wizard tabs are navigable
+- [ ] Back navigation doesn't lose state
+
+---
+
+## References
+
+- Design mockups: See `mobile-wizard-mockups-v2.html` for visual reference
+- Desktop implementation: `client/src/components/PlayDesigner.tsx`
+- Player colors/positions: `shared/football-config.ts`
+- AI generation: `server/routes.ts` → `/api/generate-play`
+- PNG export: `client/src/lib/renderPlayToImage.tsx`
