@@ -75,13 +75,20 @@ The `/mobile` route provides a separate 3-step mobile-optimized experience for d
 
 Key mobile components in `client/src/components/mobile/`:
 - `MobilePlayDesigner.tsx`: Main container orchestrating the wizard flow
-- `MobileCanvas.tsx`: Touch-optimized canvas with simplified controls
+- `MobileCanvas.tsx`: Touch-optimized canvas with simplified controls, player-colored routes, and motion route styling
 - `FormatSelector.tsx`: Initial format selection overlay
-- `AIPromptOverlay.tsx`: AI play generation with voice input
+- `AIPromptOverlay.tsx`: AI play generation with voice input (uses shadcn Dialog, centered modal on tablets, full-screen on phones)
 - `PlayDetailsForm.tsx`: Play metadata form
 - `SaveExportPanel.tsx`: Auth-aware save/export options
 - `WizardNavigation.tsx`: Bottom tab bar navigation
 - `OrientationPrompt.tsx`: Landscape orientation prompt
+
+**Mobile Route Rendering Features:**
+- Routes render in player-specific colors (Z=blue, Y=yellow, X=red, RB=green, QB=black) via `route.color` property
+- Curved routes use Catmull-Rom style bezier smoothing for continuous curves
+- Motion routes show dotted line pre-snap (below LOS) and solid line post-snap (above LOS)
+- Primary receiver indicator: filled dot with white outline at route endpoint
+- Route drawing preview uses active player's color
 
 Custom hooks in `client/src/hooks/`:
 - `useMobileDetection.ts`: Detects mobile/tablet devices
