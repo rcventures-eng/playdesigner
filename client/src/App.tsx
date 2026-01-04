@@ -12,6 +12,7 @@ import ResetPasswordPage from "@/pages/reset-password";
 import PlayLibrary from "@/pages/PlayLibrary";
 import TeamPlaybooks from "@/pages/TeamPlaybooks";
 import CoachProfile from "@/pages/CoachProfile";
+import MobileDesignerPage from "@/pages/mobile-designer";
 
 function App() {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -44,6 +45,9 @@ function App() {
           </Route>
           <Route path="/profile">
             <CoachProfile />
+          </Route>
+          <Route path="/mobile">
+            <MobileDesignerPage />
           </Route>
           <Route component={NotFound} />
         </Switch>
