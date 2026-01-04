@@ -15,7 +15,14 @@ import SignUpModal from "@/components/SignUpModal";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { getFormation, resolveColorKey, type FormationPlayer } from "@shared/football-config";
-import { User } from "lucide-react";
+import { User, Sparkles, Shield, Shirt } from "lucide-react";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type WizardStep = 1 | 2 | 3;
 
@@ -72,11 +79,13 @@ export function MobilePlayDesigner() {
     },
     onSuccess: (data) => {
       if (data.success && data.play) {
-        const playData = data.play.data || data.play;
+        const playDataRaw = data.play.data || data.play;
+        const playersData = "players" in playDataRaw ? playDataRaw.players : undefined;
+        const routesData = "routes" in playDataRaw ? playDataRaw.routes : undefined;
 
-        if (playData.players) {
+        if (playersData) {
           setPlayers(
-            playData.players.map((p, i) => ({
+            playersData.map((p: FormationPlayer & { id?: string; color?: string }, i: number) => ({
               id: p.id || `ai-player-${i}-${Date.now()}`,
               label: p.label,
               x: p.x,
@@ -87,8 +96,8 @@ export function MobilePlayDesigner() {
           );
         }
 
-        if (playData.routes) {
-          setRoutes(playData.routes);
+        if (routesData) {
+          setRoutes(routesData);
         }
 
         if (data.play.name) {
@@ -291,30 +300,83 @@ export function MobilePlayDesigner() {
     >
       <OrientationPrompt isVisible={isMobileOrTablet && isPortrait} />
 
-      <header className="flex items-center justify-between p-2 border-b bg-card">
-        <div className="flex items-center gap-2">
-          <span className="font-bold text-lg">RC Football</span>
-        </div>
-        {isAuthenticated ? (
-          <div className="text-sm text-muted-foreground">
-            Hey Coach {(user as { username?: string })?.username || ""}
+      <header className="flex items-center justify-between gap-1 px-2 py-1.5 border-b bg-card overflow-x-auto">
+        <span className="font-bold text-sm whitespace-nowrap">RC Football</span>
+        
+        {currentStep === 1 && !showFormatSelector && (
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <div className="flex rounded-md overflow-hidden border">
+              <button
+                onClick={() => handleSideChange("offense")}
+                className={`px-2 py-1 text-xs font-medium flex items-center gap-1 ${
+                  side === "offense"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-background"
+                }`}
+                data-testid="button-offense-header"
+              >
+                <Shirt className="w-3 h-3" />
+                OFF
+              </button>
+              <button
+                onClick={() => handleSideChange("defense")}
+                className={`px-2 py-1 text-xs font-medium flex items-center gap-1 ${
+                  side === "defense"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-background"
+                }`}
+                data-testid="button-defense-header"
+              >
+                <Shield className="w-3 h-3" />
+                DEF
+              </button>
+            </div>
+
+            <Select value={draft.format || "7v7"} onValueChange={handleFormatChange}>
+              <SelectTrigger className="w-[80px] h-7 text-xs" data-testid="select-format-header">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="5v5">5v5</SelectItem>
+                <SelectItem value="7v7">7v7</SelectItem>
+                <SelectItem value="9v9">9v9</SelectItem>
+                <SelectItem value="11v11">11v11</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Button
+              onClick={() => setShowAIOverlay(true)}
+              size="sm"
+              className="h-7 text-xs bg-gradient-to-r from-purple-500 to-purple-600 text-white px-2"
+              data-testid="button-ai-mode-header"
+            >
+              <Sparkles className="w-3 h-3 mr-1" />
+              AI
+            </Button>
           </div>
+        )}
+
+        {isAuthenticated ? (
+          <span className="text-xs text-muted-foreground whitespace-nowrap">
+            Coach {(user as { username?: string })?.username || ""}
+          </span>
         ) : (
-          <div className="flex gap-2">
+          <div className="flex gap-1 flex-shrink-0">
             <Button 
               variant="ghost" 
-              size="sm" 
+              size="sm"
+              className="h-7 text-xs px-2"
               onClick={() => setShowSignUp(true)}
               data-testid="button-login-header"
             >
               Log In
             </Button>
             <Button 
-              size="sm" 
+              size="sm"
+              className="h-7 text-xs px-2"
               onClick={() => setShowSignUp(true)}
               data-testid="button-signup-header"
             >
-              <User className="w-4 h-4 mr-1" />
               Sign Up
             </Button>
           </div>
@@ -354,6 +416,7 @@ export function MobilePlayDesigner() {
             onConceptTagsChange={setConceptTags}
             onEditPlay={() => setCurrentStep(1)}
             validationError={validationError}
+            gameFormat={draft.format || "7v7"}
           />
         )}
 

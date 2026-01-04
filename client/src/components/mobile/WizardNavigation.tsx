@@ -22,10 +22,10 @@ export function WizardNavigation({
 }: WizardNavigationProps) {
   return (
     <nav 
-      className="fixed bottom-0 left-0 right-0 z-40 bg-card border-t border-border"
+      className="fixed bottom-0 left-0 right-0 z-40 bg-card border-t border-border safe-area-inset-bottom"
       data-testid="wizard-navigation"
     >
-      <div className="flex justify-around items-center h-16">
+      <div className="flex justify-around items-center h-12">
         {steps.map((step) => {
           const isActive = currentStep === step.id;
           const isCompleted = completedSteps.includes(step.id);

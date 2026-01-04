@@ -18,28 +18,28 @@ export function FormatSelector({ isVisible, onSelectFormat }: FormatSelectorProp
 
   return (
     <div 
-      className="absolute inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+      className="fixed inset-x-0 top-0 bottom-0 z-50 bg-background flex flex-col"
       data-testid="format-selector-overlay"
     >
-      <div className="bg-card rounded-lg p-6 max-w-md w-full">
+      <div className="flex-1 flex flex-col items-center justify-center px-4">
         <h2 
-          className="text-xl font-bold text-center mb-6 text-card-foreground"
+          className="text-2xl font-bold text-center mb-8 text-foreground"
           data-testid="text-format-title"
         >
           Choose Your Game Format
         </h2>
         
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-4 w-full max-w-sm">
           {formats.map((format) => (
             <Button
               key={format.id}
               onClick={() => onSelectFormat(format.id)}
               variant="default"
-              className="h-14 font-medium text-base"
+              className="h-20 font-medium text-base flex flex-col gap-1"
               data-testid={`button-format-${format.id}`}
             >
-              <Users className="w-4 h-4 mr-2" />
-              {format.label}
+              <Users className="w-6 h-6" />
+              <span>{format.label}</span>
             </Button>
           ))}
         </div>

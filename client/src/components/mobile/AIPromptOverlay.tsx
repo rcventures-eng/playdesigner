@@ -22,7 +22,7 @@ interface SpeechRecognitionInstance {
 interface AIPromptOverlayProps {
   isVisible: boolean;
   onClose: () => void;
-  onGeneratePlay: (prompt: string) => Promise<void>;
+  onGeneratePlay: (prompt: string) => void;
   isGenerating: boolean;
 }
 
@@ -91,7 +91,7 @@ export function AIPromptOverlay({
     }
   };
 
-  const handleGenerate = async () => {
+  const handleGenerate = () => {
     if (!prompt.trim()) {
       toast({
         title: "Please describe your play",
@@ -100,7 +100,7 @@ export function AIPromptOverlay({
       });
       return;
     }
-    await onGeneratePlay(prompt.trim());
+    onGeneratePlay(prompt.trim());
   };
 
   const handleChipClick = (examplePrompt: string) => {
@@ -111,7 +111,7 @@ export function AIPromptOverlay({
 
   return (
     <div 
-      className="fixed inset-0 z-50 bg-black/92 flex flex-col"
+      className="fixed inset-0 z-50 bg-[#0d0d1a] flex flex-col"
       data-testid="ai-prompt-overlay"
     >
       <div className="flex justify-between items-center p-4">

@@ -1,0 +1,134 @@
+Mobile Wizard - Bug Fixes & Improvements
+Overview
+After testing the mobile wizard implementation on iPhone and iPad Pro, the following issues were identified. Please address each one. The issues are organized by screen/feature.
+
+Issue 1: Format Selection Overlay (Step 1A)
+Problem: The "Choose Your Game Format" modal has excessive padding and doesn't feel like the primary call-to-action.
+Fix Required:
+
+Make the format selection overlay take up the ENTIRE screen width
+Keep only the header bar at top (RC Football logo, Log In, Sign Up)
+Remove all left/right padding around the modal
+The format buttons should be the dominant, unmissable call-to-action
+No visible field canvas behind the overlay — it should be a full-screen takeover
+
+
+Issue 2: Header Bar — Move Controls Up (Applies to ALL mobile/tablet screens)
+Problem: The OFF/DEF toggle, format dropdown (5v5 Flag), and AI Mode button are on a second row, wasting vertical space. This pushes the canvas down.
+Fix Required:
+
+Move the OFF/DEF toggle, format dropdown, and AI Mode button UP into the main header bar
+They should sit between "RC Football" (left) and "Log In / Sign Up" (right)
+This consolidates two rows into one, giving more vertical space to the canvas
+Apply this change to BOTH mobile phone AND tablet views
+
+New header layout:
+[ RC Football ]  [ OFF | DEF ]  [ 5v5 Flag ▼ ]  [ ✨ AI Mode ]  [ Log In ]  [ Sign Up ]
+
+Issue 3: Canvas Not Using Full Screen Width
+Problem: On mobile phones, there is significant unused navy blue space on the left and right sides of the field canvas. The green field is narrower than it could be.
+Fix Required:
+
+Extend the green field canvas to fill the ENTIRE available width
+Eliminate the navy blue padding on left and right sides of the field
+The field should stretch edge-to-edge (within the content area below the header)
+This maximizes the usable drawing surface on small screens
+
+
+Issue 4: Line of Scrimmage Too Low / Players Cut Off
+Problem: The line of scrimmage is positioned too far down on the screen. On some views, the running back is barely visible or cut off by the bottom navigation.
+Fix Required:
+
+Adjust the field positioning so the line of scrimmage appears higher on screen
+Ensure all offensive players (including RB behind the QB) are fully visible
+Consider reducing the size of the bottom wizard navigation (Field / Details / Save) to reclaim vertical space
+The bottom nav icons and text can be smaller — they just need to be tappable
+Test with 5v5, 7v7, and 11v11 formations to ensure all players are visible
+
+
+Issue 5: Long-Press Menu Not Working
+Problem: On both mobile phone and iPad, tapping or long-pressing on player circles (Z, X, Y, QB, etc.) does NOT open the route/action menu. Players can be dragged, but there's no way to access Pass, Run, Block, Motion, or route options.
+Fix Required:
+
+Implement long-press detection on player circles
+After ~500ms of holding, open the player action menu
+Menu should include the same options as desktop:
+
+Route Type: Pass / Run / Block
+Style: Straight / Curved
+Options: Motion / Primary
+
+
+Ensure this works on BOTH touch devices (phone and tablet)
+Use pointer events for unified mouse/touch handling:
+
+typescriptconst LONG_PRESS_DURATION = 500; // ms
+let longPressTimer: NodeJS.Timeout;
+
+const handlePointerDown = (e: PointerEvent, playerId: string) => {
+  e.preventDefault();
+  longPressTimer = setTimeout(() => {
+    openPlayerMenu(playerId);
+  }, LONG_PRESS_DURATION);
+};
+
+const handlePointerUp = () => {
+  clearTimeout(longPressTimer);
+};
+
+const handlePointerMove = () => {
+  // If finger moves significantly, cancel long-press (user is dragging)
+  clearTimeout(longPressTimer);
+};
+
+Issue 6: AI Mode Overlay Is Transparent
+Problem: When tapping "AI Mode" on mobile, the overlay that appears is semi-transparent. You can still see the field behind it, which is visually confusing and makes it hard to focus on the input.
+Fix Required:
+
+Make the AI Mode overlay completely OPAQUE (not transparent)
+Background should be solid dark color (e.g., rgba(13, 13, 26, 0.98) or fully opaque #0d0d1a)
+The overlay should feel like a modal takeover, not a floating layer
+When user taps "Generate Play" or closes the overlay, it should dismiss completely
+The Generate Play button and microphone icon positioning are fine — just fix the transparency
+
+
+Issue 7: Situation Tags Don't Match App
+Problem: The Situation tags shown on the Details screen (Step 2) don't match what's actually in the production app.
+Fix Required:
+
+Pull the actual Situation tag options from the existing app
+Ensure mobile shows the SAME options as desktop
+Reference the existing tag configuration in the codebase (likely in PlayDesigner.tsx or a shared config)
+Do not hardcode different values for mobile
+
+
+Issue 8: Concept Tags Are Wrong
+Problem: The Concept tags are showing route names (Mesh, Vertical, Screen) instead of actual play concepts. In the real app, Concepts are categories like Run, Pass, RPO.
+Fix Required:
+
+Update Concept tags to match the production app
+Concepts should be high-level play types: Run, Pass, RPO (and any others from the actual app)
+"Mesh" and "Vertical" are route concepts, not play concepts — remove them
+Reference the existing concept options in the desktop implementation
+
+
+Issue 9: Add Yard Numbers and Hash Marks to Mobile Field
+Problem: The mobile field canvas is missing the yard line numbers and hash marks that appear on the desktop version.
+Fix Required:
+
+Add yard line numbers (10, 20, 30, 40, 50, etc.) to the mobile canvas
+Add hash marks matching the desktop implementation
+Reference the existing rendering logic in PlayDesigner.tsx or football-config.ts
+These visual elements help coaches orient plays on the field
+
+
+Summary Checklist
+#IssuePriority1Format overlay — full screen takeoverHigh2Move controls to header barHigh3Field canvas full widthHigh4Line of scrimmage too lowHigh5Long-press menu not workingCritical6AI overlay transparencyMedium7Situation tags mismatchMedium8Concept tags wrongMedium9Add yard numbers/hash marksLow
+Priority order: Fix #5 (long-press) first — without it, users can't draw routes. Then #2, #3, #4 (layout issues). Then #1, #6, #7, #8, #9.
+
+Important Reminders
+
+Do NOT modify any existing desktop files
+All changes should be within the /mobile route and mobile component files
+Test on both iPhone (small screen) and iPad (tablet) after each fix
+Ensure the bottom wizard nav (Field / Details / Save) remains functional after layout changes

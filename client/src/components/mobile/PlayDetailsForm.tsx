@@ -1,10 +1,10 @@
-import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SITUATIONAL_TAGS } from "@shared/logic-dictionary";
 import type { DraftPlayer, DraftRoute } from "@/hooks/usePlayDraft";
 
 interface PlayDetailsFormProps {
@@ -18,24 +18,15 @@ interface PlayDetailsFormProps {
   onConceptTagsChange: (tags: string[]) => void;
   onEditPlay: () => void;
   validationError?: string;
+  gameFormat?: string;
 }
 
-const situationOptions = [
-  "Red Zone",
-  "3rd & Long",
-  "Goal Line",
-  "2-Minute",
-  "1st Down",
-  "Short Yardage",
-];
-
-const conceptOptions = [
-  "Mesh",
-  "Vertical",
-  "Screen",
-  "RPO",
-  "Play Action",
-  "Quick Game",
+const CONCEPT_OPTIONS = [
+  { value: "run", label: "Run" },
+  { value: "pass", label: "Pass" },
+  { value: "play-action", label: "Play-Action" },
+  { value: "rpo", label: "RPO" },
+  { value: "trick", label: "Trick" },
 ];
 
 export function PlayDetailsForm({
@@ -49,7 +40,11 @@ export function PlayDetailsForm({
   onConceptTagsChange,
   onEditPlay,
   validationError,
+  gameFormat = "5v5",
 }: PlayDetailsFormProps) {
+  const formatKey = gameFormat as keyof typeof SITUATIONAL_TAGS;
+  const situationOptions = SITUATIONAL_TAGS[formatKey] || SITUATIONAL_TAGS["5v5"];
+
   const toggleSituationTag = (tag: string) => {
     if (situationTags.includes(tag)) {
       onSituationTagsChange(situationTags.filter((t) => t !== tag));
@@ -71,7 +66,7 @@ export function PlayDetailsForm({
       className="flex gap-4 h-full p-4 pb-20"
       data-testid="play-details-form"
     >
-      <div className="w-44 shrink-0">
+      <div className="w-36 shrink-0">
         <div className="relative bg-green-800 rounded-lg aspect-[16/10] overflow-hidden">
           <MiniPreview players={players} routes={routes} />
           <Button
@@ -104,6 +99,25 @@ export function PlayDetailsForm({
         </div>
 
         <div className="space-y-2">
+          <Label>Concept</Label>
+          <div className="flex flex-wrap gap-2">
+            {CONCEPT_OPTIONS.map((option) => (
+              <Badge
+                key={option.value}
+                variant={conceptTags.includes(option.value) ? "default" : "outline"}
+                className={cn(
+                  "cursor-pointer transition-colors"
+                )}
+                onClick={() => toggleConceptTag(option.value)}
+                data-testid={`tag-concept-${option.value}`}
+              >
+                {option.label}
+              </Badge>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2">
           <Label>Situation</Label>
           <div className="flex flex-wrap gap-2">
             {situationOptions.map((tag) => (
@@ -111,31 +125,10 @@ export function PlayDetailsForm({
                 key={tag}
                 variant={situationTags.includes(tag) ? "default" : "outline"}
                 className={cn(
-                  "cursor-pointer transition-colors",
-                  situationTags.includes(tag) && "bg-orange-500 hover:bg-orange-600"
+                  "cursor-pointer transition-colors"
                 )}
                 onClick={() => toggleSituationTag(tag)}
                 data-testid={`tag-situation-${tag.replace(/\s+/g, "-").toLowerCase()}`}
-              >
-                {tag}
-              </Badge>
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label>Concept</Label>
-          <div className="flex flex-wrap gap-2">
-            {conceptOptions.map((tag) => (
-              <Badge
-                key={tag}
-                variant={conceptTags.includes(tag) ? "default" : "outline"}
-                className={cn(
-                  "cursor-pointer transition-colors",
-                  conceptTags.includes(tag) && "bg-orange-500 hover:bg-orange-600"
-                )}
-                onClick={() => toggleConceptTag(tag)}
-                data-testid={`tag-concept-${tag.replace(/\s+/g, "-").toLowerCase()}`}
               >
                 {tag}
               </Badge>
@@ -154,7 +147,6 @@ function MiniPreview({
   players: DraftPlayer[]; 
   routes: DraftRoute[]; 
 }) {
-  const scale = 0.25;
   const fieldWidth = 694;
   const fieldHeight = 392;
 
