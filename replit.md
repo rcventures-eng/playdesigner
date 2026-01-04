@@ -65,6 +65,29 @@ Session-based authentication uses `express-session` with `connect-pg-simple` and
 
 A `/profile` page allows users to manage their avatar and preferences. An `/admin` dashboard provides protected access for managing AI Logic, formation presets, AI logs, and user accounts.
 
+### Mobile Wizard Workflow
+
+The `/mobile` route provides a separate 3-step mobile-optimized experience for designing plays on touch devices:
+
+1. **Step 1 (Field)**: Game format selection (5v5, 7v7, 9v9, 11v11) + touch-friendly canvas with player positioning and AI mode integration
+2. **Step 2 (Details)**: Play naming, situation tags, and concept tags with a mini preview
+3. **Step 3 (Save)**: Export options including download as image, save to library (authenticated users), and team playbook integration
+
+Key mobile components in `client/src/components/mobile/`:
+- `MobilePlayDesigner.tsx`: Main container orchestrating the wizard flow
+- `MobileCanvas.tsx`: Touch-optimized canvas with simplified controls
+- `FormatSelector.tsx`: Initial format selection overlay
+- `AIPromptOverlay.tsx`: AI play generation with voice input
+- `PlayDetailsForm.tsx`: Play metadata form
+- `SaveExportPanel.tsx`: Auth-aware save/export options
+- `WizardNavigation.tsx`: Bottom tab bar navigation
+- `OrientationPrompt.tsx`: Landscape orientation prompt
+
+Custom hooks in `client/src/hooks/`:
+- `useMobileDetection.ts`: Detects mobile/tablet devices
+- `useOrientation.ts`: Tracks device orientation
+- `usePlayDraft.ts`: Session persistence via sessionStorage
+
 ### UI/UX Patterns
 
 The application uses progressive disclosure for play tag details, displaying only essential fields initially and revealing advanced options upon user interaction. A fixed-width right sidebar provides guided instructions and "Pro Tips." The Play Library page (`/plays`) offers a gallery view with filters and sorting, allowing both authenticated and unauthenticated users to browse public templates.
