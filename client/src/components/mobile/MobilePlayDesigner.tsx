@@ -484,7 +484,7 @@ export function MobilePlayDesigner() {
     >
       <OrientationPrompt isVisible={isMobileOrTablet && isPortrait} />
 
-      <header className="flex items-center justify-between gap-1 px-2 py-1.5 border-b bg-card overflow-x-auto">
+      <header className="flex items-center justify-between gap-1 px-2 py-1.5 border-b bg-card">
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <img 
             src={rcFootballLogo} 

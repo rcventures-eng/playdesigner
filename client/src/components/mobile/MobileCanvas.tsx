@@ -70,6 +70,7 @@ export function MobileCanvas({
   const [isPrimaryRoute, setIsPrimaryRoute] = useState(false);
   const [isMotion, setIsMotion] = useState(false);
   const [activePlayerColor, setActivePlayerColor] = useState<string>("#9ca3af");
+  const [activeRouteType, setActiveRouteType] = useState<"pass" | "run" | "block" | "blitz" | "man" | "zone">("pass");
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
   const lastMoveTimeRef = useRef<number>(0);
 
@@ -274,13 +275,24 @@ export function MobileCanvas({
     if (activeRoutePlayerId && currentRoutePoints.length > 1) {
       // Get the player to find their color
       const player = players.find(p => p.id === activeRoutePlayerId);
-      const routeColor = player?.color || activePlayerColor;
+      
+      // Determine route color based on type:
+      // - Run routes: always black
+      // - Block routes: always white
+      // - Pass routes: use player color
+      let routeColor = player?.color || activePlayerColor;
+      if (activeRouteType === "run") {
+        routeColor = "#000000"; // Black for run routes
+      } else if (activeRouteType === "block") {
+        routeColor = "#FFFFFF"; // White for block routes
+      }
       
       const newRoute: DraftRoute = {
         id: `route-${Date.now()}`,
         playerId: activeRoutePlayerId,
         points: currentRoutePoints,
         style: routeStyle,
+        routeType: activeRouteType,
         isPrimary: isPrimaryRoute || routes.length === 0,
         isMotion: isMotion,
         color: routeColor,
@@ -290,6 +302,7 @@ export function MobileCanvas({
       setCurrentRoutePoints([]);
       setIsPrimaryRoute(false);
       setIsMotion(false);
+      setActiveRouteType("pass"); // Reset to default
     }
 
     setDraggedPlayerId(null);
@@ -308,11 +321,7 @@ export function MobileCanvas({
     setRouteStyle(action.style);
     setIsPrimaryRoute(action.isPrimary || false);
     setIsMotion(action.isMotion || false);
-    
-    if (action.type === "block") {
-      setMenuPlayer(null);
-      return;
-    }
+    setActiveRouteType(action.type);
 
     const player = players.find(p => p.id === menuPlayer.id);
     if (player) {
@@ -572,8 +581,26 @@ export function MobileCanvas({
         drawArrow(last, prev);
       }
       
-      // Primary receiver indicator removed per UX feedback
-      // Routes now end with arrowhead only, no endpoint circle
+      // Primary route indicator: white circle with "1" at endpoint (same as desktop)
+      if (route.isPrimary) {
+        const endpoint = route.points[route.points.length - 1];
+        
+        // White circle with dark border
+        ctx.beginPath();
+        ctx.arc(endpoint.x, endpoint.y, 10, 0, Math.PI * 2);
+        ctx.fillStyle = 'white';
+        ctx.fill();
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        
+        // "1" text inside
+        ctx.fillStyle = 'black';
+        ctx.font = 'bold 10px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('1', endpoint.x, endpoint.y);
+      }
     });
 
     if (currentRoutePoints.length > 1) {

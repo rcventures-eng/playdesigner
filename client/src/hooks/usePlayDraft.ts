@@ -14,7 +14,7 @@ export interface DraftRoute {
   playerId: string;
   points: { x: number; y: number }[];
   style: "straight" | "curved";
-  routeType?: "blitz" | "man" | "zone";
+  routeType?: "pass" | "run" | "block" | "blitz" | "man" | "zone";
   isPrimary?: boolean;
   isMotion?: boolean;
   color?: string;

@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { X, ArrowRight, Footprints, Shield, Minus, Waves, Zap, Star, MoveHorizontal, Check } from "lucide-react";
@@ -32,6 +32,16 @@ export function PlayerActionMenu({
   const [style, setStyle] = useState<"straight" | "curved">("straight");
   const [isMotion, setIsMotion] = useState(false);
   const [isPrimary, setIsPrimary] = useState(false);
+
+  // Reset menu state when a new player is selected
+  useEffect(() => {
+    if (isVisible) {
+      setRouteType(null);
+      setStyle("straight");
+      setIsMotion(false);
+      setIsPrimary(false);
+    }
+  }, [playerId, isVisible]);
 
   const handleRouteTypeSelect = useCallback((type: "pass" | "run" | "block" | "blitz" | "man" | "zone") => {
     setRouteType(type);

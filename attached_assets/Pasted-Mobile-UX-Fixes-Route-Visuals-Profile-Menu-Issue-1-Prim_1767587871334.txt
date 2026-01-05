@@ -1,0 +1,438 @@
+Mobile UX Fixes - Route Visuals & Profile Menu
+Issue 1: Primary Route Indicator Not Showing
+Problem: When "Primary" is selected for a route, the small white circle with "1" inside should appear at the route endpoint (same as desktop). This indicator is not showing up on mobile.
+Fix Required:
+
+When a route has isPrimary: true, render a white circle with "1" at the endpoint
+Reference the desktop implementation in PlayDesigner.tsx for exact styling
+
+Implementation:
+typescriptconst renderRoute = (route, ctx) => {
+  // ... draw route line ...
+  
+  // If primary, draw indicator at endpoint
+  if (route.isPrimary) {
+    const endpoint = route.points[route.points.length - 1];
+    
+    // White circle
+    ctx.beginPath();
+    ctx.arc(endpoint.x, endpoint.y, 10, 0, Math.PI * 2);
+    ctx.fillStyle = 'white';
+    ctx.fill();
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    
+    // "1" text inside
+    ctx.fillStyle = 'black';
+    ctx.font = 'bold 10px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('1', endpoint.x, endpoint.y);
+  }
+};
+Or if using SVG/React:
+tsx{route.isPrimary && (
+  <g transform={`translate(${endpoint.x}, ${endpoint.y})`}>
+    <circle r="10" fill="white" stroke="#333" strokeWidth="1" />
+    <text 
+      textAnchor="middle" 
+      dominantBaseline="middle" 
+      fontSize="10" 
+      fontWeight="bold" 
+      fill="black"
+    >
+      1
+    </text>
+  </g>
+)}
+
+Issue 2: Player Menu State Not Resetting
+Problem: When selecting a new player after drawing a route, the previous selections (Straight/Curved, Primary, Motion) carry over. Each new player should start with a fresh/default menu state.
+Fix Required:
+
+Reset all menu state when a new player is selected
+The menu should always open with default values:
+
+Route Type: none selected
+Style: none selected (or default to Straight)
+Motion: unchecked
+Primary: unchecked
+
+
+
+Implementation:
+typescriptconst handlePlayerLongPress = (playerId: string) => {
+  // Reset ALL menu state when opening for a new player
+  setSelectedRouteType(null);
+  setSelectedStyle('straight'); // or null if you want no default
+  setIsMotion(false);
+  setIsPrimary(false);
+  
+  // Then open menu for this player
+  setActivePlayerId(playerId);
+  setShowPlayerMenu(true);
+};
+If using a menu component with local state:
+tsxconst PlayerActionMenu = ({ player, onClose, onStartDrawing }) => {
+  // These should reset every time the component mounts (new player selected)
+  const [routeType, setRouteType] = useState<string | null>(null);
+  const [style, setStyle] = useState<'straight' | 'curved'>('straight');
+  const [isMotion, setIsMotion] = useState(false);
+  const [isPrimary, setIsPrimary] = useState(false);
+  
+  // Add a useEffect to reset if player changes while menu is open
+  useEffect(() => {
+    setRouteType(null);
+    setStyle('straight');
+    setIsMotion(false);
+    setIsPrimary(false);
+  }, [player.id]);
+  
+  // ... rest of component
+};
+Key: Make sure the menu state is tied to the specific player, not global state that persists between players.
+
+Issue 3: Profile Dropdown Menu Not Working (CRITICAL)
+Problem: The "Hey Coach Ray" area in the top right has no visible dropdown. Cannot see menu options, cannot log out, and the user's profile icon is not displaying.
+This feature was previously specified but is not implemented or not working.
+Fix Required — Complete Implementation:
+1. Profile trigger button with avatar:
+tsxconst UserProfileMenu = ({ user }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className="user-profile-menu" ref={menuRef}>
+      <button 
+        className="profile-trigger"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span className="greeting">Hey Coach {user.firstName}</span>
+        <div className="avatar">
+          {user.avatarUrl ? (
+            <img src={user.avatarUrl} alt="" />
+          ) : (
+            <span className="avatar-initial">{user.firstName?.[0] || '?'}</span>
+          )}
+        </div>
+        <ChevronDownIcon className={`chevron ${isOpen ? 'open' : ''}`} />
+      </button>
+      
+      {isOpen && (
+        <div className="profile-dropdown">
+          <div className="dropdown-header">
+            <div className="avatar-large">
+              {user.avatarUrl ? (
+                <img src={user.avatarUrl} alt="" />
+              ) : (
+                <span>{user.firstName?.[0] || '?'}</span>
+              )}
+            </div>
+            <div className="user-info">
+              <strong>Coach {user.firstName}</strong>
+              <span className="email">{user.email}</span>
+            </div>
+          </div>
+          
+          <div className="dropdown-divider" />
+          
+          <a href="/mobile" className="dropdown-item active">
+            <span>Build Plays</span>
+          </a>
+          <div className="dropdown-item disabled">
+            <span>Play Library</span>
+            <span className="badge">🚧</span>
+          </div>
+          <div className="dropdown-item disabled">
+            <span>Team Playbooks</span>
+            <span className="badge">🚧</span>
+          </div>
+          <div className="dropdown-item disabled">
+            <span>Coach Profile</span>
+            <span className="badge">🚧</span>
+          </div>
+          
+          <div className="dropdown-divider" />
+          
+          <button 
+            className="dropdown-item logout"
+            onClick={handleLogout}
+          >
+            Log Out
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+2. Styling:
+css.user-profile-menu {
+  position: relative;
+}
+
+.profile-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: transparent;
+  border: 1px solid #333;
+  border-radius: 8px;
+  color: white;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.profile-trigger:hover {
+  border-color: #f97316;
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #f97316;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-initial {
+  color: white;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.chevron {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s;
+}
+
+.chevron.open {
+  transform: rotate(180deg);
+}
+
+.profile-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 220px;
+  background: #1a1a2e;
+  border: 1px solid #333;
+  border-radius: 10px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  background: #0d0d1a;
+}
+
+.avatar-large {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #f97316;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
+}
+
+.avatar-large img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-info strong {
+  font-size: 13px;
+}
+
+.user-info .email {
+  font-size: 11px;
+  color: #888;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: #333;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  color: white;
+  text-decoration: none;
+  font-size: 13px;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+}
+
+.dropdown-item:hover {
+  background: #333;
+}
+
+.dropdown-item.active {
+  color: #f97316;
+}
+
+.dropdown-item.disabled {
+  color: #555;
+  cursor: not-allowed;
+}
+
+.dropdown-item.disabled:hover {
+  background: transparent;
+}
+
+.dropdown-item .badge {
+  font-size: 14px;
+}
+
+.dropdown-item.logout {
+  color: #ef4444;
+}
+
+.dropdown-item.logout:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+3. Logout handler:
+typescriptconst handleLogout = async () => {
+  try {
+    await fetch('/api/logout', { 
+      method: 'POST',
+      credentials: 'include'
+    });
+    
+    // Clear query cache
+    queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+    queryClient.setQueryData(['/api/user'], null);
+    
+    // Close menu
+    setIsOpen(false);
+    
+  } catch (error) {
+    console.error('Logout failed:', error);
+  }
+};
+4. Verify user avatar is being fetched:
+
+Check that /api/user returns avatarUrl field
+If user has uploaded an avatar, it should display; otherwise show initial
+
+
+Issue 4: Run Routes Should Be Black
+Problem: Run routes are currently drawn in the player's color. They should always be black.
+Fix Required:
+
+When routeType === 'run', use black (#000000) for the route color regardless of player color
+
+typescriptconst getRouteColor = (route, player) => {
+  if (route.routeType === 'run') {
+    return '#000000'; // Always black for run routes
+  }
+  
+  if (route.routeType === 'block') {
+    return '#FFFFFF'; // Always white for block routes
+  }
+  
+  // For pass routes, use player color
+  return player.color;
+};
+In rendering:
+typescriptconst renderRoute = (route, player) => {
+  const color = getRouteColor(route, player);
+  
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 3;
+  // ... draw route path
+};
+
+Issue 5: Block Routes Should Be White
+Problem: Block routes should be white. There also appears to be an issue with them being drawn at all.
+Fix Required:
+
+Block route color should be white (#FFFFFF):
+
+typescriptif (route.routeType === 'block') {
+  ctx.strokeStyle = '#FFFFFF';
+}
+
+Verify block routes are being created and stored:
+
+
+When user selects "Block" in the menu, ensure a route object is created
+Block routes may be shorter/simpler than pass routes (just a short line showing blocking assignment)
+
+
+Block route styling:
+
+typescriptconst renderBlockRoute = (route, ctx) => {
+  ctx.strokeStyle = '#FFFFFF';
+  ctx.lineWidth = 3;
+  
+  // Blocks are typically short, straight lines
+  // May also have a perpendicular cap at the end to indicate "stopping"
+  
+  const start = route.points[0];
+  const end = route.points[route.points.length - 1];
+  
+  ctx.beginPath();
+  ctx.moveTo(start.x, start.y);
+  ctx.lineTo(end.x, end.y);
+  ctx.stroke();
+  
+  // Optional: add perpendicular end cap for block indicator
+  // This shows "this is where the block happens"
+};
+
+Debug if blocks aren't drawing:
+
+
+Add console.log to verify block routes are being stored in state
+Check if the rendering loop is filtering out block routes
+Ensure routeType: 'block' is being set correctly when created
+
+
+Summary
+#IssuePriority1Primary indicator (white circle with "1") not showingHigh2Menu state carrying over to next playerHigh3Profile dropdown not working, can't log out, no avatarCRITICAL4Run routes should be blackMedium5Block routes should be whiteMedium
+Fix order: #3 first (critical auth/UX feature), then #2 (causes confusion), then #1, #4, #5 (visual fixes).
