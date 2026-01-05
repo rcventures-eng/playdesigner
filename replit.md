@@ -80,8 +80,24 @@ Key mobile components in `client/src/components/mobile/`:
 - `AIPromptOverlay.tsx`: AI play generation with voice input (uses shadcn Dialog, centered modal on tablets, full-screen on phones)
 - `PlayDetailsForm.tsx`: Play metadata form
 - `SaveExportPanel.tsx`: Auth-aware save/export options
-- `WizardNavigation.tsx`: Bottom tab bar navigation
+- `WizardNavigation.tsx`: Bottom tab bar navigation with compact wizard tabs and tool buttons (Undo, Screenshot, Share)
 - `OrientationPrompt.tsx`: Landscape orientation prompt
+
+**Mobile Touch Isolation:**
+- Aggressive scroll locking during player drag and route drawing via `lockAllScroll()`/`unlockAllScroll()` helpers
+- Disables overflow and touch-action on document.body and documentElement during interactions
+- Unlocks on pointerUp, pointerCancel, or component unmount
+- Visual feedback: amber border on dragged players, green indicator during route drawing
+
+**Mobile Undo/Redo System:**
+- 50-snapshot undo stack tracking player positions and routes
+- Uses functional setDraft pattern to avoid stale closure bugs
+- Snapshots captured before each player drag or route drawing starts
+- Exposed via `pushToUndoStack()`, `undo()`, and `canUndo` from `usePlayDraft` hook
+
+**Mobile Export Features:**
+- **Screenshot**: Uses `html-to-image` (toPng) to capture canvas as downloadable PNG with 2x pixel ratio
+- **Share**: Uses Web Share API with file sharing for iOS native share sheet, falls back to download when unavailable
 
 **Mobile Route Rendering Features:**
 - Routes render in player-specific colors (Z=blue, Y=yellow, X=red, RB=green, QB=black) via `route.color` property
@@ -93,7 +109,7 @@ Key mobile components in `client/src/components/mobile/`:
 Custom hooks in `client/src/hooks/`:
 - `useMobileDetection.ts`: Detects mobile/tablet devices
 - `useOrientation.ts`: Tracks device orientation
-- `usePlayDraft.ts`: Session persistence via sessionStorage
+- `usePlayDraft.ts`: Session persistence via sessionStorage, undo history management
 
 ### UI/UX Patterns
 
