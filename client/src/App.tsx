@@ -5,6 +5,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
+import { MobileBanner } from "@/components/MobileBanner";
 
 import Home from "@/pages/home";
 import AdminDashboard from "@/pages/admin";
@@ -21,6 +22,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
+        <MobileBanner />
         <Toaster />
         <Switch>
           <Route path="/">

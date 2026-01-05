@@ -410,3 +410,8 @@
 .player-pending-route {
   animation: pulsingGlow 1s ease-in-out infinite;
 }
+
+/* Mobile banner body offset */
+body.has-mobile-banner {
+  padding-top: 44px;
+}
