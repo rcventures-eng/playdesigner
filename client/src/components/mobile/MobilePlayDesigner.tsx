@@ -73,7 +73,7 @@ export function MobilePlayDesigner() {
   const canvasContainerRef = useRef<HTMLDivElement>(null);
 
   const { data: user } = useQuery({
-    queryKey: ["/api/user"],
+    queryKey: ["/api/me"],
     retry: false,
   });
 
@@ -620,7 +620,7 @@ export function MobilePlayDesigner() {
         onOpenChange={(open) => {
           setShowAuthModal(open);
           if (!open) {
-            queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/me"] });
           }
         }}
         initialMode={authModalMode}
