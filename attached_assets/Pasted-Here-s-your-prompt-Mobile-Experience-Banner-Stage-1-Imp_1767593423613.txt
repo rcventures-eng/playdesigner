@@ -1,0 +1,243 @@
+Here's your prompt:
+
+---
+
+# Mobile Experience Banner - Stage 1 Implementation
+
+## Overview
+
+Add a small, non-intrusive banner that appears ONLY for mobile/tablet users when they visit the main site (rc-football.com). The banner should direct them to the mobile-optimized experience at `/mobile`.
+
+## Critical Constraint
+
+**This is a MINIMAL change.** Do not modify any existing component logic, styling, or functionality. You are only ADDING a banner that appears conditionally.
+
+## Requirements
+
+### Detection Logic
+
+Show the banner when:
+- User agent indicates mobile device (iPhone, Android phone, iPad, Android tablet)
+- Screen width is less than 1024px
+- User has NOT dismissed the banner in this session
+
+```typescript
+const isMobileDevice = () => {
+  const userAgent = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  const smallScreen = window.innerWidth < 1024;
+  return userAgent || smallScreen;
+};
+```
+
+### Banner Behavior
+
+1. Appears at the TOP of the page, above the orange header
+2. Fixed position so it stays visible while scrolling
+3. Has a dismiss (X) button that hides it for the session
+4. Dismissal is stored in `sessionStorage` (not localStorage — let it come back next visit)
+
+### Banner Design
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│ 📱 We have a mobile-optimized experience!  [Try it now →]          [✕] │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+- Background: Dark blue (#1a1a2e) or match your nav
+- Text: White
+- "Try it now →" is a link to `/mobile` styled as a subtle button or underlined link
+- Dismiss X on the right
+- Height: ~40-44px (compact but tappable)
+
+## Implementation
+
+### Create New Component
+
+Create `client/src/components/MobileBanner.tsx`:
+
+```tsx
+import { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
+
+const BANNER_DISMISSED_KEY = 'rc_mobile_banner_dismissed';
+
+export const MobileBanner = () => {
+  const [showBanner, setShowBanner] = useState(false);
+
+  useEffect(() => {
+    // Check if should show banner
+    const isDismissed = sessionStorage.getItem(BANNER_DISMISSED_KEY) === 'true';
+    
+    if (isDismissed) {
+      setShowBanner(false);
+      return;
+    }
+
+    // Check if mobile device
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isSmallScreen = window.innerWidth < 1024;
+    
+    if (isMobile || isSmallScreen) {
+      setShowBanner(true);
+    }
+  }, []);
+
+  const handleDismiss = () => {
+    sessionStorage.setItem(BANNER_DISMISSED_KEY, 'true');
+    setShowBanner(false);
+  };
+
+  if (!showBanner) return null;
+
+  return (
+    <div className="mobile-banner">
+      <div className="mobile-banner-content">
+        <span className="mobile-banner-icon">📱</span>
+        <span className="mobile-banner-text">
+          We have a mobile-optimized experience!
+        </span>
+        <a href="/mobile" className="mobile-banner-cta">
+          Try it now →
+        </a>
+      </div>
+      <button 
+        className="mobile-banner-dismiss"
+        onClick={handleDismiss}
+        aria-label="Dismiss banner"
+      >
+        <X size={18} />
+      </button>
+    </div>
+  );
+};
+```
+
+### Add Styles
+
+Add to your CSS (or create `MobileBanner.css`):
+
+```css
+.mobile-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 44px;
+  background: linear-gradient(90deg, #1a1a2e 0%, #2d2d44 100%);
+  border-bottom: 1px solid #333;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 9999;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.mobile-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mobile-banner-icon {
+  font-size: 18px;
+}
+
+.mobile-banner-text {
+  color: white;
+  font-size: 14px;
+}
+
+.mobile-banner-cta {
+  color: #f97316;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  padding: 6px 12px;
+  border: 1px solid #f97316;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.mobile-banner-cta:hover {
+  background: #f97316;
+  color: white;
+}
+
+.mobile-banner-dismiss {
+  background: transparent;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-banner-dismiss:hover {
+  color: white;
+}
+
+/* Push page content down when banner is visible */
+body.has-mobile-banner {
+  padding-top: 44px;
+}
+```
+
+### Add to App
+
+In your main `App.tsx` or root layout, add the banner:
+
+```tsx
+import { MobileBanner } from './components/MobileBanner';
+
+function App() {
+  return (
+    <>
+      <MobileBanner />
+      {/* ... rest of your app */}
+    </>
+  );
+}
+```
+
+### Handle Body Padding
+
+To prevent the banner from overlapping content, add this to the `MobileBanner` component:
+
+```tsx
+useEffect(() => {
+  if (showBanner) {
+    document.body.classList.add('has-mobile-banner');
+  } else {
+    document.body.classList.remove('has-mobile-banner');
+  }
+  
+  return () => {
+    document.body.classList.remove('has-mobile-banner');
+  };
+}, [showBanner]);
+```
+
+## What NOT to Do
+
+- ❌ Do not modify any existing components
+- ❌ Do not add mobile detection logic anywhere else
+- ❌ Do not auto-redirect users (that's Stage 2)
+- ❌ Do not change routing logic
+- ❌ Do not touch the `/mobile` route or mobile components
+
+## Testing Checklist
+
+- [ ] Banner appears on mobile devices visiting rc-football.com
+- [ ] Banner does NOT appear on desktop browsers
+- [ ] "Try it now →" links to /mobile correctly
+- [ ] Dismiss (X) hides the banner
+- [ ] Banner stays hidden for the rest of the session after dismissal
+- [ ] Banner reappears on a new session (new tab/browser restart)
+- [ ] Page content is not hidden behind the banner
+- [ ] Desktop experience is completely unchanged
+
+---
