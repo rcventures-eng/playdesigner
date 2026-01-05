@@ -62,7 +62,8 @@ export function MobilePlayDesigner() {
   const [side, setSide] = useState<"offense" | "defense">("offense");
   const [showFormatSelector, setShowFormatSelector] = useState(true);
   const [showAIOverlay, setShowAIOverlay] = useState(false);
-  const [showSignUp, setShowSignUp] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<"signup" | "login">("signup");
   const [validationError, setValidationError] = useState("");
 
   const { data: user } = useQuery({
@@ -78,46 +79,59 @@ export function MobilePlayDesigner() {
       return response.json() as Promise<GeneratePlayResponse>;
     },
     onSuccess: (data) => {
-      if (data.success && data.play) {
-        const playDataRaw = data.play.data || data.play;
-        const playersData = "players" in playDataRaw ? playDataRaw.players : undefined;
-        const routesData = "routes" in playDataRaw ? playDataRaw.routes : undefined;
+      const playDataRaw = data.play?.data || data.play;
+      const playersData = playDataRaw && "players" in playDataRaw ? playDataRaw.players : undefined;
+      const routesData = playDataRaw && "routes" in playDataRaw ? playDataRaw.routes : undefined;
+      
+      // Be forgiving - show players even if routes are incomplete
+      const hasPlayers = playersData && playersData.length > 0;
+      const hasRoutes = routesData && routesData.length > 0;
 
-        if (playersData && playersData.length > 0) {
-          setPlayers(
-            playersData.map((p: FormationPlayer & { id?: string; color?: string }, i: number) => ({
-              id: p.id || `ai-player-${i}-${Date.now()}`,
-              label: p.label,
-              x: p.x,
-              y: p.y,
-              color: p.color || (p.colorKey ? resolveColorKey(p.colorKey) : "#6b7280"),
-              side: p.side || side,
-            }))
-          );
+      if (hasPlayers) {
+        setPlayers(
+          playersData.map((p: FormationPlayer & { id?: string; color?: string }, i: number) => ({
+            id: p.id || `ai-player-${i}-${Date.now()}`,
+            label: p.label,
+            x: p.x,
+            y: p.y,
+            color: p.color || (p.colorKey ? resolveColorKey(p.colorKey) : "#6b7280"),
+            side: p.side || side,
+          }))
+        );
+      }
+
+      if (hasRoutes) {
+        setRoutes(routesData);
+      }
+
+      if (data.play?.name) {
+        setName(data.play.name);
+      }
+
+      setShowAIOverlay(false);
+
+      if (hasPlayers) {
+        // Success - we got players, show appropriate message
+        if (hasRoutes) {
+          toast({
+            title: "Play generated!",
+            description: "Your AI-generated play is ready to edit.",
+          });
+        } else {
+          // Players generated but no routes - still usable, soft warning
+          toast({
+            title: "Play generated",
+            description: "Formation set up. You can draw routes manually.",
+          });
         }
-
-        if (routesData && routesData.length > 0) {
-          setRoutes(routesData);
-        }
-
-        if (data.play.name) {
-          setName(data.play.name);
-        }
-
-        setShowAIOverlay(false);
-        toast({
-          title: "Play generated!",
-          description: "Your AI-generated play is ready to edit.",
-        });
       } else {
-        // API returned but with success=false or no play data
+        // No players at all - this is a failure
         const errorMsg = (data as unknown as { error?: string })?.error || "The AI could not generate a valid play from your description.";
         toast({
           title: "Generation incomplete",
           description: errorMsg,
           variant: "destructive",
         });
-        setShowAIOverlay(false);
       }
     },
     onError: () => {
@@ -287,11 +301,13 @@ export function MobilePlayDesigner() {
   }, [toast]);
 
   const handleSignUp = useCallback(() => {
-    setShowSignUp(true);
+    setAuthModalMode("signup");
+    setShowAuthModal(true);
   }, []);
 
   const handleLogin = useCallback(() => {
-    setShowSignUp(true);
+    setAuthModalMode("login");
+    setShowAuthModal(true);
   }, []);
 
   if (!isLoaded) {
@@ -375,7 +391,10 @@ export function MobilePlayDesigner() {
               variant="ghost" 
               size="sm"
               className="h-7 text-xs px-2"
-              onClick={() => setShowSignUp(true)}
+              onClick={() => {
+                setAuthModalMode("login");
+                setShowAuthModal(true);
+              }}
               data-testid="button-login-header"
             >
               Log In
@@ -383,7 +402,10 @@ export function MobilePlayDesigner() {
             <Button 
               size="sm"
               className="h-7 text-xs px-2"
-              onClick={() => setShowSignUp(true)}
+              onClick={() => {
+                setAuthModalMode("signup");
+                setShowAuthModal(true);
+              }}
               data-testid="button-signup-header"
             >
               Sign Up
@@ -460,13 +482,14 @@ export function MobilePlayDesigner() {
       />
 
       <SignUpModal
-        open={showSignUp}
+        open={showAuthModal}
         onOpenChange={(open) => {
-          setShowSignUp(open);
+          setShowAuthModal(open);
           if (!open) {
             queryClient.invalidateQueries({ queryKey: ["/api/user"] });
           }
         }}
+        initialMode={authModalMode}
       />
     </div>
   );

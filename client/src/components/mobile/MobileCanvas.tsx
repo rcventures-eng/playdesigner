@@ -25,7 +25,7 @@ interface MobileCanvasProps {
   showControls?: boolean;
 }
 
-const LONG_PRESS_DURATION = 500;
+const LONG_PRESS_DURATION = 300;
 const PLAYER_HIT_RADIUS = 24;
 
 export function MobileCanvas({
@@ -54,6 +54,7 @@ export function MobileCanvas({
   const [isMotion, setIsMotion] = useState(false);
   const [activePlayerColor, setActivePlayerColor] = useState<string>("#9ca3af");
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
+  const lastMoveTimeRef = useRef<number>(0);
 
   const { field, colors } = FOOTBALL_CONFIG;
   const [isTouchingPlayer, setIsTouchingPlayer] = useState(false);
@@ -117,10 +118,17 @@ export function MobileCanvas({
       pointerStartRef.current = { x: e.clientX, y: e.clientY };
 
       if (player) {
-        // Only capture pointer when touching a player - allows scroll elsewhere
+        // Capture pointer and fully disable scroll when touching a player
         e.preventDefault();
+        e.stopPropagation();
         (e.target as HTMLElement).setPointerCapture(e.pointerId);
         setIsTouchingPlayer(true);
+        
+        // Disable scroll on container for iOS
+        if (containerRef.current) {
+          containerRef.current.style.overflow = 'hidden';
+          containerRef.current.style.touchAction = 'none';
+        }
         
         longPressTimerRef.current = setTimeout(() => {
           setMenuPlayer({
@@ -136,7 +144,15 @@ export function MobileCanvas({
       } else if (activeRoutePlayerId) {
         // Drawing route - capture events
         e.preventDefault();
+        e.stopPropagation();
         setIsTouchingPlayer(true);
+        
+        // Disable scroll on container for iOS
+        if (containerRef.current) {
+          containerRef.current.style.overflow = 'hidden';
+          containerRef.current.style.touchAction = 'none';
+        }
+        
         setCurrentRoutePoints((prev) => [...prev, fieldPos]);
       }
       // If not touching player and not drawing route, allow default scroll behavior
@@ -146,6 +162,13 @@ export function MobileCanvas({
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent) => {
+      // Throttle move updates to ~60fps for smoother performance
+      const now = performance.now();
+      if (now - lastMoveTimeRef.current < 16) {
+        return; // Skip if less than 16ms since last update
+      }
+      lastMoveTimeRef.current = now;
+
       const fieldPos = screenToField(e.clientX, e.clientY);
 
       if (pointerStartRef.current && longPressTimerRef.current) {
@@ -199,6 +222,12 @@ export function MobileCanvas({
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
+    }
+
+    // Re-enable scroll on container
+    if (containerRef.current) {
+      containerRef.current.style.overflow = 'auto';
+      containerRef.current.style.touchAction = 'auto';
     }
 
     if (activeRoutePlayerId && currentRoutePoints.length > 1) {

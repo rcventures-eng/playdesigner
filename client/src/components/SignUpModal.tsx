@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,10 +46,12 @@ interface SignUpModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   customMessage?: string;
+  initialMode?: "signup" | "login";
 }
 
-export default function SignUpModal({ open, onOpenChange, customMessage }: SignUpModalProps) {
+export default function SignUpModal({ open, onOpenChange, customMessage, initialMode = "signup" }: SignUpModalProps) {
   const { toast } = useToast();
+  const [mode, setMode] = useState<"signup" | "login">(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -64,6 +66,13 @@ export default function SignUpModal({ open, onOpenChange, customMessage }: SignU
     confirmPassword: false,
   });
 
+  // Sync mode with initialMode when modal opens
+  useEffect(() => {
+    if (open) {
+      setMode(initialMode);
+    }
+  }, [open, initialMode]);
+
   const isValidEmail = (email: string) => {
     if (!email) return true;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -77,7 +86,7 @@ export default function SignUpModal({ open, onOpenChange, customMessage }: SignU
   
   const isFormValid = email && isValidEmail(email) && password.length >= 8 && password === confirmPassword;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -107,6 +116,7 @@ export default function SignUpModal({ open, onOpenChange, customMessage }: SignU
         throw new Error(data.error || "Registration failed");
       }
 
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       queryClient.invalidateQueries({ queryKey: ["/api/me"] });
 
       toast({
@@ -118,6 +128,42 @@ export default function SignUpModal({ open, onOpenChange, customMessage }: SignU
       onOpenChange(false);
     } catch (err: any) {
       setError(err.message || "Registration failed. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
+
+    try {
+      const response = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+        credentials: "include",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Invalid email or password");
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/me"] });
+
+      toast({
+        title: "Welcome back!",
+        description: "You are now logged in.",
+      });
+
+      resetForm();
+      onOpenChange(false);
+    } catch (err: any) {
+      setError(err.message || "Login failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -146,157 +192,247 @@ export default function SignUpModal({ open, onOpenChange, customMessage }: SignU
     }, 300);
   };
 
+  const isLoginValid = email && isValidEmail(email) && password.length > 0;
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent 
         className="bg-slate-900 border-white/10 text-white sm:max-w-md shadow-xl max-h-[90vh] overflow-y-auto" 
-        data-testid="modal-signup"
+        data-testid={mode === "login" ? "modal-login" : "modal-signup"}
       >
         <DialogHeader className="text-center">
           <DialogTitle className="text-2xl font-bold text-center text-orange-400">
-            {customMessage ? customMessage : "Join RC Football"}
+            {mode === "login" 
+              ? "Welcome Back" 
+              : (customMessage ? customMessage : "Join RC Football")}
           </DialogTitle>
           <p className="text-slate-400 text-sm mt-1">
-            {customMessage ? "Create a free account to unlock this feature." : "Design plays, build your playbook, and dominate."}
+            {mode === "login"
+              ? "Log in to access your plays and playbooks."
+              : (customMessage ? "Create a free account to unlock this feature." : "Design plays, build your playbook, and dominate.")}
           </p>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-3 pt-2">
-          {error && (
-            <div 
-              className="bg-red-500/20 border border-red-500/50 rounded-md p-3 text-sm text-red-300"
-              data-testid="alert-error"
-            >
-              {error}
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="signup-email" className="text-slate-300">
-              Email Address <span className="text-red-400">*</span>
-            </Label>
-            <Input
-              id="signup-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onBlur={() => setTouched(t => ({ ...t, email: true }))}
-              onFocus={scrollIntoViewOnFocus}
-              placeholder="coach@team.com"
-              required
-              className={`bg-slate-800 border-slate-600 text-white placeholder:text-slate-500 ${
-                emailError ? "border-red-500 focus-visible:ring-red-500" : ""
-              }`}
-              data-testid="input-signup-email"
-            />
-            {emailError && (
-              <p className="text-xs text-red-400" data-testid="text-email-error">
-                Invalid email format
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="signup-password" className="text-slate-300">
-              Password <span className="text-red-400">*</span>
-            </Label>
-            <Input
-              id="signup-password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onBlur={() => setTouched(t => ({ ...t, password: true }))}
-              onFocus={scrollIntoViewOnFocus}
-              placeholder="Min 8 characters"
-              required
-              minLength={8}
-              className={`bg-slate-800 border-slate-600 text-white placeholder:text-slate-500 ${
-                passwordError ? "border-red-500 focus-visible:ring-red-500" : ""
-              }`}
-              data-testid="input-signup-password"
-            />
-            {passwordError && (
-              <p className="text-xs text-red-400" data-testid="text-password-error">
-                Not enough characters
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="signup-confirm-password" className="text-slate-300">
-              Confirm Password <span className="text-red-400">*</span>
-            </Label>
-            <Input
-              id="signup-confirm-password"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              onBlur={() => setTouched(t => ({ ...t, confirmPassword: true }))}
-              onFocus={scrollIntoViewOnFocus}
-              placeholder="Re-enter your password"
-              required
-              className={`bg-slate-800 border-slate-600 text-white placeholder:text-slate-500 ${
-                confirmPasswordError ? "border-red-500 focus-visible:ring-red-500" : ""
-              }`}
-              data-testid="input-signup-confirm-password"
-            />
-            {confirmPasswordError && (
-              <p className="text-xs text-red-400" data-testid="text-password-mismatch">
-                Passwords do not match
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="signup-firstname" className="text-slate-300">
-              First Name <span className="text-slate-500">(optional)</span>
-            </Label>
-            <Input
-              id="signup-firstname"
-              type="text"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              onFocus={scrollIntoViewOnFocus}
-              placeholder="Coach"
-              className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500"
-              data-testid="input-signup-firstname"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="signup-team" className="text-slate-300">
-              Favorite NFL Team <span className="text-slate-500">(optional)</span>
-            </Label>
-            <Select value={favoriteNFLTeam} onValueChange={setFavoriteNFLTeam}>
-              <SelectTrigger 
-                className="bg-slate-800 border-slate-600 text-white"
-                data-testid="select-signup-team"
+        {mode === "login" ? (
+          <form onSubmit={handleLoginSubmit} className="space-y-3 pt-2">
+            {error && (
+              <div 
+                className="bg-red-500/20 border border-red-500/50 rounded-md p-3 text-sm text-red-300"
+                data-testid="alert-error"
               >
-                <SelectValue placeholder="Select a team" />
-              </SelectTrigger>
-              <SelectContent className="bg-slate-800 border-slate-600">
-                {NFL_TEAMS.map((team) => (
-                  <SelectItem 
-                    key={team} 
-                    value={team}
-                    className="text-white hover:bg-slate-700 focus:bg-slate-700"
-                  >
-                    {team}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+                {error}
+              </div>
+            )}
 
-          <Button
-            type="submit"
-            disabled={!isFormValid || isLoading}
-            className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed"
-            data-testid="button-submit-signup"
-          >
-            {isLoading ? "Creating..." : "Create Account"}
-          </Button>
-        </form>
+            <div className="space-y-2">
+              <Label htmlFor="login-email" className="text-slate-300">
+                Email Address
+              </Label>
+              <Input
+                id="login-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onFocus={scrollIntoViewOnFocus}
+                placeholder="coach@team.com"
+                required
+                className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500"
+                data-testid="input-login-email"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="login-password" className="text-slate-300">
+                Password
+              </Label>
+              <Input
+                id="login-password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onFocus={scrollIntoViewOnFocus}
+                placeholder="Enter your password"
+                required
+                className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500"
+                data-testid="input-login-password"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              disabled={!isLoginValid || isLoading}
+              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+              data-testid="button-submit-login"
+            >
+              {isLoading ? "Logging in..." : "Log In"}
+            </Button>
+
+            <div className="text-center pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setMode("signup");
+                  setError("");
+                }}
+                className="text-sm text-slate-400 hover:text-orange-400 transition-colors"
+                data-testid="button-switch-to-signup"
+              >
+                Don't have an account? <span className="underline">Sign up</span>
+              </button>
+            </div>
+          </form>
+        ) : (
+          <form onSubmit={handleSignupSubmit} className="space-y-3 pt-2">
+            {error && (
+              <div 
+                className="bg-red-500/20 border border-red-500/50 rounded-md p-3 text-sm text-red-300"
+                data-testid="alert-error"
+              >
+                {error}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="signup-email" className="text-slate-300">
+                Email Address <span className="text-red-400">*</span>
+              </Label>
+              <Input
+                id="signup-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onBlur={() => setTouched(t => ({ ...t, email: true }))}
+                onFocus={scrollIntoViewOnFocus}
+                placeholder="coach@team.com"
+                required
+                className={`bg-slate-800 border-slate-600 text-white placeholder:text-slate-500 ${
+                  emailError ? "border-red-500 focus-visible:ring-red-500" : ""
+                }`}
+                data-testid="input-signup-email"
+              />
+              {emailError && (
+                <p className="text-xs text-red-400" data-testid="text-email-error">
+                  Invalid email format
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="signup-password" className="text-slate-300">
+                Password <span className="text-red-400">*</span>
+              </Label>
+              <Input
+                id="signup-password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onBlur={() => setTouched(t => ({ ...t, password: true }))}
+                onFocus={scrollIntoViewOnFocus}
+                placeholder="Min 8 characters"
+                required
+                minLength={8}
+                className={`bg-slate-800 border-slate-600 text-white placeholder:text-slate-500 ${
+                  passwordError ? "border-red-500 focus-visible:ring-red-500" : ""
+                }`}
+                data-testid="input-signup-password"
+              />
+              {passwordError && (
+                <p className="text-xs text-red-400" data-testid="text-password-error">
+                  Not enough characters
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="signup-confirm-password" className="text-slate-300">
+                Confirm Password <span className="text-red-400">*</span>
+              </Label>
+              <Input
+                id="signup-confirm-password"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                onBlur={() => setTouched(t => ({ ...t, confirmPassword: true }))}
+                onFocus={scrollIntoViewOnFocus}
+                placeholder="Re-enter your password"
+                required
+                className={`bg-slate-800 border-slate-600 text-white placeholder:text-slate-500 ${
+                  confirmPasswordError ? "border-red-500 focus-visible:ring-red-500" : ""
+                }`}
+                data-testid="input-signup-confirm-password"
+              />
+              {confirmPasswordError && (
+                <p className="text-xs text-red-400" data-testid="text-password-mismatch">
+                  Passwords do not match
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="signup-firstname" className="text-slate-300">
+                First Name <span className="text-slate-500">(optional)</span>
+              </Label>
+              <Input
+                id="signup-firstname"
+                type="text"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                onFocus={scrollIntoViewOnFocus}
+                placeholder="Coach"
+                className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-500"
+                data-testid="input-signup-firstname"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="signup-team" className="text-slate-300">
+                Favorite NFL Team <span className="text-slate-500">(optional)</span>
+              </Label>
+              <Select value={favoriteNFLTeam} onValueChange={setFavoriteNFLTeam}>
+                <SelectTrigger 
+                  className="bg-slate-800 border-slate-600 text-white"
+                  data-testid="select-signup-team"
+                >
+                  <SelectValue placeholder="Select a team" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-800 border-slate-600">
+                  {NFL_TEAMS.map((team) => (
+                    <SelectItem 
+                      key={team} 
+                      value={team}
+                      className="text-white hover:bg-slate-700 focus:bg-slate-700"
+                    >
+                      {team}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button
+              type="submit"
+              disabled={!isFormValid || isLoading}
+              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+              data-testid="button-submit-signup"
+            >
+              {isLoading ? "Creating..." : "Create Account"}
+            </Button>
+
+            <div className="text-center pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setMode("login");
+                  setError("");
+                }}
+                className="text-sm text-slate-400 hover:text-orange-400 transition-colors"
+                data-testid="button-switch-to-login"
+              >
+                Already have an account? <span className="underline">Log in</span>
+              </button>
+            </div>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   );
