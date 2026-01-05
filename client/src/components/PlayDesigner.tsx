@@ -5440,16 +5440,91 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                               }
                             }
                           }}
+                          onClick={() => {
+                            // Blitz and Man: immediately create assignment (no style slideout)
+                            if (action === "blitz" || action === "man") {
+                              if (!longPressPlayerId) return;
+                              const player = players.find(p => p.id === longPressPlayerId);
+                              if (!player) return;
+                              
+                              if (action === "blitz") {
+                                // Blitz: auto-draw red line to QB position
+                                const qbPos = getQBPosition();
+                                const newRoute: Route = {
+                                  id: `route-${Date.now()}`,
+                                  playerId: longPressPlayerId,
+                                  points: [{ x: player.x, y: player.y }, qbPos],
+                                  type: "assignment",
+                                  style: "linear",
+                                  defensiveAction: "blitz",
+                                  color: CONFIG_COLORS.offense.receiverX,
+                                };
+                                saveToHistory();
+                                setRoutes(prev => [...prev, newRoute]);
+                                closeLongPressMenu();
+                              } else if (action === "man") {
+                                // Man: auto-generate default assignment to nearest offensive player
+                                const offensivePlayers = players.filter(p => p.side === "offense" || !p.side);
+                                const oneYardBehindLOS = FIELD.LOS_Y + (FIELD.PIXELS_PER_YARD || 12);
+                                
+                                let targetX = player.x;
+                                let targetY = oneYardBehindLOS;
+                                let targetPlayerId: string | undefined = undefined;
+                                
+                                if (offensivePlayers.length > 0) {
+                                  // Find nearest offensive player
+                                  const targetPlayer = getNearestUnclaimedOffensivePlayer({ x: player.x, y: player.y });
+                                  if (targetPlayer) {
+                                    targetX = targetPlayer.x;
+                                    targetY = targetPlayer.y;
+                                    targetPlayerId = targetPlayer.id;
+                                  }
+                                }
+                                
+                                // Check if target player is already covered by ANOTHER defender (not this one)
+                                const existingCoverage = routes.filter(
+                                  r => r.type === "assignment" && r.defensiveAction === "man" && 
+                                  r.targetPlayerId === targetPlayerId && r.playerId !== longPressPlayerId
+                                );
+                                
+                                const newRoute: Route = {
+                                  id: `route-${Date.now()}`,
+                                  playerId: longPressPlayerId,
+                                  points: [{ x: player.x, y: player.y }, { x: targetX, y: targetY }],
+                                  type: "assignment",
+                                  style: "linear",
+                                  defensiveAction: "man",
+                                  targetPlayerId: targetPlayerId,
+                                  color: CONFIG_ROUTES.man,
+                                };
+                                saveToHistory();
+                                setRoutes(prev => [...prev, newRoute]);
+                                closeLongPressMenu();
+                                
+                                // Show warning if duplicate coverage
+                                if (existingCoverage.length > 0) {
+                                  const targetPlayerLabel = offensivePlayers.find(p => p.id === targetPlayerId)?.label || "player";
+                                  toast({
+                                    title: "Double Coverage",
+                                    description: `Multiple defenders now cover ${targetPlayerLabel}`,
+                                    variant: "default"
+                                  });
+                                }
+                              }
+                            }
+                            // Zone: don't click-trigger - hover shows style options
+                          }}
                           data-active={hoveredDefensiveAction === action}
                         >
                           <span className="capitalize font-medium">{action === "man" ? "Man" : action === "blitz" ? "Blitz" : "Zone"}</span>
-                          <span className="text-xs opacity-60">▶</span>
+                          {/* Only Zone shows arrow for submenu */}
+                          {action === "zone" && <span className="text-xs opacity-60">▶</span>}
                         </div>
                       ))}
                     </div>
                     
-                    {/* Level 2: Style for Blitz/Man/Zone */}
-                    {hoveredDefensiveAction && (
+                    {/* Level 2: Style for Zone only (Blitz/Man skip this step) */}
+                    {hoveredDefensiveAction === "zone" && (
                       <div 
                         className="flex flex-col border-l border-gray-600" 
                         style={{ 
@@ -5461,8 +5536,8 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                         <div className="px-2 py-1 bg-gray-700/50 border-b border-gray-600">
                           <span className="text-white text-[10px] font-semibold">Style</span>
                         </div>
-                        {/* Zone only shows Area (filter out Linear), Blitz/Man show both */}
-                        {(hoveredDefensiveAction === "zone" ? ["area"] as const : ["linear", "area"] as const).map((style) => (
+                        {/* Zone only shows Area */}
+                        {(["area"] as const).map((style) => (
                           <div
                             key={style}
                             className="lp-menu-item px-2 py-1.5 text-xs cursor-pointer flex items-center justify-between text-gray-200"
@@ -5472,53 +5547,11 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                                 setHoveredRouteStyle(style);
                               }
                             }}
-                            onClick={() => {
-                              if (!hoveredDefensiveAction || !longPressPlayerId) return;
-                              const player = players.find(p => p.id === longPressPlayerId);
-                              if (!player) return;
-                              
-                              // For Blitz and Man, auto-create the assignment immediately
-                              if (hoveredDefensiveAction === "blitz") {
-                                const qbPos = getQBPosition();
-                                const newRoute: Route = {
-                                  id: `route-${Date.now()}`,
-                                  playerId: longPressPlayerId,
-                                  points: [{ x: player.x, y: player.y }, qbPos],
-                                  type: "assignment",
-                                  style: style,
-                                  defensiveAction: "blitz",
-                                  color: CONFIG_COLORS.offense.receiverX,
-                                };
-                                saveToHistory();
-                                setRoutes(prev => [...prev, newRoute]);
-                                closeLongPressMenu();
-                              } else if (hoveredDefensiveAction === "man") {
-                                const targetPlayer = getNearestUnclaimedOffensivePlayer({ x: player.x, y: player.y });
-                                if (targetPlayer) {
-                                  const newRoute: Route = {
-                                    id: `route-${Date.now()}`,
-                                    playerId: longPressPlayerId,
-                                    points: [{ x: player.x, y: player.y }, { x: targetPlayer.x, y: targetPlayer.y }],
-                                    type: "assignment",
-                                    style: style,
-                                    defensiveAction: "man",
-                                    targetPlayerId: targetPlayer.id,
-                                    color: CONFIG_ROUTES.man,
-                                  };
-                                  saveToHistory();
-                                  setRoutes(prev => [...prev, newRoute]);
-                                  closeLongPressMenu();
-                                }
-                              }
-                              // Zone + Area will show Shape column, so don't close menu here
-                            }}
                             data-active={hoveredRouteStyle === style}
                           >
                             <span className="capitalize font-medium">{style}</span>
                             {/* Zone + Area shows Shape column, so add arrow */}
-                            {hoveredDefensiveAction === "zone" && style === "area" && (
-                              <span className="text-xs opacity-60">▶</span>
-                            )}
+                            <span className="text-xs opacity-60">▶</span>
                           </div>
                         ))}
                       </div>

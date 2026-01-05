@@ -18,6 +18,7 @@ export interface DraftRoute {
   isPrimary?: boolean;
   isMotion?: boolean;
   color?: string;
+  targetPlayerId?: string; // For Man coverage - ID of the offensive player being covered
 }
 
 export interface DraftShape {

@@ -11,6 +11,7 @@ import { Sparkles, Shield, Shirt } from "lucide-react";
 import { FOOTBALL_CONFIG } from "@shared/football-config";
 import { PlayerActionMenu } from "./PlayerActionMenu";
 import type { DraftPlayer, DraftRoute } from "@/hooks/usePlayDraft";
+import { useToast } from "@/hooks/use-toast";
 
 interface MobileCanvasProps {
   players: DraftPlayer[];
@@ -57,6 +58,7 @@ export function MobileCanvas({
   onPushToUndoStack,
   showControls = false,
 }: MobileCanvasProps) {
+  const { toast } = useToast();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [draggedPlayerId, setDraggedPlayerId] = useState<string | null>(null);
@@ -310,6 +312,39 @@ export function MobileCanvas({
     pointerStartRef.current = null;
   }, [activeRoutePlayerId, currentRoutePoints, routes, onRoutesChange, routeStyle, isPrimaryRoute, isMotion, players, activePlayerColor]);
 
+  // Helper: Find QB position for Blitz targeting
+  const getQBPosition = useCallback((): { x: number; y: number } => {
+    const qb = players.find(p => p.label === "QB");
+    if (qb) return { x: qb.x, y: qb.y };
+    // Default QB position (center, behind LOS)
+    return { x: field.centerX, y: field.losY + 30 };
+  }, [players, field]);
+
+  // Helper: Find nearest offensive player for Man coverage
+  const getNearestOffensivePlayer = useCallback((defenderPos: { x: number; y: number }) => {
+    const offensivePlayers = players.filter(p => p.side === "offense" || !p.side);
+    if (offensivePlayers.length === 0) return null;
+    
+    // Find players already covered by Man coverage
+    const coveredPlayerIds = routes
+      .filter(r => r.routeType === "man" && r.targetPlayerId)
+      .map(r => r.targetPlayerId);
+    
+    const uncoveredPlayers = offensivePlayers.filter(p => !coveredPlayerIds.includes(p.id));
+    const candidatePlayers = uncoveredPlayers.length > 0 ? uncoveredPlayers : offensivePlayers;
+    
+    let nearest = candidatePlayers[0];
+    let minDist = Infinity;
+    for (const p of candidatePlayers) {
+      const dist = Math.sqrt(Math.pow(p.x - defenderPos.x, 2) + Math.pow(p.y - defenderPos.y, 2));
+      if (dist < minDist) {
+        minDist = dist;
+        nearest = p;
+      }
+    }
+    return nearest;
+  }, [players, routes]);
+
   const handleMenuAction = useCallback((action: {
     type: "pass" | "run" | "block" | "blitz" | "man" | "zone";
     style: "straight" | "curved";
@@ -318,31 +353,143 @@ export function MobileCanvas({
   }) => {
     if (!menuPlayer) return;
 
+    const player = players.find(p => p.id === menuPlayer.id);
+    if (!player) {
+      setMenuPlayer(null);
+      return;
+    }
+
+    // Push current state to undo stack BEFORE any changes
+    onPushToUndoStack?.();
+
+    // Blitz: Auto-create route to QB position
+    if (action.type === "blitz") {
+      const qbPos = getQBPosition();
+      const newRoute: DraftRoute = {
+        id: `route-${Date.now()}`,
+        playerId: player.id,
+        points: [{ x: player.x, y: player.y }, qbPos],
+        style: "straight",
+        routeType: "blitz",
+        isPrimary: false,
+        isMotion: false,
+        color: "#ef4444", // Red for blitz
+      };
+      onRoutesChange([...routes, newRoute]);
+      setMenuPlayer(null);
+      return;
+    }
+
+    // Man: Auto-create route to nearest offensive player
+    if (action.type === "man") {
+      const offensivePlayers = players.filter(p => p.side === "offense" || !p.side);
+      const oneYardBehindLOS = field.losY + field.pixelsPerYard;
+      
+      let targetX = player.x;
+      let targetY = oneYardBehindLOS;
+      let targetPlayerId: string | undefined = undefined;
+      
+      if (offensivePlayers.length > 0) {
+        const targetPlayer = getNearestOffensivePlayer({ x: player.x, y: player.y });
+        if (targetPlayer) {
+          targetX = targetPlayer.x;
+          targetY = targetPlayer.y;
+          targetPlayerId = targetPlayer.id;
+        }
+      }
+      
+      // Check if target player is already covered by ANOTHER defender (not this one)
+      const existingCoverage = routes.filter(
+        r => r.routeType === "man" && r.targetPlayerId === targetPlayerId && r.playerId !== player.id
+      );
+      
+      const newRoute: DraftRoute = {
+        id: `route-${Date.now()}`,
+        playerId: player.id,
+        points: [{ x: player.x, y: player.y }, { x: targetX, y: targetY }],
+        style: "straight",
+        routeType: "man",
+        isPrimary: false,
+        isMotion: false,
+        color: "#888888", // Gray for man coverage
+        targetPlayerId: targetPlayerId,
+      };
+      onRoutesChange([...routes, newRoute]);
+      setMenuPlayer(null);
+      
+      // Show warning if duplicate coverage
+      if (existingCoverage.length > 0 && targetPlayerId) {
+        const targetPlayerLabel = offensivePlayers.find(p => p.id === targetPlayerId)?.label || "player";
+        toast({
+          title: "Double Coverage",
+          description: `Multiple defenders now cover ${targetPlayerLabel}`,
+        });
+      }
+      return;
+    }
+
+    // Zone: Start drawing mode (existing behavior)
+    // Pass/Run/Block: Start drawing mode (existing behavior)
     setRouteStyle(action.style);
     setIsPrimaryRoute(action.isPrimary || false);
     setIsMotion(action.isMotion || false);
     setActiveRouteType(action.type);
 
-    const player = players.find(p => p.id === menuPlayer.id);
-    if (player) {
-      // Lock scroll when route drawing mode starts
-      lockAllScroll();
-      if (containerRef.current) {
-        containerRef.current.style.overflow = 'hidden';
-        containerRef.current.style.touchAction = 'none';
-      }
-      
-      // Push current state to undo stack BEFORE adding route
-      onPushToUndoStack?.();
-      
-      setActiveRoutePlayerId(player.id);
-      setCurrentRoutePoints([{ x: player.x, y: player.y }]);
-      setActivePlayerColor(player.color);
-      setIsTouchingPlayer(true); // Ensure touch state is set
+    // Lock scroll when route drawing mode starts
+    lockAllScroll();
+    if (containerRef.current) {
+      containerRef.current.style.overflow = 'hidden';
+      containerRef.current.style.touchAction = 'none';
     }
     
+    setActiveRoutePlayerId(player.id);
+    setCurrentRoutePoints([{ x: player.x, y: player.y }]);
+    setActivePlayerColor(player.color);
+    setIsTouchingPlayer(true); // Ensure touch state is set
+    
     setMenuPlayer(null);
-  }, [menuPlayer, players, onPushToUndoStack]);
+  }, [menuPlayer, players, routes, onRoutesChange, onPushToUndoStack, getQBPosition, getNearestOffensivePlayer, field, toast]);
+
+  // Dynamic Man coverage sync: Keep Man routes updated when covered players move
+  useEffect(() => {
+    const manRoutes = routes.filter(r => r.routeType === "man" && r.targetPlayerId);
+    if (manRoutes.length === 0) return;
+
+    let hasUpdates = false;
+    const updatedRoutes = routes.map(route => {
+      if (route.routeType === "man" && route.targetPlayerId) {
+        const targetPlayer = players.find(p => p.id === route.targetPlayerId);
+        const defender = players.find(p => p.id === route.playerId);
+        
+        if (targetPlayer && defender && route.points.length >= 2) {
+          const currentEndpoint = route.points[route.points.length - 1];
+          const currentStart = route.points[0];
+          
+          const endpointNeedsUpdate = Math.abs(currentEndpoint.x - targetPlayer.x) > 0.5 || 
+                                      Math.abs(currentEndpoint.y - targetPlayer.y) > 0.5;
+          const startNeedsUpdate = Math.abs(currentStart.x - defender.x) > 0.5 || 
+                                   Math.abs(currentStart.y - defender.y) > 0.5;
+          
+          if (endpointNeedsUpdate || startNeedsUpdate) {
+            hasUpdates = true;
+            const updatedPoints = [...route.points];
+            if (startNeedsUpdate) {
+              updatedPoints[0] = { x: defender.x, y: defender.y };
+            }
+            if (endpointNeedsUpdate) {
+              updatedPoints[updatedPoints.length - 1] = { x: targetPlayer.x, y: targetPlayer.y };
+            }
+            return { ...route, points: updatedPoints };
+          }
+        }
+      }
+      return route;
+    });
+    
+    if (hasUpdates) {
+      onRoutesChange(updatedRoutes);
+    }
+  }, [players, routes, onRoutesChange]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -572,8 +719,12 @@ export function MobileCanvas({
         ctx.setLineDash([]);
         drawArrow(last, prev);
       } else {
-        // Regular route
+        // Regular route - use dashed line for Man coverage
+        if (route.routeType === "man") {
+          ctx.setLineDash([6, 4]); // Dashed line for Man coverage
+        }
         drawSmoothCurve(route.points);
+        ctx.setLineDash([]); // Reset dash pattern
         
         // Draw arrowhead at end
         const last = route.points[route.points.length - 1];
