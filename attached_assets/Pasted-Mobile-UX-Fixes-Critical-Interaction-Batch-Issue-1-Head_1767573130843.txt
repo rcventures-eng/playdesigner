@@ -1,0 +1,255 @@
+Mobile UX Fixes - Critical Interaction Batch
+Issue 1: Header Not Updating After Login
+Problem: After successfully logging in on mobile (toast confirms login), the header still shows "Log In" and "Sign Up" buttons instead of "Hey Coach [Name]" like the desktop version.
+Fix Required:
+
+After successful login, the header component must re-render with authenticated state
+Check if the auth state/context is being properly updated after login on mobile
+The mobile header should show the same "Hey Coach [Name]" greeting as desktop
+Likely causes:
+
+The header component isn't subscribed to auth state changes
+The mobile header is a separate component that doesn't share auth context with the login modal
+The auth state updates but the header doesn't re-render
+
+
+Verify the auth query is being invalidated after login:
+
+typescript// After successful login, invalidate user query to trigger re-fetch
+queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+
+Ensure the mobile header conditionally renders based on user authentication status
+
+
+Issue 2: Player Dragging Still Conflicts with Field Scroll (CRITICAL)
+Problem: When dragging a player on mobile, the field frequently scrolls instead of moving the player. This makes the app nearly unusable for play design on touch devices.
+This is a major UX flaw that will torpedo usage if not fixed.
+Fix Required — Implement Aggressive Touch Isolation:
+
+On pointer/touch down on a player:
+
+typescriptconst handlePlayerPointerDown = (e: PointerEvent, playerId: string) => {
+  e.preventDefault();
+  e.stopPropagation();
+  
+  // Capture all pointer events to this element
+  (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  
+  // Disable ALL touch/scroll behavior on parent containers
+  document.body.style.overflow = 'hidden';
+  document.body.style.touchAction = 'none';
+  
+  const fieldContainer = document.querySelector('.field-container');
+  if (fieldContainer) {
+    fieldContainer.style.overflow = 'hidden';
+    fieldContainer.style.touchAction = 'none';
+  }
+  
+  setActivePlayer(playerId);
+  setIsDragging(true);
+};
+
+On pointer/touch up or cancel:
+
+typescriptconst handlePlayerPointerUp = (e: PointerEvent) => {
+  // Release pointer capture
+  (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+  
+  // Re-enable scroll behavior
+  document.body.style.overflow = '';
+  document.body.style.touchAction = '';
+  
+  const fieldContainer = document.querySelector('.field-container');
+  if (fieldContainer) {
+    fieldContainer.style.overflow = '';
+    fieldContainer.style.touchAction = '';
+  }
+  
+  setIsDragging(false);
+  setActivePlayer(null);
+};
+
+Add CSS to player elements:
+
+css.player-circle {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+Consider a "drag mode" indicator — when a player is being dragged, show a subtle visual cue (slight scale up, shadow, or border) so user knows they're in drag mode.
+Add pointercancel handler to clean up state if the drag is interrupted.
+
+
+Issue 3: Route Drawing Conflicts with Field Scroll (CRITICAL)
+Problem: When long-pressing a player and drawing a route (pass, run, or block), the field scrolls while trying to draw. This makes route drawing nearly impossible on mobile.
+Fix Required — Apply Same Touch Isolation During Route Drawing:
+
+When route drawing mode activates (after long-press menu selection):
+
+typescriptconst startRouteDrawing = (playerId: string, routeType: string) => {
+  setIsDrawingRoute(true);
+  setRouteStartPlayer(playerId);
+  
+  // Lock ALL scrolling
+  document.body.style.overflow = 'hidden';
+  document.body.style.touchAction = 'none';
+  
+  const fieldContainer = document.querySelector('.field-container');
+  if (fieldContainer) {
+    fieldContainer.style.overflow = 'hidden';
+    fieldContainer.style.touchAction = 'none';
+    fieldContainer.style.pointerEvents = 'auto'; // Ensure we capture events
+  }
+};
+
+When route drawing completes (finger lifted or route finalized):
+
+typescriptconst endRouteDrawing = () => {
+  setIsDrawingRoute(false);
+  
+  // Restore scrolling
+  document.body.style.overflow = '';
+  document.body.style.touchAction = '';
+  
+  const fieldContainer = document.querySelector('.field-container');
+  if (fieldContainer) {
+    fieldContainer.style.overflow = '';
+    fieldContainer.style.touchAction = '';
+  }
+};
+
+The field canvas itself should capture all touch events during drawing mode:
+
+typescript// On the canvas/SVG layer during route drawing
+onPointerMove={(e) => {
+  if (isDrawingRoute) {
+    e.preventDefault();
+    e.stopPropagation();
+    addPointToRoute(e.clientX, e.clientY);
+  }
+}}
+```
+
+4. **Visual feedback during route drawing:**
+   - Show a "Drawing..." indicator or change cursor/touch feedback
+   - Highlight the route being drawn in real-time
+   - Provide a "Done" or "Cancel" button that's easy to tap
+
+---
+
+## Issue 4: Redesign Bottom Navigation with Tools Section
+
+**Problem:** The bottom nav (Field / Details / Save) takes up too much space and doesn't include essential tools like Undo and Share.
+
+**Fix Required — Restructure Bottom Nav:**
+
+**New Layout (left to right):**
+```
+[Field] [Details] [Save]  |  [Undo] [Save Play] [Share]
+     (75% smaller)        (divider)    (Tools section)
+Implementation:
+
+Reduce wizard tab button width by 75%:
+
+css.wizard-tab {
+  flex: 0 0 auto;      /* Don't stretch */
+  padding: 8px 12px;   /* Smaller padding */
+  min-width: 60px;     /* Minimum touch target */
+}
+
+.wizard-nav {
+  justify-content: flex-start;  /* Align left */
+  gap: 4px;
+}
+
+Add visual divider:
+
+tsx<div className="wizard-nav">
+  {/* Wizard tabs - left aligned */}
+  <button className="wizard-tab">Field</button>
+  <button className="wizard-tab">Details</button>
+  <button className="wizard-tab">Save</button>
+  
+  {/* Divider */}
+  <div className="nav-divider" /> {/* 1px vertical line, margin on sides */}
+  
+  {/* Tools section */}
+  <div className="tools-section">
+    <button className="tool-btn" onClick={handleUndo}>
+      <UndoIcon />
+      <span>Undo</span>
+    </button>
+    <button className="tool-btn" onClick={handleSavePlay}>
+      <SaveIcon />
+      <span>Save</span>
+    </button>
+    <button className="tool-btn" onClick={handleSharePlay}>
+      <ShareIcon />
+      <span>Share</span>
+    </button>
+  </div>
+</div>
+
+Share Play functionality:
+
+typescriptconst handleSharePlay = async () => {
+  // Generate PNG image of the play
+  const playImage = await renderPlayToImage(playState);
+  
+  // Convert to blob
+  const blob = await fetch(playImage).then(r => r.blob());
+  const file = new File([blob], 'play.png', { type: 'image/png' });
+  
+  // Use Web Share API (works on iOS and Android)
+  if (navigator.share && navigator.canShare({ files: [file] })) {
+    await navigator.share({
+      title: playName || 'Football Play',
+      text: 'Check out this play I designed!',
+      files: [file]
+    });
+  } else {
+    // Fallback: download the image
+    const link = document.createElement('a');
+    link.href = playImage;
+    link.download = `${playName || 'play'}.png`;
+    link.click();
+  }
+};
+
+Styling for tools section:
+
+css.tools-section {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;  /* Push to right if space allows */
+}
+
+.tool-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 10px;
+  background: transparent;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #888;
+  font-size: 10px;
+}
+
+.tool-btn:active {
+  background: #333;
+  color: white;
+}
+
+.nav-divider {
+  width: 1px;
+  height: 32px;
+  background: #333;
+  margin: 0 8px;
+}
+
+Summary
+#IssuePriority1Header not updating after loginHigh2Player dragging vs scroll conflictCRITICAL3Route drawing vs scroll conflictCRITICAL4Bottom nav redesign with toolsMedium
+Fix order: #2 and #3 first (these are blocking core functionality and making the app unusable). Then #1 (broken state). Then #4 (enhancement).
+Note: Issues #2 and #3 share the same root cause — touch events not being properly isolated. Consider creating a shared useTouchLock() hook that can be called by both player dragging and route drawing to ensure consistent behavior.
