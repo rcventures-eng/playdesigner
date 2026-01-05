@@ -29,15 +29,14 @@ import {
 
 type WizardStep = 1 | 2 | 3;
 
+// Server returns players/routes at root level, not nested
 interface GeneratePlayResponse {
-  success: boolean;
-  play?: {
-    name?: string;
-    data?: {
-      players?: Array<FormationPlayer & { id?: string; color?: string }>;
-      routes?: DraftRoute[];
-    };
-  };
+  players?: Array<FormationPlayer & { id?: string; color?: string }>;
+  routes?: DraftRoute[];
+  shapes?: Array<{ id: string; type: string; x: number; y: number; width: number; height: number; color: string; playerId?: string }>;
+  name?: string;
+  formation?: string;
+  error?: string;
 }
 
 export function MobilePlayDesigner() {
@@ -87,9 +86,9 @@ export function MobilePlayDesigner() {
       return response.json() as Promise<GeneratePlayResponse>;
     },
     onSuccess: (data) => {
-      const playDataRaw = data.play?.data || data.play;
-      const playersData = playDataRaw && "players" in playDataRaw ? playDataRaw.players : undefined;
-      const routesData = playDataRaw && "routes" in playDataRaw ? playDataRaw.routes : undefined;
+      // Server returns players/routes at root level (not nested in data.play)
+      const playersData = data.players;
+      const routesData = data.routes;
       
       // Be forgiving - show players even if routes are incomplete
       const hasPlayers = playersData && playersData.length > 0;
@@ -112,8 +111,9 @@ export function MobilePlayDesigner() {
         setRoutes(routesData);
       }
 
-      if (data.play?.name) {
-        setName(data.play.name);
+      // Set play name if returned
+      if (data.name) {
+        setName(data.name);
       }
 
       setShowAIOverlay(false);
@@ -134,7 +134,7 @@ export function MobilePlayDesigner() {
         }
       } else {
         // No players at all - this is a failure
-        const errorMsg = (data as unknown as { error?: string })?.error || "The AI could not generate a valid play from your description.";
+        const errorMsg = data.error || "The AI could not generate a valid play from your description.";
         toast({
           title: "Generation incomplete",
           description: errorMsg,
