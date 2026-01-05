@@ -1,0 +1,539 @@
+Mobile UX Fixes - Route Drawing Workflow & Visual Parity
+Issue A: Remove Blue Circle at Route Endpoint
+Problem: A blue circle appears at the tip/endpoint of the Z player's route. This shouldn't be there.
+Fix Required:
+
+Identify where route endpoints are being rendered with a circle/dot
+Remove or hide endpoint circles for routes
+The route should end with an arrowhead only (if applicable), not a circle
+Check if this is:
+
+A draggable handle meant for editing (should be hidden when not in edit mode)
+An SVG marker being applied incorrectly
+A debug element left in the code
+
+
+
+typescript// If it's a route endpoint marker, remove or conditionally hide:
+{!isEditMode && (
+  // Don't render endpoint circle
+)}
+
+Issue B: Player Menu Should Stay Open with Selection Highlighting
+Problem: When long-pressing a player and selecting "Pass Route", the menu closes. The menu should stay open and highlight the selected option in orange.
+Fix Required:
+
+Keep menu open after selecting route type:
+
+typescriptconst handleRouteTypeSelect = (type: 'pass' | 'run' | 'block') => {
+  setSelectedRouteType(type);
+  // Do NOT close menu here
+  // setShowPlayerMenu(false); // REMOVE THIS
+};
+
+Highlight selected options in orange:
+
+css.menu-option.selected {
+  background: #f97316;
+  color: white;
+  border-color: #f97316;
+}
+
+Apply to both route type (Pass/Run/Block) AND style (Straight/Curved):
+
+tsx<button 
+  className={`menu-option ${selectedRouteType === 'pass' ? 'selected' : ''}`}
+  onClick={() => handleRouteTypeSelect('pass')}
+>
+  Pass Route
+</button>
+
+<button 
+  className={`menu-option ${selectedStyle === 'straight' ? 'selected' : ''}`}
+  onClick={() => handleStyleSelect('straight')}
+>
+  Straight
+</button>
+```
+
+---
+
+## Issue C: Redesign Route Drawing Workflow
+
+**Problem:** The current workflow is confusing. Need a clearer flow where selections are made, then user explicitly starts drawing.
+
+**New Workflow for PASS Routes:**
+1. Long press player → Menu opens
+2. Select "Pass Route" → Highlights orange, menu stays open
+3. Select "Straight" or "Curved" → Highlights orange
+4. (Optional) Check "Motion" and/or "Primary" checkboxes
+5. Tap "Draw Route" button → Menu closes, drawing mode activates
+
+**New Workflow for RUN or BLOCK:**
+1. Long press player → Menu opens
+2. Select "Run Route" or "Block" → Immediately starts drawing (no additional steps)
+
+**New Menu Layout:**
+```
+┌─────────────────────────────────────────┐
+│ Player RB                            ✕  │
+├─────────────────────────────────────────┤
+│ Select Action                           │
+│ ┌─────────┐ ┌─────────┐ ┌─────────┐    │
+│ │  Pass   │ │   Run   │ │  Block  │    │
+│ │  Route  │ │  Route  │ │         │    │
+│ └─────────┘ └─────────┘ └─────────┘    │
+├─────────────────────────────────────────┤
+│ Route Style (only visible if Pass)      │
+│ ┌───────────────┐ ┌───────────────┐    │
+│ │   Straight    │ │    Curved     │    │
+│ └───────────────┘ └───────────────┘    │
+├─────────────────────────────────────────┤
+│ Options                                 │
+│ ┌─────────────────────────────────────┐│
+│ │ ☐ Motion    ☐ Primary              ││
+│ └─────────────────────────────────────┘│
+├─────────────────────────────────────────┤
+│ ┌─────────────────────────────────────┐│
+│ │          Draw Route                 ││
+│ │          (green CTA)                ││
+│ └─────────────────────────────────────┘│
+└─────────────────────────────────────────┘
+Implementation:
+tsxconst PlayerActionMenu = ({ player, onClose, onStartDrawing }) => {
+  const [routeType, setRouteType] = useState<'pass' | 'run' | 'block' | null>(null);
+  const [style, setStyle] = useState<'straight' | 'curved'>('straight');
+  const [isMotion, setIsMotion] = useState(false);
+  const [isPrimary, setIsPrimary] = useState(false);
+
+  const handleRouteTypeSelect = (type: 'pass' | 'run' | 'block') => {
+    setRouteType(type);
+    
+    // For Run or Block, immediately start drawing
+    if (type === 'run' || type === 'block') {
+      onStartDrawing({
+        playerId: player.id,
+        routeType: type,
+        style: 'straight', // Default for run/block
+        isMotion: false,
+        isPrimary: false
+      });
+      onClose();
+    }
+    // For Pass, keep menu open for additional options
+  };
+
+  const handleDrawRoute = () => {
+    onStartDrawing({
+      playerId: player.id,
+      routeType: 'pass',
+      style,
+      isMotion,
+      isPrimary
+    });
+    onClose();
+  };
+
+  return (
+    <div className="player-menu">
+      <div className="menu-header">
+        <span>Player {player.label}</span>
+        <button onClick={onClose}>✕</button>
+      </div>
+
+      <div className="menu-section">
+        <label>Select Action</label>
+        <div className="menu-options">
+          <button 
+            className={`menu-option ${routeType === 'pass' ? 'selected' : ''}`}
+            onClick={() => handleRouteTypeSelect('pass')}
+          >
+            Pass Route
+          </button>
+          <button 
+            className={`menu-option ${routeType === 'run' ? 'selected' : ''}`}
+            onClick={() => handleRouteTypeSelect('run')}
+          >
+            Run Route
+          </button>
+          <button 
+            className={`menu-option ${routeType === 'block' ? 'selected' : ''}`}
+            onClick={() => handleRouteTypeSelect('block')}
+          >
+            Block
+          </button>
+        </div>
+      </div>
+
+      {/* Only show style options for Pass routes */}
+      {routeType === 'pass' && (
+        <>
+          <div className="menu-section">
+            <label>Route Style</label>
+            <div className="menu-options">
+              <button 
+                className={`menu-option ${style === 'straight' ? 'selected' : ''}`}
+                onClick={() => setStyle('straight')}
+              >
+                Straight
+              </button>
+              <button 
+                className={`menu-option ${style === 'curved' ? 'selected' : ''}`}
+                onClick={() => setStyle('curved')}
+              >
+                Curved
+              </button>
+            </div>
+          </div>
+
+          <div className="menu-section">
+            <label>Options</label>
+            <div className="checkbox-row">
+              <label className="checkbox-option">
+                <input 
+                  type="checkbox" 
+                  checked={isMotion} 
+                  onChange={(e) => setIsMotion(e.target.checked)} 
+                />
+                <span>Motion</span>
+              </label>
+              <label className="checkbox-option">
+                <input 
+                  type="checkbox" 
+                  checked={isPrimary} 
+                  onChange={(e) => setIsPrimary(e.target.checked)} 
+                />
+                <span>Primary</span>
+              </label>
+            </div>
+          </div>
+
+          <button className="draw-route-cta" onClick={handleDrawRoute}>
+            Draw Route
+          </button>
+        </>
+      )}
+    </div>
+  );
+};
+Styling for checkboxes:
+css.checkbox-row {
+  display: flex;
+  gap: 16px;
+}
+
+.checkbox-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #1a1a2e;
+  border: 1px solid #333;
+  border-radius: 6px;
+  flex: 1;
+  cursor: pointer;
+}
+
+.checkbox-option input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #f97316;
+}
+
+.draw-route-cta {
+  width: 100%;
+  padding: 14px;
+  background: #22c55e;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  margin-top: 12px;
+}
+```
+
+---
+
+## Issue D: Add "Clear Play" Button and Rename "Undo"
+
+**Problem:** Need a Clear button to remove all drawings, and rename existing buttons for clarity.
+
+**Fix Required:**
+
+**New button order in tools section:**
+```
+[Undo Action] [Clear Play] [Screenshot] [Save] [Share]
+Implementation:
+tsx<div className="tools-section">
+  <button className="tool-btn" onClick={handleUndo}>
+    <UndoIcon />
+    <span>Undo Action</span>
+  </button>
+  
+  <button className="tool-btn" onClick={handleClearPlay}>
+    <TrashIcon />
+    <span>Clear Play</span>
+  </button>
+  
+  <button className="tool-btn" onClick={handleScreenshot}>
+    <CameraIcon />
+    <span>Screenshot</span>
+  </button>
+  
+  {/* ... Save and Share buttons */}
+</div>
+Clear Play handler:
+typescriptconst handleClearPlay = () => {
+  // Confirm before clearing (optional but recommended)
+  if (playState.routes.length > 0 || playState.players.some(p => p.hasRoute)) {
+    // Could show a quick confirm, or just clear directly
+  }
+  
+  // Clear all routes
+  setPlayState(prev => ({
+    ...prev,
+    routes: [],
+    shapes: [],
+    playNotes: []
+  }));
+  
+  // Reset players to default formation positions (keep players, remove routes)
+  // OR clear everything and reload formation
+};
+```
+
+---
+
+## Issue E: Logged-In Header with Profile Menu
+
+**Problem:** When logged in, the top right should show "Hey Coach Ray" with profile icon, and be clickable to reveal a dropdown menu.
+
+**Fix Required:**
+
+**Header when logged in:**
+```
+[RC Football Logo]  [OFF|DEF] [5v5 ▼] [✨ AI]     [Hey Coach Ray 👤 ▼]
+```
+
+**Dropdown menu contents:**
+```
+┌─────────────────────────┐
+│ Hey Coach Ray           │
+│ ray@email.com           │
+├─────────────────────────┤
+│ Build Plays        ✓    │  (current page indicator)
+│ Play Library      🚧    │  (grayed out)
+│ Team Playbooks    🚧    │  (grayed out)
+│ Coach Profile     🚧    │  (grayed out)
+├─────────────────────────┤
+│ Log Out                 │
+└─────────────────────────┘
+Implementation:
+tsxconst UserMenu = ({ user }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  
+  return (
+    <div className="user-menu-container">
+      <button 
+        className="user-menu-trigger"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span>Hey Coach {user.firstName}</span>
+        <div className="user-avatar">
+          {user.avatarUrl ? (
+            <img src={user.avatarUrl} alt="" />
+          ) : (
+            <span>{user.firstName?.[0] || '?'}</span>
+          )}
+        </div>
+        <ChevronDownIcon />
+      </button>
+      
+      {isOpen && (
+        <div className="user-dropdown">
+          <div className="dropdown-header">
+            <strong>Hey Coach {user.firstName}</strong>
+            <span className="user-email">{user.email}</span>
+          </div>
+          
+          <div className="dropdown-divider" />
+          
+          <a href="/mobile" className="dropdown-item active">
+            Build Plays
+          </a>
+          <div className="dropdown-item disabled">
+            Play Library <span className="construction">🚧</span>
+          </div>
+          <div className="dropdown-item disabled">
+            Team Playbooks <span className="construction">🚧</span>
+          </div>
+          <div className="dropdown-item disabled">
+            Coach Profile <span className="construction">🚧</span>
+          </div>
+          
+          <div className="dropdown-divider" />
+          
+          <button className="dropdown-item logout" onClick={handleLogout}>
+            Log Out
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+Styling:
+css.user-menu-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid #333;
+  border-radius: 8px;
+  color: white;
+  font-size: 12px;
+}
+
+.user-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #f97316;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.user-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: #1a1a2e;
+  border: 1px solid #333;
+  border-radius: 8px;
+  min-width: 200px;
+  z-index: 100;
+  overflow: hidden;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  color: white;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.dropdown-item:hover {
+  background: #333;
+}
+
+.dropdown-item.disabled {
+  color: #666;
+  pointer-events: none;
+}
+
+.dropdown-item .construction {
+  font-size: 12px;
+}
+
+.dropdown-item.logout {
+  color: #ef4444;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: #333;
+}
+
+Issue F: RC Football Logo Should Match Desktop
+Problem: The RC Football logo in the left corner doesn't match the desktop version.
+Fix Required:
+
+Use the exact same logo image/asset as the desktop version
+Reference the logo from the existing assets used in desktop header
+Ensure proper sizing for mobile (may need to be slightly smaller but same aspect ratio)
+
+tsx// In mobile header:
+<div className="logo">
+  <img 
+    src="/path/to/rc-football-logo.png"  // Same asset as desktop
+    alt="RC Football"
+    className="logo-image"
+  />
+</div>
+css.logo-image {
+  height: 28px;  /* Adjust as needed for mobile */
+  width: auto;
+}
+
+Issue G: Field Canvas Visual Parity with Desktop
+Problem: The mobile field canvas doesn't match the desktop version's yard numbers and hash marks styling.
+Fix Required:
+
+Yard numbers should match desktop:
+
+Same font, size (scaled appropriately), color
+Same positioning relative to yard lines
+Numbers on both left and right sides
+Rotated to face the end zones (like desktop)
+
+
+Hash marks should match desktop:
+
+Same length, thickness, spacing
+Positioned correctly at each yard line
+Reference FOOTBALL_CONFIG from shared/football-config.ts for exact measurements
+
+
+Do NOT add end zones yet (future task)
+
+Implementation approach:
+typescript// Reference the desktop rendering logic in PlayDesigner.tsx
+// Copy the exact yard number rendering:
+
+const renderYardNumbers = (ctx: CanvasRenderingContext2D) => {
+  const { field } = FOOTBALL_CONFIG;
+  
+  yardLines.forEach((yard) => {
+    // Left side number - rotated -90 degrees
+    ctx.save();
+    ctx.translate(leftX, yardY);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.font = `${fontSize}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.fillText(yard.toString(), 0, 0);
+    ctx.restore();
+    
+    // Right side number - rotated +90 degrees
+    ctx.save();
+    ctx.translate(rightX, yardY);
+    ctx.rotate(Math.PI / 2);
+    ctx.fillText(yard.toString(), 0, 0);
+    ctx.restore();
+  });
+};
+
+const renderHashMarks = (ctx: CanvasRenderingContext2D) => {
+  // Use exact hash mark positions from FOOTBALL_CONFIG
+  const { leftHash, rightHash } = field;
+  
+  yardLines.forEach((yardY) => {
+    // Left hash
+    ctx.fillRect(leftHash - hashWidth/2, yardY, hashWidth, hashHeight);
+    // Right hash  
+    ctx.fillRect(rightHash - hashWidth/2, yardY, hashWidth, hashHeight);
+  });
+};
+Key: Import and use the exact same config values and rendering logic from the desktop PlayDesigner.tsx. Don't reinvent — reuse.
+
+Summary
+#IssuePriorityARemove blue circle at route endpointMediumBKeep menu open, highlight selectionsHighCRedesign route drawing workflowHighDAdd Clear Play, rename Undo ActionMediumEProfile menu with dropdownHighFMatch desktop logoLowGMatch desktop field canvas visualsMedium
+Fix order: B and C together (they're related), then E (auth UX), then A and G (visual), then D and F (polish).
