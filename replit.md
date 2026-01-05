@@ -103,8 +103,27 @@ Key mobile components in `client/src/components/mobile/`:
 - Routes render in player-specific colors (Z=blue, Y=yellow, X=red, RB=green, QB=black) via `route.color` property
 - Curved routes use Catmull-Rom style bezier smoothing for continuous curves
 - Motion routes show dotted line pre-snap (below LOS) and solid line post-snap (above LOS)
-- Primary receiver indicator: filled dot with white outline at route endpoint
+- Route endpoints show arrowhead only (no filled dot indicator)
 - Route drawing preview uses active player's color
+
+**Mobile Player Action Menu:**
+- Long-press on player opens bottom sheet menu with Pass/Run/Block (offense) or Blitz/Man/Zone (defense)
+- Pass routes: Menu stays open to show Straight/Curved style options, Motion/Primary checkboxes
+- Run/Block/Defense: Immediately starts drawing and closes menu
+- Orange highlighting (#f97316) for selected options
+- Green "Draw Route" CTA button for Pass routes
+- Tapping outside auto-starts drawing with current selections
+
+**Mobile Clear Play Feature:**
+- "Clear Play" button with Trash2 icon in bottom toolbar
+- First press: Clears routes, shapes, notes, footballs (keeps formation)
+- Second press: Removes formation entirely, shows format selector
+- Pushes to undo stack before clearing for undo parity
+
+**Mobile User Profile Menu:**
+- Shows "Hey Coach {name}" with avatar when logged in
+- Dropdown includes: Build Plays (active), grayed items with 🚧, Log Out
+- Click outside closes dropdown
 
 Custom hooks in `client/src/hooks/`:
 - `useMobileDetection.ts`: Detects mobile/tablet devices
