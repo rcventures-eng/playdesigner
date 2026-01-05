@@ -1,0 +1,249 @@
+Mobile AI Generate Play - Diagnostic & Fix Session
+Focus
+This session is dedicated solely to fixing the AI Generate Play functionality on mobile. Do not work on any other features until this is resolved.
+Problem Statement
+The AI Generate Play feature is not working on the mobile web version of RC Football. Users can:
+
+Open the AI prompt overlay
+Type or speak a play description
+Tap "Generate Play"
+See "Generating..." loading state
+
+But then either:
+
+Nothing happens
+An error appears ("Generation incomplete")
+Players load but no routes are drawn
+
+Critical Question to Answer First
+Is the mobile AI generation using the same /api/generate-play endpoint and logic as the desktop version?
+Before writing any fix, investigate and report:
+□ What endpoint does mobile call when "Generate Play" is tapped?
+□ What endpoint does desktop call when AI generates a play?
+□ Are they the same endpoint? YES / NO
+□ If NO, why are there two different implementations?
+Diagnostic Steps
+Step 1: Trace the Mobile AI Request
+Add logging to understand exactly what's happening:
+typescriptconst handleGeneratePlay = async () => {
+  console.log('=== AI GENERATE PLAY DEBUG ===');
+  console.log('1. Prompt text:', promptText);
+  console.log('2. Selected format:', selectedFormat);
+  console.log('3. Play type (offense/defense):', playType);
+  
+  setIsGenerating(true);
+  
+  try {
+    const requestBody = {
+      prompt: promptText,
+      format: selectedFormat, // e.g., "5v5"
+      type: playType, // "offense" or "defense"
+    };
+    
+    console.log('4. Request body:', JSON.stringify(requestBody, null, 2));
+    console.log('5. Calling endpoint: /api/generate-play');
+    
+    const response = await fetch('/api/generate-play', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(requestBody),
+    });
+    
+    console.log('6. Response status:', response.status);
+    console.log('7. Response ok:', response.ok);
+    
+    const data = await response.json();
+    
+    console.log('8. Response data:', JSON.stringify(data, null, 2));
+    
+    if (!response.ok) {
+      console.error('9. ERROR - Non-200 response:', data);
+      throw new Error(data.message || 'Generation failed');
+    }
+    
+    console.log('10. Players returned:', data.players?.length || 0);
+    console.log('11. Routes returned:', data.routes?.length || 0);
+    
+    // Apply to canvas
+    if (data.players) {
+      console.log('12. Applying players to canvas...');
+      // ... apply logic
+    }
+    
+    if (data.routes) {
+      console.log('13. Applying routes to canvas...');
+      // ... apply logic
+    }
+    
+  } catch (error) {
+    console.error('14. CAUGHT ERROR:', error);
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+  } finally {
+    setIsGenerating(false);
+    console.log('=== END DEBUG ===');
+  }
+};
+```
+
+### Step 2: Compare with Desktop Implementation
+
+Find the desktop AI generation code (likely in `PlayDesigner.tsx` or `AIPlayCreator.tsx`) and compare:
+```
+□ Does desktop use the same fetch URL?
+□ Does desktop send the same request body structure?
+□ Does desktop parse the response the same way?
+□ Are there any transformations desktop does that mobile doesn't?
+```
+
+### Step 3: Check Server-Side Endpoint
+
+Review `/api/generate-play` in `server/routes.ts`:
+```
+□ Is the endpoint receiving the request? (Add server-side logging)
+□ Is it calling the Gemini API correctly?
+□ What does the raw Gemini response look like?
+□ Is the response parsing failing?
+□ Is there error handling that's swallowing errors silently?
+Add server logging:
+typescriptapp.post('/api/generate-play', async (req, res) => {
+  console.log('=== SERVER: /api/generate-play ===');
+  console.log('Request body:', req.body);
+  
+  try {
+    const { prompt, format, type } = req.body;
+    
+    console.log('Calling Gemini with prompt:', prompt);
+    
+    const geminiResponse = await generatePlayWithGemini(prompt, format, type);
+    
+    console.log('Raw Gemini response:', JSON.stringify(geminiResponse, null, 2));
+    
+    const parsedPlay = parseGeminiResponse(geminiResponse);
+    
+    console.log('Parsed play:', JSON.stringify(parsedPlay, null, 2));
+    
+    res.json(parsedPlay);
+    
+  } catch (error) {
+    console.error('Server error:', error);
+    res.status(500).json({ 
+      error: 'Generation failed', 
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+Step 4: Verify Response Structure
+The mobile canvas expects a specific data structure. Verify the API returns:
+typescriptinterface GeneratedPlay {
+  players: Array<{
+    id: string;
+    label: string;      // "QB", "RB", "X", "Y", "Z"
+    x: number;          // Canvas coordinate
+    y: number;          // Canvas coordinate
+    color: string;      // Hex color
+    side: 'offense' | 'defense';
+  }>;
+  routes: Array<{
+    id: string;
+    playerId: string;   // Links to player.id
+    points: Array<{ x: number; y: number }>;
+    style: 'straight' | 'curved';
+    routeType: 'pass' | 'run' | 'block';
+    isPrimary?: boolean;
+    isMotion?: boolean;
+  }>;
+  formation?: string;   // e.g., "Spread", "Trips Right"
+}
+If the structure doesn't match, mobile won't render correctly.
+Common Failure Points
+Failure Point A: Mobile Not Sending Required Fields
+Desktop might send additional fields mobile doesn't:
+typescript// Desktop might send:
+{
+  prompt: "...",
+  format: "5v5",
+  type: "offense",
+  existingPlayers: [...],  // Mobile might be missing this
+  gameFormat: "flag",       // Mobile might be missing this
+}
+Fix: Ensure mobile sends ALL required fields.
+Failure Point B: Response Coordinate Mismatch
+Desktop uses logical coordinates (694x392 canvas). If mobile uses different canvas dimensions without scaling, players/routes appear wrong or off-screen.
+Fix: Mobile must either:
+
+Use same logical coordinate system and scale for display
+Transform coordinates from API response to mobile canvas size
+
+Failure Point C: Route Parsing Failure
+If Gemini returns routes in an unexpected format, parsing fails silently:
+typescript// Expected:
+routes: [{ playerId: "1", points: [{x: 100, y: 200}, ...] }]
+
+// Gemini might return:
+routes: [{ player: "QB", path: "slant" }]  // Different structure!
+Fix: Make parsing more robust, handle multiple formats.
+Failure Point D: CORS or Credentials Issue
+Mobile might not be sending credentials:
+typescript// WRONG:
+fetch('/api/generate-play', { method: 'POST', body: ... })
+
+// RIGHT:
+fetch('/api/generate-play', { 
+  method: 'POST', 
+  credentials: 'include',  // Required for session auth
+  headers: { 'Content-Type': 'application/json' },
+  body: ... 
+})
+The Fix
+Once you've diagnosed the issue, implement the fix. The goal is:
+
+Mobile uses the exact same endpoint as desktop (/api/generate-play)
+Mobile sends the exact same request body structure as desktop
+Mobile parses the response the exact same way as desktop
+If 60-80% of the play is correct, that's acceptable — coaches can fine-tune
+
+If there are two separate implementations, consolidate to one. Create a shared function/hook that both desktop and mobile use:
+typescript// shared/useGeneratePlay.ts or lib/generatePlay.ts
+export const generatePlay = async (params: {
+  prompt: string;
+  format: string;
+  type: 'offense' | 'defense';
+}): Promise<GeneratedPlay> => {
+  const response = await fetch('/api/generate-play', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Generation failed');
+  }
+  
+  return response.json();
+};
+Then both desktop and mobile import and use this same function.
+Deliverables
+After this session, provide:
+
+Root cause identified: What exactly was broken?
+Fix implemented: What code was changed?
+Verification: Screenshot or description showing AI generation working on mobile
+Any remaining issues: Are there edge cases that still fail?
+
+Acceptance Criteria
+
+ User can type a play description on mobile
+ User can tap "Generate Play"
+ Loading state shows during generation
+ Players appear on canvas in correct positions
+ Routes appear on canvas connected to players
+ At least 60-80% of generated plays are usable (may need minor adjustments)
+ Errors are handled gracefully with user-friendly messages
+
+Claude is AI and can make mistakes. Please double-check responses.
