@@ -1,4 +1,4 @@
-import { Grid3X3, Tag, Download, Check } from "lucide-react";
+import { Grid3X3, Tag, Download, Check, Undo2, Camera, Share2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface WizardNavigationProps {
@@ -6,6 +6,10 @@ interface WizardNavigationProps {
   completedSteps: number[];
   onStepChange: (step: 1 | 2 | 3) => void;
   canProceed?: boolean;
+  canUndo?: boolean;
+  onUndo?: () => void;
+  onScreenshot?: () => void;
+  onShare?: () => void;
 }
 
 const steps = [
@@ -19,44 +23,94 @@ export function WizardNavigation({
   completedSteps,
   onStepChange,
   canProceed = true,
+  canUndo = false,
+  onUndo,
+  onScreenshot,
+  onShare,
 }: WizardNavigationProps) {
   return (
     <nav 
       className="fixed bottom-0 left-0 right-0 z-40 bg-card border-t border-border safe-area-inset-bottom"
       data-testid="wizard-navigation"
     >
-      <div className="flex justify-around items-center h-12">
-        {steps.map((step) => {
-          const isActive = currentStep === step.id;
-          const isCompleted = completedSteps.includes(step.id);
-          const Icon = step.icon;
+      <div className="flex items-center h-14 px-2">
+        {/* Wizard Steps - Left aligned, smaller */}
+        <div className="flex items-center gap-1">
+          {steps.map((step) => {
+            const isActive = currentStep === step.id;
+            const isCompleted = completedSteps.includes(step.id);
+            const Icon = step.icon;
 
-          return (
-            <button
-              key={step.id}
-              onClick={() => {
-                onStepChange(step.id);
-              }}
-              disabled={step.id > currentStep + 1}
-              className={cn(
-                "flex flex-col items-center justify-center gap-1 px-4 py-2 min-w-[80px] transition-colors",
-                isActive && "text-orange-500",
-                !isActive && isCompleted && "text-green-500",
-                !isActive && !isCompleted && "text-muted-foreground"
-              )}
-              data-testid={`button-step-${step.id}`}
-            >
-              <div className="relative">
-                {isCompleted && !isActive ? (
-                  <Check className="w-5 h-5" />
-                ) : (
-                  <Icon className="w-5 h-5" />
+            return (
+              <button
+                key={step.id}
+                onClick={() => {
+                  onStepChange(step.id);
+                }}
+                disabled={step.id > currentStep + 1}
+                className={cn(
+                  "flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 min-w-[48px] rounded-md transition-colors",
+                  isActive && "text-orange-500 bg-orange-500/10",
+                  !isActive && isCompleted && "text-green-500",
+                  !isActive && !isCompleted && "text-muted-foreground",
+                  step.id > currentStep + 1 && "opacity-50"
                 )}
-              </div>
-              <span className="text-xs font-medium">{step.label}</span>
-            </button>
-          );
-        })}
+                data-testid={`button-step-${step.id}`}
+              >
+                <div className="relative">
+                  {isCompleted && !isActive ? (
+                    <Check className="w-4 h-4" />
+                  ) : (
+                    <Icon className="w-4 h-4" />
+                  )}
+                </div>
+                <span className="text-[10px] font-medium">{step.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Divider */}
+        <div className="w-px h-8 bg-border mx-2" />
+
+        {/* Tools Section - Right side */}
+        <div className="flex items-center gap-1 ml-auto">
+          {/* Undo Button */}
+          <button
+            onClick={onUndo}
+            disabled={!canUndo}
+            className={cn(
+              "flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 min-w-[48px] rounded-md border transition-colors",
+              canUndo 
+                ? "text-foreground border-border hover:bg-accent active:bg-accent/80"
+                : "text-muted-foreground/50 border-border/50 cursor-not-allowed"
+            )}
+            data-testid="button-undo"
+          >
+            <Undo2 className="w-4 h-4" />
+            <span className="text-[10px] font-medium">Undo</span>
+          </button>
+
+          {/* Screenshot Button */}
+          <button
+            onClick={onScreenshot}
+            className="flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 min-w-[48px] rounded-md border border-border text-foreground hover:bg-accent active:bg-accent/80 transition-colors"
+            data-testid="button-screenshot"
+          >
+            <Camera className="w-4 h-4" />
+            <span className="text-[10px] font-medium">Screenshot</span>
+          </button>
+
+          {/* Share Button */}
+          <button
+            onClick={onShare}
+            className="flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 min-w-[48px] rounded-md border border-border text-foreground hover:bg-accent active:bg-accent/80 transition-colors"
+            data-testid="button-share"
+          >
+            <Share2 className="w-4 h-4" />
+            <span className="text-[10px] font-medium">Share</span>
+          </button>
+        </div>
       </div>
     </nav>
   );

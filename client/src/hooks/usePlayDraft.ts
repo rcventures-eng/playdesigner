@@ -61,6 +61,12 @@ export interface PlayDraft {
 
 const STORAGE_KEY = "rc_draft_play";
 const EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
+const MAX_HISTORY_SIZE = 50; // Max undo steps
+
+interface UndoSnapshot {
+  players: DraftPlayer[];
+  routes: DraftRoute[];
+}
 
 const defaultDraft: PlayDraft = {
   players: [],
@@ -78,6 +84,7 @@ const defaultDraft: PlayDraft = {
 export function usePlayDraft() {
   const [draft, setDraft] = useState<PlayDraft>(defaultDraft);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [undoStack, setUndoStack] = useState<UndoSnapshot[]>([]);
 
   // Load draft from sessionStorage on mount
   useEffect(() => {
@@ -157,14 +164,60 @@ export function usePlayDraft() {
   const clearDraft = useCallback(() => {
     sessionStorage.removeItem(STORAGE_KEY);
     setDraft(defaultDraft);
+    setUndoStack([]);
   }, []);
 
+  // Push current state to undo stack before making changes
+  // Uses functional update pattern to get latest draft state
+  const pushToUndoStack = useCallback(() => {
+    // Read current draft directly via setDraft functional pattern
+    // to avoid stale closure issues
+    setDraft((currentDraft) => {
+      // Push snapshot to undo stack
+      setUndoStack((prevStack) => {
+        const snapshot: UndoSnapshot = {
+          players: JSON.parse(JSON.stringify(currentDraft.players)),
+          routes: JSON.parse(JSON.stringify(currentDraft.routes)),
+        };
+        const newStack = [...prevStack, snapshot];
+        // Limit stack size
+        if (newStack.length > MAX_HISTORY_SIZE) {
+          return newStack.slice(-MAX_HISTORY_SIZE);
+        }
+        return newStack;
+      });
+      // Return unchanged draft - we're just reading it
+      return currentDraft;
+    });
+  }, []);
+
+  // Undo the last change - restores both players and routes
+  const undo = useCallback(() => {
+    if (undoStack.length === 0) return false;
+    
+    setUndoStack((prev) => {
+      const newStack = [...prev];
+      const snapshot = newStack.pop();
+      if (snapshot) {
+        setDraft((prevDraft) => ({
+          ...prevDraft,
+          players: snapshot.players,
+          routes: snapshot.routes,
+        }));
+      }
+      return newStack;
+    });
+    return true;
+  }, [undoStack.length]);
+
+  const canUndo = undoStack.length > 0;
   const hasDraft = draft.players.length > 0 || draft.routes.length > 0;
 
   return {
     draft,
     isLoaded,
     hasDraft,
+    canUndo,
     updateDraft,
     setPlayers,
     setRoutes,
@@ -176,5 +229,7 @@ export function usePlayDraft() {
     setSituationTags,
     setConceptTags,
     clearDraft,
+    pushToUndoStack,
+    undo,
   };
 }

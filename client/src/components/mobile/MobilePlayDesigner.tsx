@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { toPng } from "html-to-image";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useMobileDetection } from "@/hooks/useMobileDetection";
 import { useOrientation } from "@/hooks/useOrientation";
@@ -45,6 +46,7 @@ export function MobilePlayDesigner() {
   const {
     draft,
     isLoaded,
+    canUndo,
     setPlayers,
     setRoutes,
     setShapes,
@@ -55,6 +57,8 @@ export function MobilePlayDesigner() {
     setSituationTags,
     setConceptTags,
     clearDraft,
+    pushToUndoStack,
+    undo,
   } = usePlayDraft();
 
   const [currentStep, setCurrentStep] = useState<WizardStep>(1);
@@ -65,6 +69,8 @@ export function MobilePlayDesigner() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<"signup" | "login">("signup");
   const [validationError, setValidationError] = useState("");
+  
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
 
   const { data: user } = useQuery({
     queryKey: ["/api/user"],
@@ -300,6 +306,129 @@ export function MobilePlayDesigner() {
     });
   }, [toast]);
 
+  const handleUndo = useCallback(() => {
+    const undone = undo();
+    if (undone) {
+      toast({
+        title: "Undone",
+        description: "Last action has been reversed.",
+      });
+    } else {
+      toast({
+        title: "Nothing to undo",
+        description: "No more actions to reverse.",
+        variant: "destructive",
+      });
+    }
+  }, [undo, toast]);
+
+  const handleScreenshot = useCallback(async () => {
+    const canvasElement = document.querySelector('[data-testid="mobile-canvas"]');
+    if (!canvasElement) {
+      toast({
+        title: "Screenshot failed",
+        description: "Could not find the canvas element.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      toast({
+        title: "Capturing...",
+        description: "Preparing your play image.",
+      });
+
+      const dataUrl = await toPng(canvasElement as HTMLElement, {
+        quality: 1,
+        pixelRatio: 2,
+        backgroundColor: '#166534',
+      });
+
+      // Create a link and trigger download
+      const link = document.createElement('a');
+      link.download = `${draft.name || 'play'}-${Date.now()}.png`;
+      link.href = dataUrl;
+      link.click();
+
+      toast({
+        title: "Screenshot saved!",
+        description: "Your play image has been downloaded.",
+      });
+    } catch (error) {
+      console.error('Screenshot failed:', error);
+      toast({
+        title: "Screenshot failed",
+        description: "Could not capture the canvas.",
+        variant: "destructive",
+      });
+    }
+  }, [draft.name, toast]);
+
+  const handleShare = useCallback(async () => {
+    const canvasElement = document.querySelector('[data-testid="mobile-canvas"]');
+    if (!canvasElement) {
+      toast({
+        title: "Share failed",
+        description: "Could not find the canvas element.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      toast({
+        title: "Preparing to share...",
+        description: "Generating your play image.",
+      });
+
+      const dataUrl = await toPng(canvasElement as HTMLElement, {
+        quality: 1,
+        pixelRatio: 2,
+        backgroundColor: '#166534',
+      });
+
+      // Convert data URL to blob
+      const response = await fetch(dataUrl);
+      const blob = await response.blob();
+      const file = new File([blob], `${draft.name || 'play'}.png`, { type: 'image/png' });
+
+      // Use Web Share API if available (iOS and modern Android)
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: draft.name || 'Football Play',
+          text: 'Check out this play I designed!',
+          files: [file],
+        });
+        toast({
+          title: "Shared!",
+          description: "Your play has been shared.",
+        });
+      } else {
+        // Fallback: download the image
+        const link = document.createElement('a');
+        link.download = `${draft.name || 'play'}-${Date.now()}.png`;
+        link.href = dataUrl;
+        link.click();
+        toast({
+          title: "Downloaded",
+          description: "Sharing not available. Image has been downloaded instead.",
+        });
+      }
+    } catch (error: any) {
+      // User cancelled sharing is not an error
+      if (error?.name === 'AbortError') {
+        return;
+      }
+      console.error('Share failed:', error);
+      toast({
+        title: "Share failed",
+        description: "Could not share the play.",
+        variant: "destructive",
+      });
+    }
+  }, [draft.name, toast]);
+
   const handleSignUp = useCallback(() => {
     setAuthModalMode("signup");
     setShowAuthModal(true);
@@ -431,6 +560,7 @@ export function MobilePlayDesigner() {
               onFormatChange={handleFormatChange}
               onSideChange={handleSideChange}
               onOpenAI={() => setShowAIOverlay(true)}
+              onPushToUndoStack={pushToUndoStack}
             />
           </>
         )}
@@ -472,6 +602,10 @@ export function MobilePlayDesigner() {
         currentStep={currentStep}
         completedSteps={completedSteps}
         onStepChange={handleStepChange}
+        canUndo={canUndo}
+        onUndo={handleUndo}
+        onScreenshot={handleScreenshot}
+        onShare={handleShare}
       />
 
       <AIPromptOverlay

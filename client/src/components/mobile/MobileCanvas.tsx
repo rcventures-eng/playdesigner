@@ -22,11 +22,27 @@ interface MobileCanvasProps {
   onFormatChange: (format: string) => void;
   onSideChange: (side: "offense" | "defense") => void;
   onOpenAI: () => void;
+  onPushToUndoStack?: () => void;
   showControls?: boolean;
 }
 
 const LONG_PRESS_DURATION = 300;
 const PLAYER_HIT_RADIUS = 24;
+
+// Aggressive touch isolation - lock ALL scrolling when interacting with players/routes
+function lockAllScroll() {
+  document.body.style.overflow = 'hidden';
+  document.body.style.touchAction = 'none';
+  document.documentElement.style.overflow = 'hidden';
+  document.documentElement.style.touchAction = 'none';
+}
+
+function unlockAllScroll() {
+  document.body.style.overflow = '';
+  document.body.style.touchAction = '';
+  document.documentElement.style.overflow = '';
+  document.documentElement.style.touchAction = '';
+}
 
 export function MobileCanvas({
   players,
@@ -38,6 +54,7 @@ export function MobileCanvas({
   onFormatChange,
   onSideChange,
   onOpenAI,
+  onPushToUndoStack,
   showControls = false,
 }: MobileCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -58,6 +75,13 @@ export function MobileCanvas({
 
   const { field, colors } = FOOTBALL_CONFIG;
   const [isTouchingPlayer, setIsTouchingPlayer] = useState(false);
+
+  // Cleanup scroll locks when component unmounts
+  useEffect(() => {
+    return () => {
+      unlockAllScroll();
+    };
+  }, []);
 
   useEffect(() => {
     const updateScale = () => {
@@ -118,17 +142,25 @@ export function MobileCanvas({
       pointerStartRef.current = { x: e.clientX, y: e.clientY };
 
       if (player) {
-        // Capture pointer and fully disable scroll when touching a player
+        // AGGRESSIVE touch isolation for iOS
         e.preventDefault();
         e.stopPropagation();
-        (e.target as HTMLElement).setPointerCapture(e.pointerId);
-        setIsTouchingPlayer(true);
         
-        // Disable scroll on container for iOS
+        // Capture pointer to this element
+        const target = e.target as HTMLElement;
+        target.setPointerCapture(e.pointerId);
+        
+        // Lock ALL scrolling everywhere
+        lockAllScroll();
         if (containerRef.current) {
           containerRef.current.style.overflow = 'hidden';
           containerRef.current.style.touchAction = 'none';
         }
+        
+        // Push current state to undo stack BEFORE making changes
+        onPushToUndoStack?.();
+        
+        setIsTouchingPlayer(true);
         
         longPressTimerRef.current = setTimeout(() => {
           setMenuPlayer({
@@ -142,26 +174,33 @@ export function MobileCanvas({
 
         setDraggedPlayerId(player.id);
       } else if (activeRoutePlayerId) {
-        // Drawing route - capture events
+        // Drawing route - AGGRESSIVE touch isolation
         e.preventDefault();
         e.stopPropagation();
-        setIsTouchingPlayer(true);
         
-        // Disable scroll on container for iOS
+        // Lock ALL scrolling everywhere
+        lockAllScroll();
         if (containerRef.current) {
           containerRef.current.style.overflow = 'hidden';
           containerRef.current.style.touchAction = 'none';
         }
         
+        setIsTouchingPlayer(true);
         setCurrentRoutePoints((prev) => [...prev, fieldPos]);
       }
       // If not touching player and not drawing route, allow default scroll behavior
     },
-    [screenToField, findPlayerAtPoint, activeRoutePlayerId]
+    [screenToField, findPlayerAtPoint, activeRoutePlayerId, onPushToUndoStack]
   );
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent) => {
+      // If we're in an active interaction, prevent default behavior
+      if (isTouchingPlayer || draggedPlayerId || activeRoutePlayerId) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      
       // Throttle move updates to ~60fps for smoother performance
       const now = performance.now();
       if (now - lastMoveTimeRef.current < 16) {
@@ -215,6 +254,7 @@ export function MobileCanvas({
       onPlayersChange,
       field,
       menuPlayer,
+      isTouchingPlayer,
     ]
   );
 
@@ -224,10 +264,11 @@ export function MobileCanvas({
       longPressTimerRef.current = null;
     }
 
-    // Re-enable scroll on container
+    // Unlock ALL scroll - restore everything
+    unlockAllScroll();
     if (containerRef.current) {
-      containerRef.current.style.overflow = 'auto';
-      containerRef.current.style.touchAction = 'auto';
+      containerRef.current.style.overflow = '';
+      containerRef.current.style.touchAction = '';
     }
 
     if (activeRoutePlayerId && currentRoutePoints.length > 1) {
@@ -275,13 +316,24 @@ export function MobileCanvas({
 
     const player = players.find(p => p.id === menuPlayer.id);
     if (player) {
+      // Lock scroll when route drawing mode starts
+      lockAllScroll();
+      if (containerRef.current) {
+        containerRef.current.style.overflow = 'hidden';
+        containerRef.current.style.touchAction = 'none';
+      }
+      
+      // Push current state to undo stack BEFORE adding route
+      onPushToUndoStack?.();
+      
       setActiveRoutePlayerId(player.id);
       setCurrentRoutePoints([{ x: player.x, y: player.y }]);
       setActivePlayerColor(player.color);
+      setIsTouchingPlayer(true); // Ensure touch state is set
     }
     
     setMenuPlayer(null);
-  }, [menuPlayer, players]);
+  }, [menuPlayer, players, onPushToUndoStack]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -509,12 +561,36 @@ export function MobileCanvas({
 
     players.forEach((player) => {
       const isDrawingRoute = activeRoutePlayerId === player.id;
+      const isDragging = draggedPlayerId === player.id && !menuPlayer;
+      
+      // Visual feedback: larger radius and shadow when dragging
+      const baseRadius = 16;
+      const radius = isDragging ? baseRadius + 4 : baseRadius;
+      
+      // Draw shadow when dragging
+      if (isDragging) {
+        ctx.beginPath();
+        ctx.arc(player.x + 2, player.y + 2, radius, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(0,0,0,0.3)";
+        ctx.fill();
+      }
+      
       ctx.beginPath();
-      ctx.arc(player.x, player.y, 16, 0, Math.PI * 2);
+      ctx.arc(player.x, player.y, radius, 0, Math.PI * 2);
       ctx.fillStyle = player.color;
       ctx.fill();
-      ctx.strokeStyle = isDrawingRoute ? "#22c55e" : (player.side === "offense" ? "#000" : "#fff");
-      ctx.lineWidth = isDrawingRoute ? 4 : 2;
+      
+      // Different border when dragging vs drawing route
+      if (isDragging) {
+        ctx.strokeStyle = "#fbbf24"; // Yellow/amber when dragging
+        ctx.lineWidth = 4;
+      } else if (isDrawingRoute) {
+        ctx.strokeStyle = "#22c55e"; // Green when drawing route
+        ctx.lineWidth = 4;
+      } else {
+        ctx.strokeStyle = player.side === "offense" ? "#000" : "#fff";
+        ctx.lineWidth = 2;
+      }
       ctx.stroke();
 
       ctx.fillStyle = player.side === "offense" ? "#fff" : "#000";
@@ -525,7 +601,7 @@ export function MobileCanvas({
     });
 
     ctx.restore();
-  }, [players, routes, currentRoutePoints, scale, offset, field, colors, activeRoutePlayerId, activePlayerColor]);
+  }, [players, routes, currentRoutePoints, scale, offset, field, colors, activeRoutePlayerId, activePlayerColor, draggedPlayerId, menuPlayer]);
 
   return (
     <div className="flex flex-col h-full" data-testid="mobile-canvas">
@@ -598,9 +674,17 @@ export function MobileCanvas({
           className="absolute inset-0 w-full h-full"
         />
         
+        {/* Drag indicator */}
+        {draggedPlayerId && !menuPlayer && !activeRoutePlayerId && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-amber-500/90 text-black backdrop-blur px-4 py-2 rounded-full text-sm font-medium shadow-lg">
+            Dragging player...
+          </div>
+        )}
+        
+        {/* Route drawing indicator */}
         {activeRoutePlayerId && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-card/90 backdrop-blur px-4 py-2 rounded-full text-sm font-medium">
-            Tap to add route points, lift to finish
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-green-500/90 text-black backdrop-blur px-4 py-2 rounded-full text-sm font-medium shadow-lg">
+            Drawing route... lift finger to finish
           </div>
         )}
       </div>
