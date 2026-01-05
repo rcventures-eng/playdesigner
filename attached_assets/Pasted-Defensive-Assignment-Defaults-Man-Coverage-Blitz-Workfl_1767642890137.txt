@@ -1,0 +1,233 @@
+Defensive Assignment Defaults - Man Coverage & Blitz Workflow
+Overview
+Update BOTH desktop and mobile versions to implement smart defaults for Man Coverage and streamline Blitz. This simplifies the workflow by removing unnecessary style options for assignments that are always Linear.
+IMPORTANT: Do NOT modify what Blitz does — it should continue to auto-draw a red line toward the QB position exactly as it does today. We are only removing the unnecessary style slideout since Blitz is always Linear.
+Changes Required
+Change 1: Remove "Style" Selection for Man and Blitz
+Current behavior: When selecting Man or Blitz, a secondary "Style" menu slides out with options for "Linear" or "Area".
+New behavior: Man and Blitz should skip the style selection entirely (both are always Linear). Remove the style slideout animation for both.
+Assignment TypeStyle OptionsBehaviorBlitzNone (always Linear)Select Blitz → immediately trigger existing auto-draw red line to QBManNone (always Linear)Select Man → auto-generate default assignmentZoneShow Linear/AreaKeep existing behavior (Area shows shape options)
+Implementation:
+typescriptconst handleAssignmentSelect = (assignmentType: 'blitz' | 'man' | 'zone') => {
+  setSelectedAssignment(assignmentType);
+  
+  if (assignmentType === 'blitz') {
+    // Skip style selection - immediately trigger existing blitz auto-draw
+    // This calls the SAME function that currently runs after style selection
+    triggerBlitzAutoDraw(selectedPlayer); // Existing functionality - draws red line to QB
+    closeMenu();
+  } 
+  else if (assignmentType === 'man') {
+    // Skip style selection - auto-generate default man assignment
+    generateDefaultManCoverage(selectedPlayer);
+    closeMenu();
+  } 
+  else if (assignmentType === 'zone') {
+    // Show style selection (Linear vs Area)
+    setShowStyleOptions(true);
+  }
+};
+
+Change 2: Auto-Generate Default Man Coverage Assignment
+When a defensive player is assigned Man coverage, automatically create a default assignment:
+Visual specification:
+
+Line style: Dotted/dashed gray line
+Color: Gray (#888888 or #9ca3af)
+Direction: Vertical line going toward the line of scrimmage (upward on screen)
+End point: Stop 1 yard BEHIND the line of scrimmage (do not cross LOS)
+Line width: 2-3px
+
+Auto-assignment logic:
+If offensive players exist on the field:
+
+Find the offensive player nearest to the defensive player
+Draw the man coverage line toward that offensive player's position
+Stop the line 1 yard behind LOS (use FOOTBALL_CONFIG.field.pixelsPerYard to calculate)
+
+If no offensive players on field:
+
+Draw a straight vertical line toward LOS
+Stop 1 yard behind LOS
+
+Implementation:
+typescriptconst generateDefaultManCoverage = (defensivePlayer: Player) => {
+  const { field } = FOOTBALL_CONFIG;
+  const pixelsPerYard = field.pixelsPerYard; // typically 12
+  const losY = field.losY;
+  const oneYardBehindLOS = losY + pixelsPerYard; // 1 yard behind (toward defense)
+  
+  // Find nearest offensive player (if any)
+  const offensivePlayers = players.filter(p => p.side === 'offense');
+  let targetX = defensivePlayer.x; // Default: straight vertical
+  let targetY = oneYardBehindLOS;
+  let assignedToPlayerId = null;
+  
+  if (offensivePlayers.length > 0) {
+    // Find nearest offensive player
+    const nearest = offensivePlayers.reduce((closest, player) => {
+      const distToCurrent = Math.hypot(
+        player.x - defensivePlayer.x, 
+        player.y - defensivePlayer.y
+      );
+      const distToClosest = Math.hypot(
+        closest.x - defensivePlayer.x, 
+        closest.y - defensivePlayer.y
+      );
+      return distToCurrent < distToClosest ? player : closest;
+    });
+    
+    // Target the nearest offensive player's X position
+    // but stop Y at 1 yard behind LOS
+    targetX = nearest.x;
+    assignedToPlayerId = nearest.id;
+  }
+  
+  // Create the route/assignment
+  const manRoute: Route = {
+    id: generateId(),
+    playerId: defensivePlayer.id,
+    routeType: 'man',
+    style: 'linear',
+    points: [
+      { x: defensivePlayer.x, y: defensivePlayer.y },
+      { x: targetX, y: targetY }
+    ],
+    color: '#888888',
+    lineStyle: 'dashed',
+    assignedToPlayerId: assignedToPlayerId,
+  };
+  
+  // Add to routes
+  addRoute(manRoute);
+};
+
+Change 3: Man Coverage Rendering
+Ensure man coverage routes render with dashed gray lines:
+typescriptconst renderRoute = (route: Route, ctx: CanvasRenderingContext2D) => {
+  ctx.beginPath();
+  
+  // Set line style based on route type
+  if (route.routeType === 'man') {
+    ctx.strokeStyle = '#888888'; // Gray
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 4]); // Dashed line
+  } else {
+    // All other routes (blitz, pass, run, block, zone) - use existing rendering
+    ctx.strokeStyle = route.color || playerColor;
+    ctx.lineWidth = 3;
+    ctx.setLineDash(route.lineStyle === 'dashed' ? [6, 4] : []);
+  }
+  
+  // Draw the line
+  const points = route.points;
+  ctx.moveTo(points[0].x, points[0].y);
+  
+  for (let i = 1; i < points.length; i++) {
+    ctx.lineTo(points[i].x, points[i].y);
+  }
+  
+  ctx.stroke();
+  
+  // Reset dash pattern
+  ctx.setLineDash([]);
+  
+  // Draw arrowhead at end
+  drawArrowhead(ctx, points[points.length - 2], points[points.length - 1], route.routeType);
+};
+For SVG/React rendering:
+tsx<path
+  d={routePath}
+  stroke={route.routeType === 'man' ? '#888888' : route.color}
+  strokeWidth={route.routeType === 'man' ? 2 : 3}
+  strokeDasharray={route.routeType === 'man' ? '6,4' : 'none'}
+  fill="none"
+  markerEnd="url(#arrowhead)"
+/>
+
+Change 4: Allow Manual Override for Man Coverage
+Users should be able to delete the auto-generated man assignment and draw their own:
+
+Tap/click the man coverage line → shows delete option
+Delete the line → clears the assignment
+Long-press the defensive player again → can select Man again to either regenerate default or draw custom
+
+Implementation:
+typescript// When man route is tapped/clicked
+const handleRouteClick = (route: Route) => {
+  if (route.routeType === 'man') {
+    setSelectedRoute(route);
+    showRouteOptions(['Delete']);
+  }
+};
+
+// Delete handler
+const handleDeleteRoute = (routeId: string) => {
+  setRoutes(routes.filter(r => r.id !== routeId));
+};
+After deleting, if the user long-presses the same defensive player and selects "Man" again:
+typescriptconst handleManSelect = (player: Player) => {
+  // Check if player already has a man assignment
+  const existingMan = routes.find(r => r.playerId === player.id && r.routeType === 'man');
+  
+  if (existingMan) {
+    // Already has man coverage - maybe show option to delete or keep
+    return;
+  }
+  
+  // Show options: auto-generate or draw custom
+  showManOptions([
+    { label: 'Auto-assign nearest', action: () => generateDefaultManCoverage(player) },
+    { label: 'Draw custom', action: () => startManualDrawMode(player, 'man') }
+  ]);
+};
+
+Change 5: Update Menu UI
+Desktop (PlayDesigner.tsx):
+Remove style slideout for BOTH Man and Blitz in the defensive player context menu.
+tsx// Defensive assignment menu
+<div className="assignment-options">
+  <button onClick={() => handleAssignmentSelect('blitz')}>
+    Blitz
+    {/* No style slideout - immediately triggers existing auto-draw to QB */}
+  </button>
+  <button onClick={() => handleAssignmentSelect('man')}>
+    Man
+    {/* No style slideout - auto-generates default assignment */}
+  </button>
+  <button onClick={() => handleAssignmentSelect('zone')}>
+    Zone
+  </button>
+</div>
+
+{/* Only show style options for Zone */}
+{selectedAssignment === 'zone' && (
+  <div className="style-options">
+    <button onClick={() => handleStyleSelect('linear')}>Linear</button>
+    <button onClick={() => handleStyleSelect('area')}>Area</button>
+  </div>
+)}
+Mobile (PlayerActionMenu.tsx or equivalent):
+Same logic — only show Linear/Area choice for Zone.
+
+Summary of Behavior
+AssignmentClick/Tap ActionLine StyleColorAuto-TargetBlitzImmediately trigger existing auto-draw (no style slideout)SolidRed (#ef4444)Yes - QB position (existing behavior)ManAuto-generate default (no style slideout)DashedGray (#888888)Yes - nearest offensive playerZoneShow Linear/Area optionsDepends on choicePurple/BlueNo - user defines
+What NOT to Change
+
+❌ Do NOT modify what Blitz draws (red line to QB) — only skip the style slideout
+❌ Do NOT change Zone behavior
+❌ Do NOT change Blitz line color, style, or targeting logic
+
+Files to Modify
+Desktop:
+
+client/src/components/PlayDesigner.tsx — defensive player menu (remove style slideout for Blitz and Man), route rendering (add man dashed gray line)
+
+Mobile:
+
+client/src/components/mobile/PlayerActionMenu.tsx — defensive player menu (remove style slideout for Blitz and Man)
+client/src/components/mobile/MobileCanvas.tsx — route rendering (add man dashed gray line)
+
+Shared (if applicable):
+
+shared/football-config.ts — reference pixelsPerYard and losY for calculations
