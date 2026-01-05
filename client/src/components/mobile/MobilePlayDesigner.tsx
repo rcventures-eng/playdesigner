@@ -307,23 +307,13 @@ export function MobilePlayDesigner() {
   }, [toast]);
 
   const handleUndo = useCallback(() => {
-    const undone = undo();
-    if (undone) {
-      toast({
-        title: "Undone",
-        description: "Last action has been reversed.",
-      });
-    } else {
-      toast({
-        title: "Nothing to undo",
-        description: "No more actions to reverse.",
-        variant: "destructive",
-      });
-    }
-  }, [undo, toast]);
+    undo();
+  }, [undo]);
 
   const handleScreenshot = useCallback(async () => {
-    const canvasElement = document.querySelector('[data-testid="mobile-canvas"]');
+    // Try main canvas first, then fall back to mini preview
+    const canvasElement = document.querySelector('[data-testid="mobile-canvas"]') 
+      || document.querySelector('[data-testid="play-preview"]');
     if (!canvasElement) {
       toast({
         title: "Screenshot failed",
@@ -334,28 +324,53 @@ export function MobilePlayDesigner() {
     }
 
     try {
-      toast({
-        title: "Capturing...",
-        description: "Preparing your play image.",
-      });
-
       const dataUrl = await toPng(canvasElement as HTMLElement, {
         quality: 1,
         pixelRatio: 2,
         backgroundColor: '#166534',
+        skipFonts: true,
       });
 
-      // Create a link and trigger download
-      const link = document.createElement('a');
-      link.download = `${draft.name || 'play'}-${Date.now()}.png`;
-      link.href = dataUrl;
-      link.click();
+      // Add watermark to the image
+      const img = new Image();
+      img.src = dataUrl;
+      await new Promise((resolve) => { img.onload = resolve; });
 
-      toast({
-        title: "Screenshot saved!",
-        description: "Your play image has been downloaded.",
-      });
-    } catch (error) {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0);
+        
+        // Add subtle watermark in bottom-right corner (10px font, scaled for 2x pixel ratio)
+        ctx.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText('Built in RC Football', canvas.width - 8, canvas.height - 8);
+      }
+
+      const watermarkedDataUrl = canvas.toDataURL('image/png');
+
+      // Convert to blob and use share API to save to Photos
+      const response = await fetch(watermarkedDataUrl);
+      const blob = await response.blob();
+      const file = new File([blob], `${draft.name || 'play'}.png`, { type: 'image/png' });
+
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file] });
+      } else {
+        // Fallback: trigger download
+        const link = document.createElement('a');
+        link.download = `${draft.name || 'play'}-${Date.now()}.png`;
+        link.href = watermarkedDataUrl;
+        link.click();
+      }
+    } catch (error: any) {
+      if (error?.name === 'AbortError') {
+        return;
+      }
       console.error('Screenshot failed:', error);
       toast({
         title: "Screenshot failed",
@@ -366,7 +381,9 @@ export function MobilePlayDesigner() {
   }, [draft.name, toast]);
 
   const handleShare = useCallback(async () => {
-    const canvasElement = document.querySelector('[data-testid="mobile-canvas"]');
+    // Try main canvas first, then fall back to mini preview
+    const canvasElement = document.querySelector('[data-testid="mobile-canvas"]')
+      || document.querySelector('[data-testid="play-preview"]');
     if (!canvasElement) {
       toast({
         title: "Share failed",
@@ -377,15 +394,11 @@ export function MobilePlayDesigner() {
     }
 
     try {
-      toast({
-        title: "Preparing to share...",
-        description: "Generating your play image.",
-      });
-
       const dataUrl = await toPng(canvasElement as HTMLElement, {
         quality: 1,
         pixelRatio: 2,
         backgroundColor: '#166534',
+        skipFonts: true,
       });
 
       // Convert data URL to blob
@@ -400,20 +413,12 @@ export function MobilePlayDesigner() {
           text: 'Check out this play I designed!',
           files: [file],
         });
-        toast({
-          title: "Shared!",
-          description: "Your play has been shared.",
-        });
       } else {
         // Fallback: download the image
         const link = document.createElement('a');
         link.download = `${draft.name || 'play'}-${Date.now()}.png`;
         link.href = dataUrl;
         link.click();
-        toast({
-          title: "Downloaded",
-          description: "Sharing not available. Image has been downloaded instead.",
-        });
       }
     } catch (error: any) {
       // User cancelled sharing is not an error

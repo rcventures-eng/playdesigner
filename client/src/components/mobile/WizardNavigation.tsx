@@ -13,9 +13,9 @@ interface WizardNavigationProps {
 }
 
 const steps = [
-  { id: 1 as const, label: "Field", icon: Grid3X3 },
-  { id: 2 as const, label: "Details", icon: Tag },
-  { id: 3 as const, label: "Save", icon: Download },
+  { id: 1 as const, label: "Field", icon: Grid3X3, stepNum: "1" },
+  { id: 2 as const, label: "Details", icon: Tag, stepNum: "2" },
+  { id: 3 as const, label: "Save", icon: Download, stepNum: "3" },
 ];
 
 export function WizardNavigation({
@@ -65,6 +65,16 @@ export function WizardNavigation({
                   )}
                 </div>
                 <span className="text-[10px] font-medium">{step.label}</span>
+                <span 
+                  className={cn(
+                    "w-3.5 h-3.5 text-[9px] font-medium rounded-full flex items-center justify-center",
+                    isActive && "bg-orange-500 text-white",
+                    !isActive && isCompleted && "bg-green-500 text-white",
+                    !isActive && !isCompleted && "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {isCompleted && !isActive ? <Check className="w-2 h-2" /> : step.stepNum}
+                </span>
               </button>
             );
           })}

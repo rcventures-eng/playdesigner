@@ -64,7 +64,7 @@ export function SaveExportPanel({
       data-testid="save-export-panel"
     >
       <div className="w-44 shrink-0 space-y-2">
-        <div className="relative bg-green-800 rounded-lg aspect-[16/10] overflow-hidden">
+        <div className="relative bg-green-800 rounded-lg aspect-[16/10] overflow-hidden" data-testid="play-preview">
           <MiniPreview players={players} routes={routes} />
         </div>
         <p className="text-sm font-medium text-center truncate">{playName}</p>

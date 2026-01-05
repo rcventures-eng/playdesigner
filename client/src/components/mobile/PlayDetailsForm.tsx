@@ -67,7 +67,7 @@ export function PlayDetailsForm({
       data-testid="play-details-form"
     >
       <div className="w-36 shrink-0">
-        <div className="relative bg-green-800 rounded-lg aspect-[16/10] overflow-hidden">
+        <div className="relative bg-green-800 rounded-lg aspect-[16/10] overflow-hidden" data-testid="play-preview">
           <MiniPreview players={players} routes={routes} />
           <Button
             onClick={onEditPlay}
