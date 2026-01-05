@@ -1,0 +1,225 @@
+Mobile UX Fixes - Polish & Critical Auth
+Issue A: Remove Undo Toast Notification
+Problem: When tapping "Undo" on mobile, a toast notification appears confirming the action. This takes up valuable screen space and is unnecessary.
+Fix Required:
+
+Remove the toast notification that appears after undo
+The visual change on the canvas (route/player removed) is sufficient feedback
+Find the undo handler and remove or comment out the toast call:
+
+typescriptconst handleUndo = () => {
+  // Perform undo logic
+  undoLastAction();
+  
+  // REMOVE THIS:
+  // toast({ title: "Change undone" });
+};
+
+Issue B: Save to Photos with Watermark by Default
+Problem: Tapping "Save" shows options for Files or Drive, but the expected behavior is to save directly to the Photos app (camera roll) with a subtle watermark.
+Fix Required:
+
+Change default save behavior — save directly to Photos, not Files/Drive picker:
+
+typescriptconst handleSavePlay = async () => {
+  // Generate the play image with watermark
+  const playImage = await renderPlayToImageWithWatermark(playState);
+  
+  // On iOS/Android, use the share API to save to Photos
+  const blob = await fetch(playImage).then(r => r.blob());
+  const file = new File([blob], `${playName || 'play'}.png`, { type: 'image/png' });
+  
+  if (navigator.share && navigator.canShare({ files: [file] })) {
+    // This will show native share sheet where user can "Save Image"
+    await navigator.share({ files: [file] });
+  } else {
+    // Fallback: trigger download
+    const link = document.createElement('a');
+    link.href = playImage;
+    link.download = `${playName || 'play'}.png`;
+    link.click();
+  }
+};
+
+Add watermark to exported image — modify the renderPlayToImage function (or create renderPlayToImageWithWatermark):
+
+typescriptconst renderPlayToImageWithWatermark = async (playState) => {
+  // Render play to canvas as usual
+  const canvas = await renderPlayToCanvas(playState);
+  const ctx = canvas.getContext('2d');
+  
+  // Add subtle watermark in bottom-right corner
+  ctx.save();
+  ctx.font = '10px -apple-system, BlinkMacSystemFont, sans-serif';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.5)'; // Semi-transparent white
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText('Built in RC Football', canvas.width - 8, canvas.height - 8);
+  ctx.restore();
+  
+  return canvas.toDataURL('image/png');
+};
+
+Watermark styling:
+
+Position: bottom-right corner, 8px padding from edges
+Text: "Built in RC Football"
+Color: semi-transparent white (rgba(255, 255, 255, 0.5)) for light visibility without being intrusive
+Font size: 10px, system font
+
+
+
+
+Issue C: Remove "Preparing to Share" Toast
+Problem: When tapping Share, a toast appears saying "Preparing to share..." which takes up too much screen space.
+Fix Required:
+
+Remove the "Preparing to share" toast notification
+The native share sheet appearing is sufficient feedback
+If there's a delay, consider a subtle inline loading spinner on the Share button itself instead
+
+typescriptconst handleSharePlay = async () => {
+  // REMOVE THIS:
+  // toast({ title: "Preparing to share..." });
+  
+  // Optional: show loading state on button
+  setIsSharing(true);
+  
+  try {
+    const playImage = await renderPlayToImageWithWatermark(playState);
+    // ... share logic
+  } finally {
+    setIsSharing(false);
+  }
+};
+```
+
+---
+
+## Issue D: Add Step Numbers to Wizard Tabs
+
+**Problem:** The bottom nav tabs (Field, Details, Save) should look more like a wizard with step numbers 1, 2, 3.
+
+**Fix Required:**
+- Add small step numbers underneath each tab icon/label
+
+**New layout for each tab:**
+```
+   [Icon]
+   Label
+     1
+Implementation:
+tsx<div className="wizard-nav">
+  <button className="wizard-tab active">
+    <GridIcon className="wizard-tab-icon" />
+    <span className="wizard-tab-label">Field</span>
+    <span className="wizard-tab-step">1</span>
+  </button>
+  
+  <button className="wizard-tab">
+    <TagIcon className="wizard-tab-icon" />
+    <span className="wizard-tab-label">Details</span>
+    <span className="wizard-tab-step">2</span>
+  </button>
+  
+  <button className="wizard-tab">
+    <DownloadIcon className="wizard-tab-icon" />
+    <span className="wizard-tab-label">Save</span>
+    <span className="wizard-tab-step">3</span>
+  </button>
+</div>
+Styling:
+css.wizard-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.wizard-tab-step {
+  font-size: 9px;
+  color: #666;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wizard-tab.active .wizard-tab-step {
+  background: #f97316;
+  color: white;
+}
+
+.wizard-tab.completed .wizard-tab-step {
+  background: #22c55e;
+  color: white;
+}
+
+/* Show checkmark instead of number when completed */
+.wizard-tab.completed .wizard-tab-step::before {
+  content: '✓';
+}
+
+Issue E: Login State Not Persisting in Header (CRITICAL)
+Problem: After successfully logging in on mobile:
+
+A success toast appears (login worked)
+But the header still shows "Log In" and "Sign Up"
+Clicking "Log In" again goes through the login flow as if not authenticated
+
+This indicates the auth state is not being properly propagated to the header component after login.
+IMPORTANT: Do NOT guess at the fix. Diagnose first.
+Diagnostic Steps Required:
+
+Check the auth state after login succeeds:
+
+typescript// In the login success handler, add logging:
+const handleLoginSuccess = (userData) => {
+  console.log('Login successful, user data:', userData);
+  console.log('Current auth context state:', authContext);
+  
+  // Check if queryClient is invalidating properly
+  queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+  console.log('Invalidated /api/user query');
+};
+
+Check the header component's auth subscription:
+
+typescript// In the mobile header component:
+const { data: user, isLoading, error } = useQuery({
+  queryKey: ['/api/user'],
+  // ...
+});
+
+console.log('Header render - user:', user, 'isLoading:', isLoading, 'error:', error);
+
+Verify the /api/user endpoint is returning the authenticated user:
+
+After login, manually check Network tab: is /api/user returning the logged-in user or null?
+Check if cookies/session are being set correctly
+
+
+Check if there are TWO different header components:
+
+One for desktop that works
+One for mobile that doesn't subscribe to auth
+If so, the mobile header may need to use the same auth hook as desktop
+
+
+
+Potential Causes (verify before fixing):
+
+ Mobile header is a separate component not using the same useUser() or useAuth() hook
+ The query isn't being invalidated after login on mobile
+ Session cookie isn't being set (check credentials: 'include' on fetch)
+ The mobile login modal is a different component with different success handling
+ React Query cache isn't shared between mobile header and login modal
+
+Once diagnosed, report findings before implementing fix.
+
+Summary
+#IssuePriorityARemove undo toastLowBSave to Photos with watermarkMediumCRemove "preparing to share" toastLowDAdd step numbers to wizard tabsLowELogin state not persisting in headerCRITICAL
+Fix order: Diagnose and fix #E first — this is blocking authenticated features entirely. Then B (core save functionality). Then A, C, D (polish).
