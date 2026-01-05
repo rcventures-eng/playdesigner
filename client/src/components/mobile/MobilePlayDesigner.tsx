@@ -11,12 +11,14 @@ import { AIPromptOverlay } from "./AIPromptOverlay";
 import { PlayDetailsForm } from "./PlayDetailsForm";
 import { SaveExportPanel } from "./SaveExportPanel";
 import { WizardNavigation } from "./WizardNavigation";
+import { UserProfileMenu } from "./UserProfileMenu";
 import { Button } from "@/components/ui/button";
 import SignUpModal from "@/components/SignUpModal";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { getFormation, resolveColorKey, type FormationPlayer } from "@shared/football-config";
 import { User, Sparkles, Shield, Shirt } from "lucide-react";
+import rcFootballLogo from "@assets/RC_Football_1765082048330.png";
 import { 
   Select,
   SelectContent,
@@ -310,6 +312,29 @@ export function MobilePlayDesigner() {
     undo();
   }, [undo]);
 
+  // Track if there are routes or if formation is loaded (for Clear Play logic)
+  const hasRoutes = draft.routes.length > 0;
+  const hasPlayers = draft.players.length > 0;
+  const canClear = hasRoutes || hasPlayers;
+
+  const handleClear = useCallback(() => {
+    // Push to undo stack before making changes for undo parity
+    pushToUndoStack();
+    
+    if (hasRoutes) {
+      // First press: Clear routes but keep formation
+      setRoutes([]);
+      setShapes([]);
+      setPlayNotes([]);
+      setFootballs([]);
+    } else if (hasPlayers) {
+      // Second press: Remove formation entirely, show format selector
+      setPlayers([]);
+      setRoutes([]);
+      setShowFormatSelector(true);
+    }
+  }, [hasRoutes, hasPlayers, setRoutes, setShapes, setPlayNotes, setFootballs, setPlayers, pushToUndoStack]);
+
   const handleScreenshot = useCallback(async () => {
     // Try main canvas first, then fall back to mini preview
     const canvasElement = document.querySelector('[data-testid="mobile-canvas"]') 
@@ -460,7 +485,15 @@ export function MobilePlayDesigner() {
       <OrientationPrompt isVisible={isMobileOrTablet && isPortrait} />
 
       <header className="flex items-center justify-between gap-1 px-2 py-1.5 border-b bg-card overflow-x-auto">
-        <span className="font-bold text-sm whitespace-nowrap">RC Football</span>
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <img 
+            src={rcFootballLogo} 
+            alt="RC Football" 
+            className="h-6 w-auto"
+            data-testid="brand-logo"
+          />
+          <span className="font-bold text-sm whitespace-nowrap hidden sm:inline">RC Football</span>
+        </div>
         
         {currentStep === 1 && !showFormatSelector && (
           <div className="flex items-center gap-1 flex-shrink-0">
@@ -516,9 +549,10 @@ export function MobilePlayDesigner() {
         )}
 
         {isAuthenticated ? (
-          <span className="text-xs text-muted-foreground whitespace-nowrap">
-            Coach {(user as { username?: string })?.username || ""}
-          </span>
+          <UserProfileMenu
+            user={user as { username?: string; email?: string; firstName?: string }}
+            onLogout={() => {}}
+          />
         ) : (
           <div className="flex gap-1 flex-shrink-0">
             <Button 
@@ -608,7 +642,9 @@ export function MobilePlayDesigner() {
         completedSteps={completedSteps}
         onStepChange={handleStepChange}
         canUndo={canUndo}
+        canClear={canClear}
         onUndo={handleUndo}
+        onClear={handleClear}
         onScreenshot={handleScreenshot}
         onShare={handleShare}
       />

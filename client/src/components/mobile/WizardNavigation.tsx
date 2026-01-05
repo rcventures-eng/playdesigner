@@ -1,4 +1,4 @@
-import { Grid3X3, Tag, Download, Check, Undo2, Camera, Share2 } from "lucide-react";
+import { Grid3X3, Tag, Download, Check, Undo2, Camera, Share2, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface WizardNavigationProps {
@@ -7,7 +7,9 @@ interface WizardNavigationProps {
   onStepChange: (step: 1 | 2 | 3) => void;
   canProceed?: boolean;
   canUndo?: boolean;
+  canClear?: boolean;
   onUndo?: () => void;
+  onClear?: () => void;
   onScreenshot?: () => void;
   onShare?: () => void;
 }
@@ -24,7 +26,9 @@ export function WizardNavigation({
   onStepChange,
   canProceed = true,
   canUndo = false,
+  canClear = false,
   onUndo,
+  onClear,
   onScreenshot,
   onShare,
 }: WizardNavigationProps) {
@@ -85,12 +89,12 @@ export function WizardNavigation({
 
         {/* Tools Section - Right side */}
         <div className="flex items-center gap-1 ml-auto">
-          {/* Undo Button */}
+          {/* Undo Action Button */}
           <button
             onClick={onUndo}
             disabled={!canUndo}
             className={cn(
-              "flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 min-w-[48px] rounded-md border transition-colors",
+              "flex flex-col items-center justify-center gap-0.5 px-1.5 py-1.5 min-w-[44px] rounded-md border transition-colors",
               canUndo 
                 ? "text-foreground border-border hover:bg-accent active:bg-accent/80"
                 : "text-muted-foreground/50 border-border/50 cursor-not-allowed"
@@ -98,27 +102,43 @@ export function WizardNavigation({
             data-testid="button-undo"
           >
             <Undo2 className="w-4 h-4" />
-            <span className="text-[10px] font-medium">Undo</span>
+            <span className="text-[9px] font-medium whitespace-nowrap">Undo Action</span>
+          </button>
+
+          {/* Clear Play Button */}
+          <button
+            onClick={onClear}
+            disabled={!canClear}
+            className={cn(
+              "flex flex-col items-center justify-center gap-0.5 px-1.5 py-1.5 min-w-[44px] rounded-md border transition-colors",
+              canClear 
+                ? "text-foreground border-border hover:bg-accent active:bg-accent/80"
+                : "text-muted-foreground/50 border-border/50 cursor-not-allowed"
+            )}
+            data-testid="button-clear"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span className="text-[9px] font-medium whitespace-nowrap">Clear Play</span>
           </button>
 
           {/* Screenshot Button */}
           <button
             onClick={onScreenshot}
-            className="flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 min-w-[48px] rounded-md border border-border text-foreground hover:bg-accent active:bg-accent/80 transition-colors"
+            className="flex flex-col items-center justify-center gap-0.5 px-1.5 py-1.5 min-w-[44px] rounded-md border border-border text-foreground hover:bg-accent active:bg-accent/80 transition-colors"
             data-testid="button-screenshot"
           >
             <Camera className="w-4 h-4" />
-            <span className="text-[10px] font-medium">Screenshot</span>
+            <span className="text-[9px] font-medium">Screenshot</span>
           </button>
 
           {/* Share Button */}
           <button
             onClick={onShare}
-            className="flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 min-w-[48px] rounded-md border border-border text-foreground hover:bg-accent active:bg-accent/80 transition-colors"
+            className="flex flex-col items-center justify-center gap-0.5 px-1.5 py-1.5 min-w-[44px] rounded-md border border-border text-foreground hover:bg-accent active:bg-accent/80 transition-colors"
             data-testid="button-share"
           >
             <Share2 className="w-4 h-4" />
-            <span className="text-[10px] font-medium">Share</span>
+            <span className="text-[9px] font-medium">Share</span>
           </button>
         </div>
       </div>

@@ -357,12 +357,17 @@ export function MobileCanvas({
     ctx.translate(offset.x, offset.y);
     ctx.scale(scale, scale);
 
-    ctx.fillStyle = "#166534";
+    // Field background - gradient from green-600 to green-700 to match desktop
+    const gradient = ctx.createLinearGradient(0, 0, 0, field.height);
+    gradient.addColorStop(0, "#16a34a"); // green-600
+    gradient.addColorStop(1, "#15803d"); // green-700
+    ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, field.width, field.height);
 
+    // 5-yard lines
     ctx.strokeStyle = "rgba(255,255,255,0.3)";
-    ctx.lineWidth = 1;
-    const yardLines = [];
+    ctx.lineWidth = 2;
+    const yardLines: number[] = [];
     for (let y = field.headerHeight; y < field.height; y += field.pixelsPerYard * 5) {
       yardLines.push(y);
       ctx.beginPath();
@@ -371,19 +376,58 @@ export function MobileCanvas({
       ctx.stroke();
     }
 
-    ctx.fillStyle = "rgba(255,255,255,0.5)";
-    ctx.font = "bold 14px sans-serif";
+    // 1-yard tick marks on left and right edges
+    ctx.strokeStyle = "rgba(255,255,255,0.8)";
+    ctx.lineWidth = 2;
+    for (let y = field.headerHeight; y < field.height; y += field.pixelsPerYard) {
+      // Left tick
+      ctx.beginPath();
+      ctx.moveTo(field.sidePadding, y);
+      ctx.lineTo(field.sidePadding + 12, y);
+      ctx.stroke();
+      // Right tick
+      ctx.beginPath();
+      ctx.moveTo(field.width - field.sidePadding - 12, y);
+      ctx.lineTo(field.width - field.sidePadding, y);
+      ctx.stroke();
+    }
+
+    // Yard numbers with rotation (matching desktop)
+    ctx.fillStyle = "rgba(255,255,255,0.25)";
+    ctx.font = "bold 24px 'Arial Narrow', Arial, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     
-    const yardNumbers = [10, 20, 30, 40, 50, 40, 30, 20, 10];
-    yardLines.forEach((y, i) => {
-      if (i < yardNumbers.length) {
-        ctx.fillText(String(yardNumbers[i]), field.sidePadding - 20, y);
-        ctx.fillText(String(yardNumbers[i]), field.width - field.sidePadding + 20, y);
+    const leftX = field.width * 0.15;
+    const rightX = field.width * 0.85;
+    
+    // Show key yard markers: 30, 40, 50 relative to LOS
+    const yardMarkers = [
+      { label: "30", yOffset: 18 },    // Below LOS
+      { label: "40", yOffset: -102 },  // Above LOS  
+      { label: "50", yOffset: -222 },  // Further above
+    ];
+    
+    yardMarkers.forEach(({ label, yOffset }) => {
+      const y = field.losY + yOffset;
+      if (y > 0 && y < field.height) {
+        // Left side - rotated -90 degrees
+        ctx.save();
+        ctx.translate(leftX, y);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillText(label, 0, 0);
+        ctx.restore();
+        
+        // Right side - rotated +90 degrees
+        ctx.save();
+        ctx.translate(rightX, y);
+        ctx.rotate(Math.PI / 2);
+        ctx.fillText(label, 0, 0);
+        ctx.restore();
       }
     });
 
+    // Hash marks
     const hashX1 = field.width / 2 - 80;
     const hashX2 = field.width / 2 + 80;
     ctx.strokeStyle = "rgba(255,255,255,0.4)";
@@ -528,19 +572,8 @@ export function MobileCanvas({
         drawArrow(last, prev);
       }
       
-      // Draw primary receiver indicator (filled dot at route end)
-      if (route.isPrimary) {
-        const last = route.points[route.points.length - 1];
-        ctx.beginPath();
-        ctx.arc(last.x, last.y, 6, 0, Math.PI * 2);
-        ctx.fillStyle = routeColor;
-        ctx.fill();
-        ctx.strokeStyle = "#fff";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        // Reset stroke color for next route
-        ctx.strokeStyle = routeColor;
-      }
+      // Primary receiver indicator removed per UX feedback
+      // Routes now end with arrowhead only, no endpoint circle
     });
 
     if (currentRoutePoints.length > 1) {
