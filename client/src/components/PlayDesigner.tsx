@@ -5191,8 +5191,8 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                       }}
                       data-testid={`rpo-marker-${football.id}`}
                     >
-                      <circle cx="9" cy="9" r="9" fill="black" stroke="#000" strokeWidth="2" />
-                      <text x="9" y="12.5" fill="#FF1493" fontSize="9" fontWeight="bold" textAnchor="middle">RPO</text>
+                      <circle cx="9" cy="9" r="9" fill="white" stroke="#000" strokeWidth="1.5" />
+                      <text x="9" y="12.5" fill="black" fontSize="9" fontWeight="bold" textAnchor="middle">RPO</text>
                     </svg>
                   )}
                 </div>
