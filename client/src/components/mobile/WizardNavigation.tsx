@@ -1,4 +1,4 @@
-import { Grid3X3, Tag, Download, Check, Undo2, Camera, Share2, Trash2 } from "lucide-react";
+import { Grid3X3, Tag, Download, Check, Undo2, Camera, Share2, Trash2, StickyNote } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface WizardNavigationProps {
@@ -8,10 +8,12 @@ interface WizardNavigationProps {
   canProceed?: boolean;
   canUndo?: boolean;
   canClear?: boolean;
+  notesActive?: boolean;
   onUndo?: () => void;
   onClear?: () => void;
   onScreenshot?: () => void;
   onShare?: () => void;
+  onToggleNotes?: () => void;
 }
 
 const steps = [
@@ -27,10 +29,12 @@ export function WizardNavigation({
   canProceed = true,
   canUndo = false,
   canClear = false,
+  notesActive = false,
   onUndo,
   onClear,
   onScreenshot,
   onShare,
+  onToggleNotes,
 }: WizardNavigationProps) {
   return (
     <nav 
@@ -119,6 +123,21 @@ export function WizardNavigation({
           >
             <Trash2 className="w-4 h-4" />
             <span className="text-[9px] font-medium whitespace-nowrap">Clear Play</span>
+          </button>
+
+          {/* Notes Button - Apple Notes style */}
+          <button
+            onClick={onToggleNotes}
+            className={cn(
+              "flex flex-col items-center justify-center gap-0.5 px-1.5 py-1.5 min-w-[44px] rounded-md border transition-colors",
+              notesActive
+                ? "bg-gradient-to-br from-yellow-300 to-yellow-400 border-yellow-500 text-yellow-900"
+                : "border-yellow-400 text-yellow-600 hover:bg-yellow-50 active:bg-yellow-100"
+            )}
+            data-testid="button-notes"
+          >
+            <StickyNote className="w-4 h-4" />
+            <span className="text-[9px] font-medium">Notes</span>
           </button>
 
           {/* Screenshot Button */}

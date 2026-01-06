@@ -217,6 +217,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   const routeStyleRef = useRef<"straight" | "curved" | "linear" | "area">("straight");
   const [isMotion, setIsMotion] = useState(false);
   const [isPlayAction, setIsPlayAction] = useState(false);
+  const [isRPO, setIsRPO] = useState(false);
   const [showBlocking, setShowBlocking] = useState(true);
   const [includeOffense, setIncludeOffense] = useState(true);
   const [includeDefense, setIncludeDefense] = useState(false);
@@ -372,7 +373,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
           })
           .then((play) => {
             // Load the play data into the designer
-            // Play data structure is flat: { players, routes, shapes, footballs, notes, isPlayAction }
+            // Play data structure is flat: { players, routes, shapes, footballs, notes, isPlayAction, isRPO }
             const playData = play.data as {
               players?: Player[];
               routes?: Route[];
@@ -380,6 +381,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
               footballs?: Football[];
               notes?: PlayNote[];
               isPlayAction?: boolean;
+              isRPO?: boolean;
             };
             
             // Determine play type from the saved type
@@ -422,9 +424,12 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
             setNotes(loadedState.notes);
             setMetadata(loadedMetadata);
             
-            // Set play action state if present
+            // Set play action and RPO state if present
             if (playData.isPlayAction !== undefined) {
               setIsPlayAction(playData.isPlayAction);
+            }
+            if (playData.isRPO !== undefined) {
+              setIsRPO(playData.isRPO);
             }
             
             setLoadedPlayId(playId);
@@ -3453,36 +3458,80 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                     </Button>
                   </div>
                   {footballs.length > 0 && (
-                    <div className="flex items-center gap-2 mt-2">
-                      <input
-                        type="checkbox"
-                        id="play-action"
-                        checked={isPlayAction}
-                        onChange={(e) => {
-                          const newValue = e.target.checked;
-                          setIsPlayAction(newValue);
-                          
-                          // If a football is selected, toggle its hasPlayAction
-                          if (selectedFootball) {
-                            setHistory(prev => [...prev, {
-                              players: JSON.parse(JSON.stringify(players)),
-                              routes: JSON.parse(JSON.stringify(routes)),
-                              shapes: JSON.parse(JSON.stringify(shapes)),
-                              footballs: JSON.parse(JSON.stringify(footballs)),
-                              notes: JSON.parse(JSON.stringify(notes)),
-                              metadata: JSON.parse(JSON.stringify(metadata))
-                            }]);
-                            setFootballs(prev => prev.map(f => 
-                              f.id === selectedFootball 
-                                ? { ...f, hasPlayAction: newValue }
-                                : f
-                            ));
-                          }
-                        }}
-                        className="rounded"
-                        data-testid="checkbox-play-action"
-                      />
-                      <Label htmlFor="play-action" className="text-xs">Play-Action</Label>
+                    <div className="flex items-center gap-4 mt-2">
+                      {/* RPO Checkbox - Bright Pink */}
+                      <label 
+                        className={`flex items-center gap-1.5 px-2 py-1 rounded-md cursor-pointer border-2 transition-all ${
+                          isRPO 
+                            ? 'bg-pink-500 border-pink-500 text-white' 
+                            : 'bg-pink-500/10 border-pink-500 text-pink-500'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isRPO}
+                          onChange={(e) => {
+                            const newValue = e.target.checked;
+                            setIsRPO(newValue);
+                            // Mutual exclusivity: turn off PA if RPO is turned on
+                            if (newValue && isPlayAction) {
+                              setIsPlayAction(false);
+                              if (selectedFootball) {
+                                setFootballs(prev => prev.map(f => 
+                                  f.id === selectedFootball 
+                                    ? { ...f, hasPlayAction: false }
+                                    : f
+                                ));
+                              }
+                            }
+                          }}
+                          className="hidden"
+                          data-testid="checkbox-rpo"
+                        />
+                        <span className="text-xs font-bold">RPO</span>
+                      </label>
+                      
+                      {/* Play-Action Checkbox - Orange */}
+                      <label 
+                        className={`flex items-center gap-1.5 px-2 py-1 rounded-md cursor-pointer border-2 transition-all ${
+                          isPlayAction 
+                            ? 'bg-orange-500 border-orange-500 text-white' 
+                            : 'bg-orange-500/10 border-orange-500 text-orange-500'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isPlayAction}
+                          onChange={(e) => {
+                            const newValue = e.target.checked;
+                            setIsPlayAction(newValue);
+                            // Mutual exclusivity: turn off RPO if PA is turned on
+                            if (newValue && isRPO) {
+                              setIsRPO(false);
+                            }
+                            
+                            // If a football is selected, toggle its hasPlayAction
+                            if (selectedFootball) {
+                              setHistory(prev => [...prev, {
+                                players: JSON.parse(JSON.stringify(players)),
+                                routes: JSON.parse(JSON.stringify(routes)),
+                                shapes: JSON.parse(JSON.stringify(shapes)),
+                                footballs: JSON.parse(JSON.stringify(footballs)),
+                                notes: JSON.parse(JSON.stringify(notes)),
+                                metadata: JSON.parse(JSON.stringify(metadata))
+                              }]);
+                              setFootballs(prev => prev.map(f => 
+                                f.id === selectedFootball 
+                                  ? { ...f, hasPlayAction: newValue }
+                                  : f
+                              ));
+                            }
+                          }}
+                          className="hidden"
+                          data-testid="checkbox-play-action"
+                        />
+                        <span className="text-xs font-bold">PA</span>
+                      </label>
                     </div>
                   )}
                 </div>
@@ -4269,7 +4318,8 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                       shapes,
                       footballs,
                       notes,
-                      isPlayAction
+                      isPlayAction,
+                      isRPO
                     };
                     
                     savePlayMutation.mutate({
@@ -5160,6 +5210,8 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                           setEditingNote(null);
                         }}
                         onKeyDown={(e) => {
+                          // Stop propagation for all keys to prevent canvas-level handlers from capturing backspace/delete
+                          e.stopPropagation();
                           if (e.key === 'Escape') {
                             setEditingNote(null);
                           }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { GripVertical } from "lucide-react";
+import { GripVertical, Trash2 } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { PlayPreview } from "@/components/PlayPreview";
@@ -40,10 +40,32 @@ export default function TeamPlaysList({ teamId, plays, onPlayClick }: TeamPlaysL
   const [localPlays, setLocalPlays] = useState<PlayItem[]>(plays);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [selectedPlayId, setSelectedPlayId] = useState<number | null>(null);
 
   useEffect(() => {
     setLocalPlays(plays);
   }, [plays]);
+
+  // Remove play from this team's playbook only (doesn't delete from library)
+  const removeFromPlaybookMutation = useMutation({
+    mutationFn: async (playId: number) => {
+      return apiRequest("DELETE", `/api/teams/${teamId}/plays/${playId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/teams", teamId, "plays-for-export"] });
+      toast({
+        title: "Play removed",
+        description: "The play has been removed from this team's playbook.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove play from playbook",
+        variant: "destructive",
+      });
+    },
+  });
 
   const reorderMutation = useMutation({
     mutationFn: async (playOrder: number[]) => {
@@ -124,6 +146,8 @@ export default function TeamPlaysList({ teamId, plays, onPlayClick }: TeamPlaysL
         const useStructuredPreview = hasStructuredPlayData(play.data);
         const hasRasterPreview = play.data?.previewData;
         
+        const isSelected = selectedPlayId === play.id;
+        
         return (
           <div
             key={play.id}
@@ -133,13 +157,18 @@ export default function TeamPlaysList({ teamId, plays, onPlayClick }: TeamPlaysL
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, index)}
             onDragEnd={handleDragEnd}
-            onClick={() => onPlayClick?.(play.id)}
+            onClick={() => {
+              // Single click opens the play AND selects it
+              setSelectedPlayId(play.id);
+              onPlayClick?.(play.id);
+            }}
             className={`
-              flex items-center gap-3 p-2 rounded-lg border bg-white
+              group relative flex items-center gap-3 p-2 rounded-lg border bg-white
               transition-all duration-150 cursor-pointer
               ${draggedIndex === index ? "opacity-50 scale-[0.98]" : ""}
-              ${dragOverIndex === index && draggedIndex !== index ? "border-orange-400 bg-orange-50" : "border-gray-200"}
-              ${draggedIndex === null ? "hover:border-gray-300 hover:shadow-sm" : ""}
+              ${dragOverIndex === index && draggedIndex !== index ? "border-orange-400 bg-orange-50" : ""}
+              ${isSelected ? "border-2 border-orange-500 bg-orange-50/50" : "border-gray-200"}
+              ${draggedIndex === null && !isSelected ? "hover:border-gray-300 hover:shadow-sm" : ""}
             `}
             data-testid={`play-item-${play.id}`}
           >
@@ -188,6 +217,20 @@ export default function TeamPlaysList({ teamId, plays, onPlayClick }: TeamPlaysL
             <div className="text-sm text-gray-400 flex-shrink-0 font-medium">
               #{index + 1}
             </div>
+            
+            {/* Delete button - always visible for easy access */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                removeFromPlaybookMutation.mutate(play.id);
+              }}
+              disabled={removeFromPlaybookMutation.isPending}
+              className="flex-shrink-0 w-8 h-8 bg-red-100 hover:bg-red-500 text-red-500 hover:text-white rounded-full flex items-center justify-center transition-colors dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-600 dark:hover:text-white"
+              data-testid={`button-delete-play-${play.id}`}
+              aria-label={`Remove ${play.name} from playbook`}
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
           </div>
         );
       })}

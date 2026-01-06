@@ -58,6 +58,8 @@ export interface PlayDraft {
   situationTags: string[];
   conceptTags: string[];
   timestamp: number;
+  isRPO?: boolean;
+  isPlayAction?: boolean;
 }
 
 const STORAGE_KEY = "rc_draft_play";
@@ -162,6 +164,24 @@ export function usePlayDraft() {
     setDraft((prev) => ({ ...prev, conceptTags }));
   }, []);
 
+  const setIsRPO = useCallback((isRPO: boolean) => {
+    setDraft((prev) => ({ 
+      ...prev, 
+      isRPO,
+      // Mutual exclusivity: turn off PA if RPO is turned on
+      isPlayAction: isRPO ? false : prev.isPlayAction
+    }));
+  }, []);
+
+  const setIsPlayAction = useCallback((isPlayAction: boolean) => {
+    setDraft((prev) => ({ 
+      ...prev, 
+      isPlayAction,
+      // Mutual exclusivity: turn off RPO if PA is turned on
+      isRPO: isPlayAction ? false : prev.isRPO
+    }));
+  }, []);
+
   const clearDraft = useCallback(() => {
     sessionStorage.removeItem(STORAGE_KEY);
     setDraft(defaultDraft);
@@ -229,6 +249,8 @@ export function usePlayDraft() {
     setName,
     setSituationTags,
     setConceptTags,
+    setIsRPO,
+    setIsPlayAction,
     clearDraft,
     pushToUndoStack,
     undo,

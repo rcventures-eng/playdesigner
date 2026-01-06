@@ -13,13 +13,24 @@ import { PlayerActionMenu } from "./PlayerActionMenu";
 import type { DraftPlayer, DraftRoute } from "@/hooks/usePlayDraft";
 import { useToast } from "@/hooks/use-toast";
 
+interface PlayNote {
+  id: string;
+  x: number;
+  y: number;
+  text: string;
+  backgroundColor?: string;
+}
+
 interface MobileCanvasProps {
   players: DraftPlayer[];
   routes: DraftRoute[];
+  playNotes: PlayNote[];
   format: string;
   side: "offense" | "defense";
+  notesMode: boolean;
   onPlayersChange: (players: DraftPlayer[]) => void;
   onRoutesChange: (routes: DraftRoute[]) => void;
+  onPlayNotesChange: (notes: PlayNote[]) => void;
   onFormatChange: (format: string) => void;
   onSideChange: (side: "offense" | "defense") => void;
   onOpenAI: () => void;
@@ -48,10 +59,13 @@ function unlockAllScroll() {
 export function MobileCanvas({
   players,
   routes,
+  playNotes,
   format,
   side,
+  notesMode,
   onPlayersChange,
   onRoutesChange,
+  onPlayNotesChange,
   onFormatChange,
   onSideChange,
   onOpenAI,
@@ -62,6 +76,8 @@ export function MobileCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [draggedPlayerId, setDraggedPlayerId] = useState<string | null>(null);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editingNoteText, setEditingNoteText] = useState("");
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -144,6 +160,22 @@ export function MobileCanvas({
       const player = findPlayerAtPoint(fieldPos.x, fieldPos.y);
       pointerStartRef.current = { x: e.clientX, y: e.clientY };
 
+      // Notes mode - tap to add a new note
+      if (notesMode && !player) {
+        onPushToUndoStack?.();
+        const newNote: PlayNote = {
+          id: `note-${Date.now()}`,
+          x: fieldPos.x - 50, // Center the note on tap
+          y: fieldPos.y - 30,
+          text: "",
+          backgroundColor: "#FFFACD", // Default yellow post-it color
+        };
+        onPlayNotesChange([...playNotes, newNote]);
+        setEditingNoteId(newNote.id);
+        setEditingNoteText("");
+        return;
+      }
+
       if (player) {
         // AGGRESSIVE touch isolation for iOS
         e.preventDefault();
@@ -193,7 +225,7 @@ export function MobileCanvas({
       }
       // If not touching player and not drawing route, allow default scroll behavior
     },
-    [screenToField, findPlayerAtPoint, activeRoutePlayerId, onPushToUndoStack]
+    [screenToField, findPlayerAtPoint, activeRoutePlayerId, onPushToUndoStack, notesMode, playNotes, onPlayNotesChange]
   );
 
   const handlePointerMove = useCallback(
@@ -811,8 +843,50 @@ export function MobileCanvas({
       ctx.fillText(player.label, player.x, player.y);
     });
 
+    // Render play notes (post-it style)
+    playNotes.forEach((note) => {
+      const noteWidth = 100;
+      const noteHeight = 60;
+      
+      // Use note's background color or default yellow
+      const bgColor = note.backgroundColor || "#FFFACD";
+      ctx.fillStyle = bgColor;
+      ctx.fillRect(note.x, note.y, noteWidth, noteHeight);
+      
+      // Border - derive from background color
+      ctx.strokeStyle = "#E6DB74";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(note.x, note.y, noteWidth, noteHeight);
+      
+      // Note text
+      ctx.fillStyle = "#333";
+      ctx.font = "11px sans-serif";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "top";
+      
+      // Word wrap the text
+      const maxWidth = noteWidth - 8;
+      const words = (note.text || "Tap to edit...").split(' ');
+      let line = '';
+      let y = note.y + 4;
+      const lineHeight = 14;
+      
+      words.forEach((word) => {
+        const testLine = line + (line ? ' ' : '') + word;
+        const metrics = ctx.measureText(testLine);
+        if (metrics.width > maxWidth && line) {
+          ctx.fillText(line, note.x + 4, y);
+          line = word;
+          y += lineHeight;
+        } else {
+          line = testLine;
+        }
+      });
+      ctx.fillText(line, note.x + 4, y);
+    });
+
     ctx.restore();
-  }, [players, routes, currentRoutePoints, scale, offset, field, colors, activeRoutePlayerId, activePlayerColor, draggedPlayerId, menuPlayer]);
+  }, [players, routes, playNotes, currentRoutePoints, scale, offset, field, colors, activeRoutePlayerId, activePlayerColor, draggedPlayerId, menuPlayer]);
 
   return (
     <div className="flex flex-col h-full" data-testid="mobile-canvas">
@@ -898,6 +972,79 @@ export function MobileCanvas({
             Drawing route... lift finger to finish
           </div>
         )}
+        
+        {/* Notes mode indicator */}
+        {notesMode && !editingNoteId && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-yellow-400/90 text-black backdrop-blur px-4 py-2 rounded-full text-sm font-medium shadow-lg">
+            Tap anywhere to add a note
+          </div>
+        )}
+        
+        {/* Note editing overlays */}
+        {playNotes.map((note) => {
+          const isEditing = editingNoteId === note.id;
+          const noteWidth = 100;
+          const noteHeight = 60;
+          const noteX = offset.x + note.x * scale;
+          const noteY = offset.y + note.y * scale;
+          
+          return (
+            <div
+              key={note.id}
+              className={`absolute ${isEditing ? 'z-20' : 'z-10'}`}
+              style={{
+                left: noteX,
+                top: noteY,
+                width: noteWidth * scale,
+                height: noteHeight * scale,
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!isEditing) {
+                  setEditingNoteId(note.id);
+                  setEditingNoteText(note.text);
+                }
+              }}
+              data-testid={`note-overlay-${note.id}`}
+            >
+              {isEditing && (
+                <div 
+                  className="absolute inset-0 border-2 border-orange-400 rounded shadow-lg"
+                  style={{ 
+                    transform: `scale(${1/scale})`,
+                    transformOrigin: 'top left',
+                    width: 120,
+                    height: 80,
+                    backgroundColor: note.backgroundColor || '#FFFACD',
+                  }}
+                >
+                  <textarea
+                    autoFocus
+                    value={editingNoteText}
+                    onChange={(e) => setEditingNoteText(e.target.value)}
+                    onBlur={() => {
+                      onPlayNotesChange(
+                        playNotes.map((n) =>
+                          n.id === note.id ? { ...n, text: editingNoteText } : n
+                        )
+                      );
+                      setEditingNoteId(null);
+                    }}
+                    onKeyDown={(e) => {
+                      e.stopPropagation();
+                      if (e.key === 'Escape') {
+                        setEditingNoteId(null);
+                      }
+                    }}
+                    className="w-full h-full p-2 bg-transparent border-none outline-none resize-none text-sm text-gray-800"
+                    placeholder="Add note text..."
+                    data-testid={`note-input-${note.id}`}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       <PlayerActionMenu

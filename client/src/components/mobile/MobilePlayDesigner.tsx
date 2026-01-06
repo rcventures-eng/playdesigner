@@ -57,6 +57,8 @@ export function MobilePlayDesigner() {
     setName,
     setSituationTags,
     setConceptTags,
+    setIsRPO,
+    setIsPlayAction,
     clearDraft,
     pushToUndoStack,
     undo,
@@ -67,6 +69,7 @@ export function MobilePlayDesigner() {
   const [side, setSide] = useState<"offense" | "defense">("offense");
   const [showFormatSelector, setShowFormatSelector] = useState(true);
   const [showAIOverlay, setShowAIOverlay] = useState(false);
+  const [notesMode, setNotesMode] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<"signup" | "login">("signup");
   const [validationError, setValidationError] = useState("");
@@ -163,6 +166,8 @@ export function MobilePlayDesigner() {
           shapes: draft.shapes,
           playNotes: draft.playNotes,
           footballs: draft.footballs,
+          isRPO: draft.isRPO,
+          isPlayAction: draft.isPlayAction,
         },
         situation: draft.situationTags.length > 0 ? draft.situationTags[0] : null,
         concept: draft.conceptTags.length > 0 ? draft.conceptTags[0] : null,
@@ -311,6 +316,10 @@ export function MobilePlayDesigner() {
   const handleUndo = useCallback(() => {
     undo();
   }, [undo]);
+
+  const handleToggleNotes = useCallback(() => {
+    setNotesMode(prev => !prev);
+  }, []);
 
   // Track if there are routes or if formation is loaded (for Clear Play logic)
   const hasRoutes = draft.routes.length > 0;
@@ -592,15 +601,72 @@ export function MobilePlayDesigner() {
             <MobileCanvas
               players={draft.players}
               routes={draft.routes}
+              playNotes={(draft.playNotes || []).map(note => ({
+                ...note,
+                backgroundColor: note.backgroundColor || "#FFFACD"
+              }))}
               format={draft.format || "7v7"}
               side={side}
+              notesMode={notesMode}
               onPlayersChange={setPlayers}
               onRoutesChange={setRoutes}
+              onPlayNotesChange={(notes) => {
+                // Normalize all notes to ensure backgroundColor is always set
+                const normalizedNotes = notes.map(note => ({
+                  ...note,
+                  backgroundColor: note.backgroundColor || "#FFFACD"
+                }));
+                setPlayNotes(normalizedNotes);
+              }}
               onFormatChange={handleFormatChange}
               onSideChange={handleSideChange}
               onOpenAI={() => setShowAIOverlay(true)}
               onPushToUndoStack={pushToUndoStack}
             />
+            
+            {/* RPO/PA Floating Toggles - visible only on offense side and when canvas is ready */}
+            {!showFormatSelector && side === "offense" && (
+              <div 
+                className="absolute bottom-20 right-3 flex flex-col gap-2 z-20"
+                data-testid="mobile-play-options"
+              >
+                {/* RPO Toggle */}
+                <Button
+                  size="sm"
+                  variant={draft.isRPO ? "default" : "secondary"}
+                  onClick={() => {
+                    const newValue = !draft.isRPO;
+                    setIsRPO(newValue);
+                    // Local guard: ensure mutual exclusivity
+                    if (newValue && draft.isPlayAction) {
+                      setIsPlayAction(false);
+                    }
+                  }}
+                  className="rounded-full shadow-lg font-bold text-xs"
+                  data-testid="button-toggle-rpo"
+                >
+                  RPO
+                </Button>
+                
+                {/* PA Toggle */}
+                <Button
+                  size="sm"
+                  variant={draft.isPlayAction ? "default" : "secondary"}
+                  onClick={() => {
+                    const newValue = !draft.isPlayAction;
+                    setIsPlayAction(newValue);
+                    // Local guard: ensure mutual exclusivity
+                    if (newValue && draft.isRPO) {
+                      setIsRPO(false);
+                    }
+                  }}
+                  className="rounded-full shadow-lg font-bold text-xs"
+                  data-testid="button-toggle-pa"
+                >
+                  PA
+                </Button>
+              </div>
+            )}
           </>
         )}
 
@@ -643,10 +709,12 @@ export function MobilePlayDesigner() {
         onStepChange={handleStepChange}
         canUndo={canUndo}
         canClear={canClear}
+        notesActive={notesMode}
         onUndo={handleUndo}
         onClear={handleClear}
         onScreenshot={handleScreenshot}
         onShare={handleShare}
+        onToggleNotes={handleToggleNotes}
       />
 
       <AIPromptOverlay
