@@ -2253,7 +2253,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid team ID" });
       }
 
-      const { generateDoc = true, generateSlides = true, playIds = [], playImages = {}, documentName, playsPerPage = 2, slidesPlaysPerPage = 1 } = req.body;
+      const { generateDoc = true, generateSlides = true, orderedItems = [], playImages = {}, documentName, playsPerPage = 2, slidesPlaysPerPage = 1 } = req.body;
 
       // Validate at least one format is selected
       if (!generateDoc && !generateSlides) {
@@ -2275,62 +2275,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
       })
         .from(playTeams)
         .innerJoin(plays, eq(playTeams.playId, plays.id))
-        .where(eq(playTeams.teamId, teamId))
-        .orderBy(asc(plays.name));
+        .where(eq(playTeams.teamId, teamId));
 
-      if (teamPlaysData.length === 0) {
-        return res.status(400).json({ error: "No plays assigned to this team" });
+      // Build play lookup map
+      const playMap = new Map(teamPlaysData.map(({ play }) => [play.id, play]));
+
+      // Build ordered items for export, preserving the order from frontend
+      interface ExportItem {
+        itemType: 'play' | 'blankPage';
+        id: number;
+        name: string;
+        type?: string;
+        concept?: string | null;
+        formation?: string | null;
+        notes?: string | null;
+        imageBase64?: string;
+        imageWidth?: number;
+        imageHeight?: number;
       }
 
-      // Filter to selected plays if playIds provided
-      let filteredPlays = teamPlaysData;
-      if (playIds && Array.isArray(playIds) && playIds.length > 0) {
-        const playIdSet = new Set(playIds);
-        filteredPlays = teamPlaysData.filter(({ play }) => playIdSet.has(play.id));
-      }
+      const itemsForExport: ExportItem[] = [];
+      let playCount = 0;
+      let blankPageCount = 0;
 
-      if (filteredPlays.length === 0) {
-        return res.status(400).json({ error: "No valid plays selected for export" });
-      }
-
-      // Prepare plays for export with images
-      // playImages can be either { [id]: string } (legacy) or { [id]: { base64, width, height } }
-      const playsForExport = filteredPlays.map(({ play }) => {
-        const imageData = playImages[play.id];
-        let imageBase64: string | undefined;
-        let imageWidth: number | undefined;
-        let imageHeight: number | undefined;
-        
-        if (imageData) {
-          if (typeof imageData === 'string') {
-            // Legacy format: just base64 string
-            imageBase64 = imageData;
-          } else if (typeof imageData === 'object' && imageData.base64) {
-            // New format: { base64, width, height }
-            imageBase64 = imageData.base64;
-            imageWidth = imageData.width;
-            imageHeight = imageData.height;
+      for (const item of orderedItems) {
+        if (item.type === 'play') {
+          const play = playMap.get(item.id);
+          if (play) {
+            const imageData = playImages[play.id];
+            let imageBase64: string | undefined;
+            let imageWidth: number | undefined;
+            let imageHeight: number | undefined;
+            
+            if (imageData) {
+              if (typeof imageData === 'string') {
+                imageBase64 = imageData;
+              } else if (typeof imageData === 'object' && imageData.base64) {
+                imageBase64 = imageData.base64;
+                imageWidth = imageData.width;
+                imageHeight = imageData.height;
+              }
+            }
+            
+            itemsForExport.push({
+              itemType: 'play',
+              id: play.id,
+              name: play.name,
+              type: play.type,
+              concept: play.concept,
+              formation: play.formation,
+              imageBase64,
+              imageWidth,
+              imageHeight
+            });
+            playCount++;
           }
+        } else if (item.type === 'blankPage') {
+          // Blank page - include title and notes from the frontend
+          itemsForExport.push({
+            itemType: 'blankPage',
+            id: item.id,
+            name: item.title || 'Section Divider',
+            notes: item.notes
+          });
+          blankPageCount++;
         }
-        
-        return {
-          id: play.id,
-          name: play.name,
-          type: play.type,
-          concept: play.concept,
-          formation: play.formation,
-          imageBase64,
-          imageWidth,
-          imageHeight
-        };
-      });
+      }
 
-      // Validate that images were provided for slides export
-      const playsWithImages = playsForExport.filter(p => p.imageBase64);
-      if (generateSlides && playsWithImages.length === 0) {
+      if (itemsForExport.length === 0) {
+        return res.status(400).json({ error: "No valid items selected for export" });
+      }
+
+      // Log export stats
+      const playsWithImages = itemsForExport.filter(i => i.itemType === 'play' && i.imageBase64);
+      if (generateSlides && playsWithImages.length === 0 && playCount > 0) {
         console.warn("Slides export requested but no play images were provided");
-      } else if (generateSlides) {
-        console.log(`${playsWithImages.length}/${playsForExport.length} plays have images for slides`);
+      } else if (generateSlides && playCount > 0) {
+        console.log(`${playsWithImages.length}/${playCount} plays have images for slides`);
       }
 
       // Callback to update tokens if refreshed
@@ -2345,7 +2366,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Use custom document name or default to team name + year
       const customDocName = documentName?.trim() || undefined;
-      console.log("Exporting to Google Drive:", { customDocName, teamName: team.name, playsCount: playsForExport.length, generateDoc, generateSlides });
+      console.log("Exporting to Google Drive:", { customDocName, teamName: team.name, playsCount: playCount, blankPagesCount: blankPageCount, generateDoc, generateSlides });
       
       const result = await exportPlaybookToGoogleDrive(
         tokens,
@@ -2355,7 +2376,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           year: team.year || undefined,
           coverImageUrl: team.coverImageUrl
         },
-        playsForExport,
+        itemsForExport,
         { generateDoc, generateSlides, customDocName, playsPerPage, slidesPlaysPerPage },
         updateTokensCallback
       );
@@ -2365,7 +2386,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         docUrl: result.docUrl,
         slidesUrl: result.slidesUrl,
         errors: result.errors,
-        playsExported: playsForExport.length
+        playsExported: playCount,
+        blankPagesExported: blankPageCount
       });
     } catch (error: any) {
       console.error("Export to Google Drive error:", error);
@@ -2407,6 +2429,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(playTeams.teamId, teamId))
         .orderBy(asc(playTeams.displayOrder), asc(plays.name));
 
+      // Get blank pages for this team
+      const blankPagesData = await db.select()
+        .from(teamBlankPages)
+        .where(eq(teamBlankPages.teamId, teamId))
+        .orderBy(asc(teamBlankPages.displayOrder));
+
       res.json({
         team: {
           id: team.id,
@@ -2414,7 +2442,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           year: team.year,
           coverImageUrl: team.coverImageUrl
         },
-        plays: teamPlaysData
+        plays: teamPlaysData,
+        blankPages: blankPagesData
       });
     } catch (error: any) {
       console.error("Get plays for export error:", error);

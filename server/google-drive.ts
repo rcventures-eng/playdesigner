@@ -173,11 +173,13 @@ interface TeamInfo {
 }
 
 interface PlayInfo {
+  itemType?: 'play' | 'blankPage';  // New field to distinguish item types
   id: number;
   name: string;
-  type: string;
+  type?: string;  // Made optional for blank pages
   concept?: string | null;
   formation?: string | null;
+  notes?: string | null;  // For blank pages
   imageBase64?: string;
   imageWidth?: number;
   imageHeight?: number;
@@ -402,7 +404,8 @@ export async function generateTeamDoc(
   currentIndex += yearText.length;
 
   // Add total plays count (18pt, centered)
-  const countText = `Total Plays: ${plays.length}\n`;
+  const playCount = plays.filter(p => p.itemType !== 'blankPage').length;
+  const countText = `Total Plays: ${playCount}\n`;
   requests.push({
     insertText: {
       location: { index: currentIndex },
@@ -444,8 +447,10 @@ export async function generateTeamDoc(
   currentIndex += 1;
 
   // Upload all play images to Drive first (batch upload for efficiency)
+  // Skip blank pages - they don't have images
   const uploadedImages: { playId: number; imageUrl: string }[] = [];
   for (const play of plays) {
+    if (play.itemType === 'blankPage') continue; // Skip blank pages
     if (play.imageBase64) {
       const imageBuffer = Buffer.from(play.imageBase64, 'base64');
       const imageFile = await drive.files.create({
@@ -496,12 +501,16 @@ export async function generateTeamDoc(
   if (playsPerPage === 4 || playsPerPage === 8) {
     const playsPerTablePage = playsPerPage;
     
-    // Process plays in groups of playsPerPage
-    for (let pageStart = 0; pageStart < plays.length; pageStart += playsPerTablePage) {
-      const pagePlays = plays.slice(pageStart, pageStart + playsPerTablePage);
+    // For grid layouts, we need to handle blank pages separately
+    // We'll iterate through items and insert section dividers as full pages
+    // Plays will be grouped into grids
+    let currentPlaysBuffer: PlayInfo[] = [];
+    
+    // Helper function to render a grid page of plays
+    const renderGridPage = async (pagePlays: PlayInfo[]) => {
+      if (pagePlays.length === 0) return;
       
       // Insert a 2-column table with appropriate rows
-      // Each table row has 2 cells (left and right columns)
       const tableRows = Math.ceil(pagePlays.length / 2);
       
       requests.push({
@@ -513,13 +522,12 @@ export async function generateTeamDoc(
       });
       
       // Execute current requests to get the table structure
-      // We need to do this in batches because table insertion changes document structure
       if (requests.length > 0) {
         await docs.documents.batchUpdate({
           documentId: docId,
           requestBody: { requests }
         });
-        requests.length = 0; // Clear requests array
+        requests.length = 0;
       }
       
       // Get the updated document to find table cell indices
@@ -541,8 +549,7 @@ export async function generateTeamDoc(
         const numRows = tableElement.tableRows?.length || 0;
         const numCols = 2;
         
-        // Remove table borders - apply to all cells
-        // Create border style with 0 width for all sides
+        // Remove table borders
         const zeroBorder = {
           color: { color: { rgbColor: { red: 1, green: 1, blue: 1 } } },
           width: { magnitude: 0, unit: 'PT' },
@@ -551,7 +558,6 @@ export async function generateTeamDoc(
         
         const borderRemovalRequests: any[] = [];
         
-        // Apply zero borders to each cell individually
         for (let row = 0; row < numRows; row++) {
           for (let col = 0; col < numCols; col++) {
             borderRemovalRequests.push({
@@ -581,7 +587,6 @@ export async function generateTeamDoc(
           }
         }
         
-        // Execute border removal
         if (borderRemovalRequests.length > 0) {
           await docs.documents.batchUpdate({
             documentId: docId,
@@ -589,11 +594,10 @@ export async function generateTeamDoc(
           });
         }
         
-        // Need to re-fetch document after border styling changes indices
+        // Re-fetch document after border styling
         const docAfterBorders = await docs.documents.get({ documentId: docId });
         const bodyAfterBorders = docAfterBorders.data.body?.content || [];
         
-        // Find the table again after border updates
         let tableForImages: any = null;
         for (const element of bodyAfterBorders) {
           if (element.table) {
@@ -601,96 +605,319 @@ export async function generateTeamDoc(
           }
         }
         
-        if (!tableForImages) continue;
-        
-        // Insert images into table cells
-        // CRITICAL: Process cells in REVERSE order (last cell first)
-        // Each image insertion shifts document indices, so we must insert 
-        // from highest index to lowest to avoid invalidating remaining indices
-        for (let playIdx = pagePlays.length - 1; playIdx >= 0; playIdx--) {
-          const play = pagePlays[playIdx];
-          const rowIdx = Math.floor(playIdx / 2);
-          const colIdx = playIdx % 2;
-          
-          const imageUrl = imageUrlMap.get(play.id);
-          if (!imageUrl) continue;
-          
-          // Get the cell's content start index
-          const tableRow = tableForImages.table.tableRows?.[rowIdx];
-          const tableCell = tableRow?.tableCells?.[colIdx];
-          const cellContent = tableCell?.content?.[0];
-          
-          if (cellContent?.paragraph) {
-            const cellStartIndex = cellContent.startIndex;
+        if (tableForImages) {
+          // Insert images in reverse order
+          for (let playIdx = pagePlays.length - 1; playIdx >= 0; playIdx--) {
+            const play = pagePlays[playIdx];
+            const rowIdx = Math.floor(playIdx / 2);
+            const colIdx = playIdx % 2;
             
-            const imageHeight = play.imageWidth && play.imageHeight
-              ? Math.round(imageWidth * (play.imageHeight / play.imageWidth))
-              : defaultImageHeight;
+            const imageUrl = imageUrlMap.get(play.id);
+            if (!imageUrl) continue;
             
-            // Execute each image insertion individually to avoid index conflicts
-            await docs.documents.batchUpdate({
-              documentId: docId,
-              requestBody: { 
-                requests: [{
-                  insertInlineImage: {
-                    location: { index: cellStartIndex },
-                    uri: imageUrl,
-                    objectSize: {
-                      width: { magnitude: imageWidth, unit: 'PT' },
-                      height: { magnitude: imageHeight, unit: 'PT' }
+            const tableRow = tableForImages.table.tableRows?.[rowIdx];
+            const tableCell = tableRow?.tableCells?.[colIdx];
+            const cellContent = tableCell?.content?.[0];
+            
+            if (cellContent?.paragraph) {
+              const cellStartIndex = cellContent.startIndex;
+              
+              const imageHeight = play.imageWidth && play.imageHeight
+                ? Math.round(imageWidth * (play.imageHeight / play.imageWidth))
+                : defaultImageHeight;
+              
+              await docs.documents.batchUpdate({
+                documentId: docId,
+                requestBody: { 
+                  requests: [{
+                    insertInlineImage: {
+                      location: { index: cellStartIndex },
+                      uri: imageUrl,
+                      objectSize: {
+                        width: { magnitude: imageWidth, unit: 'PT' },
+                        height: { magnitude: imageHeight, unit: 'PT' }
+                      }
                     }
-                  }
-                }]
-              }
-            });
+                  }]
+                }
+              });
+            }
           }
         }
       }
       
-      // Add page break after each table (except for the last one)
-      if (pageStart + playsPerTablePage < plays.length) {
-        // Get fresh document state to find correct insertion point
-        const docAfterTable = await docs.documents.get({ documentId: docId });
-        const bodyAfterTable = docAfterTable.data.body?.content || [];
-        
-        // Find the end of document - insert newline + page break there
-        // The last element's endIndex is where we should insert
-        const lastElement = bodyAfterTable[bodyAfterTable.length - 1];
-        currentIndex = (lastElement?.endIndex || 2) - 1;
-        
+      // Update currentIndex
+      const docAfterGrid = await docs.documents.get({ documentId: docId });
+      const bodyAfterGrid = docAfterGrid.data.body?.content || [];
+      const lastElement = bodyAfterGrid[bodyAfterGrid.length - 1];
+      currentIndex = (lastElement?.endIndex || 2) - 1;
+    };
+    
+    // Helper to insert a section divider
+    const insertSectionDivider = async (title: string, notes?: string | null) => {
+      requests.push({
+        insertPageBreak: {
+          location: { index: currentIndex }
+        }
+      });
+      currentIndex += 1;
+      
+      const dividerTitle = `${title}\n`;
+      requests.push({
+        insertText: {
+          location: { index: currentIndex },
+          text: dividerTitle
+        }
+      });
+      
+      const titleEnd = currentIndex + dividerTitle.length - 1;
+      
+      requests.push({
+        updateParagraphStyle: {
+          range: { startIndex: currentIndex, endIndex: currentIndex + dividerTitle.length },
+          paragraphStyle: {
+            alignment: 'CENTER',
+            spaceAbove: { magnitude: 180, unit: 'PT' }
+          },
+          fields: 'alignment,spaceAbove'
+        }
+      });
+      
+      requests.push({
+        updateTextStyle: {
+          range: { startIndex: currentIndex, endIndex: titleEnd },
+          textStyle: {
+            fontSize: { magnitude: 36, unit: 'PT' },
+            bold: true
+          },
+          fields: 'fontSize,bold'
+        }
+      });
+      currentIndex += dividerTitle.length;
+      
+      if (notes) {
+        const notesText = `${notes}\n`;
         requests.push({
           insertText: {
             location: { index: currentIndex },
-            text: '\n'
+            text: notesText
+          }
+        });
+        
+        const notesEnd = currentIndex + notesText.length - 1;
+        
+        requests.push({
+          updateParagraphStyle: {
+            range: { startIndex: currentIndex, endIndex: currentIndex + notesText.length },
+            paragraphStyle: { alignment: 'CENTER' },
+            fields: 'alignment'
           }
         });
         
         requests.push({
-          insertPageBreak: {
-            location: { index: currentIndex + 1 }
+          updateTextStyle: {
+            range: { startIndex: currentIndex, endIndex: notesEnd },
+            textStyle: { fontSize: { magnitude: 18, unit: 'PT' } },
+            fields: 'fontSize'
           }
         });
-        
-        // Execute page break
+        currentIndex += notesText.length;
+      }
+      
+      // Execute the section divider requests
+      if (requests.length > 0) {
         await docs.documents.batchUpdate({
           documentId: docId,
           requestBody: { requests }
         });
         requests.length = 0;
+      }
+      
+      // Add page break after divider
+      requests.push({
+        insertPageBreak: {
+          location: { index: currentIndex }
+        }
+      });
+      currentIndex += 1;
+      
+      if (requests.length > 0) {
+        await docs.documents.batchUpdate({
+          documentId: docId,
+          requestBody: { requests }
+        });
+        requests.length = 0;
+      }
+      
+      // Update currentIndex
+      const docAfterDivider = await docs.documents.get({ documentId: docId });
+      const bodyAfterDivider = docAfterDivider.data.body?.content || [];
+      const lastElement = bodyAfterDivider[bodyAfterDivider.length - 1];
+      currentIndex = (lastElement?.endIndex || 2) - 1;
+    };
+    
+    // Process all items
+    for (let i = 0; i < plays.length; i++) {
+      const item = plays[i];
+      
+      if (item.itemType === 'blankPage') {
+        // Flush any buffered plays first
+        if (currentPlaysBuffer.length > 0) {
+          await renderGridPage(currentPlaysBuffer);
+          currentPlaysBuffer = [];
+        }
         
-        // Get updated document state - the next table goes AFTER the page break
-        // A page break is 1 character, so we need index after the break
-        const docAfterBreak = await docs.documents.get({ documentId: docId });
-        const bodyAfterBreak = docAfterBreak.data.body?.content || [];
-        const lastElementAfterBreak = bodyAfterBreak[bodyAfterBreak.length - 1];
-        // Use endIndex - 1 to insert at the start of the trailing paragraph
-        currentIndex = (lastElementAfterBreak?.endIndex || 2) - 1;
+        // Insert section divider
+        await insertSectionDivider(item.name, item.notes);
+      } else {
+        // Add to buffer
+        currentPlaysBuffer.push(item);
+        
+        // If buffer is full, render the grid page
+        if (currentPlaysBuffer.length >= playsPerTablePage) {
+          await renderGridPage(currentPlaysBuffer);
+          currentPlaysBuffer = [];
+          
+          // Add page break if not at the end
+          if (i < plays.length - 1) {
+            requests.push({
+              insertText: {
+                location: { index: currentIndex },
+                text: '\n'
+              }
+            });
+            requests.push({
+              insertPageBreak: {
+                location: { index: currentIndex + 1 }
+              }
+            });
+            
+            if (requests.length > 0) {
+              await docs.documents.batchUpdate({
+                documentId: docId,
+                requestBody: { requests }
+              });
+              requests.length = 0;
+            }
+            
+            const docAfterBreak = await docs.documents.get({ documentId: docId });
+            const bodyAfterBreak = docAfterBreak.data.body?.content || [];
+            const lastElementAfterBreak = bodyAfterBreak[bodyAfterBreak.length - 1];
+            currentIndex = (lastElementAfterBreak?.endIndex || 2) - 1;
+          }
+        }
       }
     }
+    
+    // Render any remaining plays
+    if (currentPlaysBuffer.length > 0) {
+      await renderGridPage(currentPlaysBuffer);
+    }
+    
   } else {
     // For 1 or 2 plays per page, use simple vertical stacking (original behavior)
+    let playsOnCurrentPage = 0;
+    
     for (let i = 0; i < plays.length; i++) {
       const play = plays[i];
+      
+      // Handle blank pages (section dividers)
+      if (play.itemType === 'blankPage') {
+        // If there's content on the current page, add a page break first
+        if (playsOnCurrentPage > 0 || i > 0) {
+          requests.push({
+            insertPageBreak: {
+              location: { index: currentIndex }
+            }
+          });
+          currentIndex += 1;
+        }
+        
+        // Add section divider title (centered, large, bold)
+        const dividerTitle = `${play.name}\n`;
+        requests.push({
+          insertText: {
+            location: { index: currentIndex },
+            text: dividerTitle
+          }
+        });
+        
+        const titleEnd = currentIndex + dividerTitle.length - 1;
+        
+        // Center and style the title
+        requests.push({
+          updateParagraphStyle: {
+            range: { startIndex: currentIndex, endIndex: currentIndex + dividerTitle.length },
+            paragraphStyle: {
+              alignment: 'CENTER',
+              spaceAbove: { magnitude: 180, unit: 'PT' } // Push down to center vertically
+            },
+            fields: 'alignment,spaceAbove'
+          }
+        });
+        
+        requests.push({
+          updateTextStyle: {
+            range: { startIndex: currentIndex, endIndex: titleEnd },
+            textStyle: {
+              fontSize: { magnitude: 36, unit: 'PT' },
+              bold: true
+            },
+            fields: 'fontSize,bold'
+          }
+        });
+        currentIndex += dividerTitle.length;
+        
+        // Add notes if present
+        if (play.notes) {
+          const notesText = `${play.notes}\n`;
+          requests.push({
+            insertText: {
+              location: { index: currentIndex },
+              text: notesText
+            }
+          });
+          
+          const notesEnd = currentIndex + notesText.length - 1;
+          
+          requests.push({
+            updateParagraphStyle: {
+              range: { startIndex: currentIndex, endIndex: currentIndex + notesText.length },
+              paragraphStyle: {
+                alignment: 'CENTER'
+              },
+              fields: 'alignment'
+            }
+          });
+          
+          requests.push({
+            updateTextStyle: {
+              range: { startIndex: currentIndex, endIndex: notesEnd },
+              textStyle: {
+                fontSize: { magnitude: 18, unit: 'PT' }
+              },
+              fields: 'fontSize'
+            }
+          });
+          currentIndex += notesText.length;
+        }
+        
+        // Reset plays counter for new section
+        playsOnCurrentPage = 0;
+        
+        // Add page break after section divider (if not last item)
+        if (i < plays.length - 1) {
+          requests.push({
+            insertPageBreak: {
+              location: { index: currentIndex }
+            }
+          });
+          currentIndex += 1;
+        }
+        continue;
+      }
+      
+      // Handle regular plays
       const imageUrl = imageUrlMap.get(play.id);
       
       if (imageUrl) {
@@ -719,15 +946,18 @@ export async function generateTeamDoc(
         }
       });
       currentIndex += 2;
+      
+      playsOnCurrentPage++;
 
       // Page break based on playsPerPage setting (except for the last one)
-      if ((i + 1) % playsPerPage === 0 && i < plays.length - 1) {
+      if (playsOnCurrentPage % playsPerPage === 0 && i < plays.length - 1) {
         requests.push({
           insertPageBreak: {
             location: { index: currentIndex }
           }
         });
         currentIndex += 1;
+        playsOnCurrentPage = 0;
       }
     }
   }
@@ -796,10 +1026,11 @@ export async function generateTeamSlides(
     );
 
     if (subtitleShape?.objectId) {
+      const playCount = plays.filter(p => p.itemType !== 'blankPage').length;
       requests.push({
         insertText: {
           objectId: subtitleShape.objectId,
-          text: `${team.year || new Date().getFullYear()} Season\n${plays.length} Plays`
+          text: `${team.year || new Date().getFullYear()} Season\n${playCount} Plays`
         }
       });
     }
@@ -822,8 +1053,10 @@ export async function generateTeamSlides(
   const layout = layoutConfig[playsPerSlide as 1 | 2 | 4] || layoutConfig[1];
 
   // Upload all images first to avoid interleaving API calls
+  // Skip blank pages - they don't have images
   const imageUrls: Record<number, string> = {};
   for (const play of plays) {
+    if (play.itemType === 'blankPage') continue; // Skip blank pages
     if (play.imageBase64) {
       console.log(`Uploading image for play ${play.id}: ${play.name}`);
       const imageBuffer = Buffer.from(play.imageBase64, 'base64');
@@ -851,15 +1084,37 @@ export async function generateTeamSlides(
     }
   }
 
-  // Group plays into slides
-  const slideGroups: PlayInfo[][] = [];
-  for (let i = 0; i < plays.length; i += playsPerSlide) {
-    slideGroups.push(plays.slice(i, i + playsPerSlide));
+  // Group plays into slides, handling blank pages as section dividers
+  // Blank pages get their own slide, plays are grouped by playsPerSlide
+  const slideItems: { type: 'plays' | 'divider'; plays?: PlayInfo[]; divider?: PlayInfo }[] = [];
+  let currentPlayBuffer: PlayInfo[] = [];
+  
+  for (const item of plays) {
+    if (item.itemType === 'blankPage') {
+      // Flush any buffered plays first
+      if (currentPlayBuffer.length > 0) {
+        slideItems.push({ type: 'plays', plays: currentPlayBuffer });
+        currentPlayBuffer = [];
+      }
+      // Add section divider
+      slideItems.push({ type: 'divider', divider: item });
+    } else {
+      currentPlayBuffer.push(item);
+      if (currentPlayBuffer.length >= playsPerSlide) {
+        slideItems.push({ type: 'plays', plays: currentPlayBuffer });
+        currentPlayBuffer = [];
+      }
+    }
+  }
+  
+  // Flush remaining plays
+  if (currentPlayBuffer.length > 0) {
+    slideItems.push({ type: 'plays', plays: currentPlayBuffer });
   }
 
-  // Create slides for each group
-  for (let slideIndex = 0; slideIndex < slideGroups.length; slideIndex++) {
-    const group = slideGroups[slideIndex];
+  // Create slides for each item
+  for (let slideIndex = 0; slideIndex < slideItems.length; slideIndex++) {
+    const slideItem = slideItems[slideIndex];
     const slideId = `play_slide_${slideIndex}`;
 
     // Create new slide
@@ -872,6 +1127,124 @@ export async function generateTeamSlides(
         }
       }
     });
+    
+    // Handle section divider slides
+    if (slideItem.type === 'divider' && slideItem.divider) {
+      const divider = slideItem.divider;
+      const titleShapeId = `divider_title_${slideIndex}`;
+      
+      // Add centered section title
+      requests.push({
+        createShape: {
+          objectId: titleShapeId,
+          shapeType: 'TEXT_BOX',
+          elementProperties: {
+            pageObjectId: slideId,
+            size: {
+              width: { magnitude: slideWidth - margin * 2, unit: 'PT' },
+              height: { magnitude: 60, unit: 'PT' }
+            },
+            transform: {
+              scaleX: 1,
+              scaleY: 1,
+              translateX: margin,
+              translateY: slideHeight / 2 - 50,
+              unit: 'PT'
+            }
+          }
+        }
+      });
+      
+      requests.push({
+        insertText: {
+          objectId: titleShapeId,
+          text: divider.name
+        }
+      });
+      
+      requests.push({
+        updateTextStyle: {
+          objectId: titleShapeId,
+          textRange: { type: 'ALL' },
+          style: {
+            fontSize: { magnitude: 48, unit: 'PT' },
+            bold: true
+          },
+          fields: 'fontSize,bold'
+        }
+      });
+      
+      requests.push({
+        updateParagraphStyle: {
+          objectId: titleShapeId,
+          textRange: { type: 'ALL' },
+          style: {
+            alignment: 'CENTER'
+          },
+          fields: 'alignment'
+        }
+      });
+      
+      // Add notes if present
+      if (divider.notes) {
+        const notesShapeId = `divider_notes_${slideIndex}`;
+        
+        requests.push({
+          createShape: {
+            objectId: notesShapeId,
+            shapeType: 'TEXT_BOX',
+            elementProperties: {
+              pageObjectId: slideId,
+              size: {
+                width: { magnitude: slideWidth - margin * 2, unit: 'PT' },
+                height: { magnitude: 40, unit: 'PT' }
+              },
+              transform: {
+                scaleX: 1,
+                scaleY: 1,
+                translateX: margin,
+                translateY: slideHeight / 2 + 20,
+                unit: 'PT'
+              }
+            }
+          }
+        });
+        
+        requests.push({
+          insertText: {
+            objectId: notesShapeId,
+            text: divider.notes
+          }
+        });
+        
+        requests.push({
+          updateTextStyle: {
+            objectId: notesShapeId,
+            textRange: { type: 'ALL' },
+            style: {
+              fontSize: { magnitude: 24, unit: 'PT' }
+            },
+            fields: 'fontSize'
+          }
+        });
+        
+        requests.push({
+          updateParagraphStyle: {
+            objectId: notesShapeId,
+            textRange: { type: 'ALL' },
+            style: {
+              alignment: 'CENTER'
+            },
+            fields: 'alignment'
+          }
+        });
+      }
+      
+      continue;
+    }
+    
+    // Handle regular plays slide
+    const group = slideItem.plays || [];
 
     // Calculate cell dimensions
     const cellWidth = (slideWidth - margin * (layout.cols + 1)) / layout.cols;

@@ -43,6 +43,32 @@ interface Play {
   formation?: string | null;
   situation?: string | null;
   data?: any;
+  displayOrder?: number;
+}
+
+interface BlankPage {
+  id: number;
+  teamId: number;
+  title: string;
+  notes?: string | null;
+  displayOrder: number;
+}
+
+// Unified item type for merged plays and blank pages
+interface ExportItem {
+  itemType: 'play' | 'blankPage';
+  id: number;
+  displayOrder: number;
+  // Play fields
+  name?: string;
+  type?: string;
+  concept?: string | null;
+  formation?: string | null;
+  situation?: string | null;
+  data?: any;
+  // Blank page fields
+  title?: string;
+  notes?: string | null;
 }
 
 interface TeamExportData {
@@ -53,6 +79,7 @@ interface TeamExportData {
     coverImageUrl?: string | null;
   };
   plays: Play[];
+  blankPages?: BlankPage[];
 }
 
 interface GoogleDriveExportModalProps {
@@ -74,7 +101,7 @@ export default function GoogleDriveExportModal({
   const [generateSlides, setGenerateSlides] = useState(true);
   const [docsPlaysPerPage, setDocsPlaysPerPage] = useState<number>(2);
   const [slidesPlaysPerPage, setSlidesPlaysPerPage] = useState<number>(1);
-  const [selectedPlays, setSelectedPlays] = useState<number[]>([]);
+  const [selectedItems, setSelectedItems] = useState<string[]>([]); // Format: "play-{id}" or "blankPage-{id}"
   const [documentName, setDocumentName] = useState("");
   const [isExporting, setIsExporting] = useState(false);
   const [renderingProgress, setRenderingProgress] = useState<{ current: number; total: number } | null>(null);
@@ -83,7 +110,7 @@ export default function GoogleDriveExportModal({
     slidesUrl?: string;
     errors: string[];
   } | null>(null);
-  const [orderedPlays, setOrderedPlays] = useState<Play[]>([]);
+  const [orderedItems, setOrderedItems] = useState<ExportItem[]>([]);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const draggedIndexRef = useRef<number | null>(null);
 
@@ -99,11 +126,36 @@ export default function GoogleDriveExportModal({
     enabled: open && teamId > 0,
   });
 
-  // Initialize ordered plays and selected plays when data loads
+  // Initialize ordered items and selected items when data loads
   useEffect(() => {
-    if (exportData?.plays) {
-      setOrderedPlays(exportData.plays);
-      setSelectedPlays(exportData.plays.map((p) => p.id));
+    if (exportData) {
+      // Merge plays and blank pages into unified items
+      const playItems: ExportItem[] = (exportData.plays || []).map(p => ({
+        itemType: 'play' as const,
+        id: p.id,
+        displayOrder: p.displayOrder ?? 0,
+        name: p.name,
+        type: p.type,
+        concept: p.concept,
+        formation: p.formation,
+        situation: p.situation,
+        data: p.data,
+      }));
+      
+      const blankPageItems: ExportItem[] = (exportData.blankPages || []).map(bp => ({
+        itemType: 'blankPage' as const,
+        id: bp.id,
+        displayOrder: bp.displayOrder,
+        title: bp.title,
+        notes: bp.notes,
+      }));
+      
+      // Merge and sort by displayOrder
+      const mergedItems = [...playItems, ...blankPageItems].sort((a, b) => a.displayOrder - b.displayOrder);
+      setOrderedItems(mergedItems);
+      
+      // Select all items by default
+      setSelectedItems(mergedItems.map(item => `${item.itemType}-${item.id}`));
     }
   }, [exportData]);
 
@@ -119,25 +171,25 @@ export default function GoogleDriveExportModal({
     }
   }, [open, refetchStatus, teamName]);
 
-  const togglePlaySelection = useCallback((playId: number) => {
-    setSelectedPlays((prev) =>
-      prev.includes(playId)
-        ? prev.filter((id) => id !== playId)
-        : [...prev, playId]
+  const toggleItemSelection = useCallback((itemKey: string) => {
+    setSelectedItems((prev) =>
+      prev.includes(itemKey)
+        ? prev.filter((key) => key !== itemKey)
+        : [...prev, itemKey]
     );
   }, []);
 
-  const selectAllPlays = useCallback(() => {
-    if (orderedPlays.length > 0) {
-      setSelectedPlays(orderedPlays.map((p) => p.id));
+  const selectAllItems = useCallback(() => {
+    if (orderedItems.length > 0) {
+      setSelectedItems(orderedItems.map((item) => `${item.itemType}-${item.id}`));
     }
-  }, [orderedPlays]);
+  }, [orderedItems]);
 
-  const deselectAllPlays = useCallback(() => {
-    setSelectedPlays([]);
+  const deselectAllItems = useCallback(() => {
+    setSelectedItems([]);
   }, []);
 
-  // Drag and drop handlers for reordering plays
+  // Drag and drop handlers for reordering items
   const handleDragStart = useCallback((e: React.DragEvent, index: number) => {
     draggedIndexRef.current = index;
     setDraggedIndex(index);
@@ -151,13 +203,13 @@ export default function GoogleDriveExportModal({
     
     if (sourceIndex === null || sourceIndex === targetIndex) return;
     
-    // Reorder the plays as the user drags
-    setOrderedPlays((prev) => {
-      const newPlays = [...prev];
-      const draggedItem = newPlays[sourceIndex];
-      newPlays.splice(sourceIndex, 1);
-      newPlays.splice(targetIndex, 0, draggedItem);
-      return newPlays;
+    // Reorder the items as the user drags
+    setOrderedItems((prev) => {
+      const newItems = [...prev];
+      const draggedItem = newItems[sourceIndex];
+      newItems.splice(sourceIndex, 1);
+      newItems.splice(targetIndex, 0, draggedItem);
+      return newItems;
     });
     
     // Update both ref and state to stay in sync
@@ -228,25 +280,36 @@ export default function GoogleDriveExportModal({
     mutationFn: async () => {
       setIsExporting(true);
       setRenderingProgress(null);
-      console.log("Starting Google Drive export...", { teamId, generateDoc, generateSlides, selectedPlays: selectedPlays.length, documentName });
+      console.log("Starting Google Drive export...", { teamId, generateDoc, generateSlides, selectedItems: selectedItems.length, documentName });
       
-      // Get selected plays with their data for rendering, maintaining the user's custom order
-      const selectedPlayData = orderedPlays.filter(p => selectedPlays.includes(p.id));
+      // Filter selected items by type
+      const selectedItemsFiltered = orderedItems.filter(item => 
+        selectedItems.includes(`${item.itemType}-${item.id}`)
+      );
       
-      // Get ordered play IDs for export (maintains user's drag-and-drop order)
-      const orderedSelectedPlayIds = orderedPlays.filter(p => selectedPlays.includes(p.id)).map(p => p.id);
+      // Separate plays and blank pages, maintaining order
+      const selectedPlays = selectedItemsFiltered.filter(item => item.itemType === 'play');
+      const selectedBlankPages = selectedItemsFiltered.filter(item => item.itemType === 'blankPage');
+      
+      // Create ordered item list for export (includes both types)
+      const orderedExportItems = selectedItemsFiltered.map(item => ({
+        type: item.itemType,
+        id: item.id,
+        // Include blank page details for export
+        ...(item.itemType === 'blankPage' ? { title: item.title, notes: item.notes } : {})
+      }));
       
       // Render plays to images for both Docs and Slides
       console.log("Rendering plays to images...");
       let playImages: Record<number, PlayImageData> = {};
       
-      if ((generateSlides || generateDoc) && selectedPlayData.length > 0) {
+      if ((generateSlides || generateDoc) && selectedPlays.length > 0) {
         try {
           // Transform plays to handle null -> undefined for type compatibility
-          const playsForRendering = selectedPlayData.map(p => ({
+          const playsForRendering = selectedPlays.map(p => ({
             id: p.id,
-            name: p.name,
-            type: p.type,
+            name: p.name!,
+            type: p.type!,
             data: p.data,
             formation: p.formation ?? undefined,
             concept: p.concept ?? undefined,
@@ -274,8 +337,8 @@ export default function GoogleDriveExportModal({
       const response = await apiRequest("POST", `/api/teams/${teamId}/export-to-drive`, {
         generateDoc,
         generateSlides,
-        playIds: orderedSelectedPlayIds,  // Use ordered IDs for correct export sequence
-        playImages,  // Now includes { base64, width, height } per play
+        orderedItems: orderedExportItems,  // New: ordered list of plays and blank pages
+        playImages,  // Includes { base64, width, height } per play
         documentName: documentName.trim() || `${teamName} Playbook`,
         playsPerPage: docsPlaysPerPage,
         slidesPlaysPerPage: slidesPlaysPerPage,
@@ -303,9 +366,10 @@ export default function GoogleDriveExportModal({
       });
       
       if (data.docUrl || data.slidesUrl) {
+        const itemCount = data.playsExported + (data.blankPagesExported || 0);
         toast({
           title: "Export Complete!",
-          description: `Successfully exported ${data.playsExported} plays to Google Drive.`,
+          description: `Successfully exported ${itemCount} items to Google Drive.`,
         });
       } else if (data.errors && data.errors.length > 0) {
         toast({
@@ -336,10 +400,10 @@ export default function GoogleDriveExportModal({
       return;
     }
 
-    if (selectedPlays.length === 0) {
+    if (selectedItems.length === 0) {
       toast({
-        title: "Select plays",
-        description: "Please select at least one play to export.",
+        title: "Select items",
+        description: "Please select at least one play or section divider to export.",
         variant: "destructive",
       });
       return;
@@ -580,28 +644,28 @@ export default function GoogleDriveExportModal({
                 </div>
               </div>
 
-              {/* Play Selection */}
+              {/* Item Selection (Plays + Blank Pages) */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <Label className="text-white text-base font-medium">
-                    Select Plays ({selectedPlays.length} of {orderedPlays.length})
+                    Select Items ({selectedItems.length} of {orderedItems.length})
                   </Label>
                   <div className="flex gap-2">
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={selectAllPlays}
+                      onClick={selectAllItems}
                       className="text-gray-400 hover:text-white"
-                      data-testid="button-select-all-plays"
+                      data-testid="button-select-all-items"
                     >
                       Select All
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={deselectAllPlays}
+                      onClick={deselectAllItems}
                       className="text-gray-400 hover:text-white"
-                      data-testid="button-deselect-all-plays"
+                      data-testid="button-deselect-all-items"
                     >
                       Deselect All
                     </Button>
@@ -612,41 +676,58 @@ export default function GoogleDriveExportModal({
                   <div className="flex items-center justify-center p-8">
                     <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
                   </div>
-                ) : orderedPlays.length === 0 ? (
+                ) : orderedItems.length === 0 ? (
                   <div className="p-4 bg-zinc-800 rounded-lg text-center text-gray-400">
-                    No plays assigned to this team yet.
+                    No plays or section dividers assigned to this team yet.
                   </div>
                 ) : (
                   <div className="max-h-64 overflow-y-auto space-y-1 bg-zinc-800 rounded-lg p-2">
-                    {orderedPlays.map((play, index) => (
-                      <div
-                        key={play.id}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, index)}
-                        onDragEnter={(e) => handleDragEnter(e, index)}
-                        onDragOver={handleDragOver}
-                        onDragEnd={handleDragEnd}
-                        className={`flex items-center gap-3 p-2 rounded cursor-grab active:cursor-grabbing transition-colors select-none ${
-                          draggedIndex === index 
-                            ? "bg-zinc-600 opacity-50" 
-                            : "hover:bg-zinc-700"
-                        }`}
-                        data-testid={`draggable-play-${play.id}`}
-                      >
-                        <GripVertical className="w-4 h-4 text-gray-500 flex-shrink-0" />
-                        <Checkbox
-                          checked={selectedPlays.includes(play.id)}
-                          onCheckedChange={() => togglePlaySelection(play.id)}
-                          data-testid={`checkbox-play-${play.id}`}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-white truncate">{play.name}</p>
-                          <p className="text-gray-400 text-xs truncate">
-                            {play.type} {play.formation && `• ${play.formation}`} {play.concept && `• ${play.concept}`}
-                          </p>
+                    {orderedItems.map((item, index) => {
+                      const itemKey = `${item.itemType}-${item.id}`;
+                      const isBlankPage = item.itemType === 'blankPage';
+                      
+                      return (
+                        <div
+                          key={itemKey}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, index)}
+                          onDragEnter={(e) => handleDragEnter(e, index)}
+                          onDragOver={handleDragOver}
+                          onDragEnd={handleDragEnd}
+                          className={`flex items-center gap-3 p-2 rounded cursor-grab active:cursor-grabbing transition-colors select-none ${
+                            draggedIndex === index 
+                              ? "bg-zinc-600 opacity-50" 
+                              : "hover:bg-zinc-700"
+                          } ${isBlankPage ? "border border-dashed border-gray-500" : ""}`}
+                          data-testid={`draggable-${item.itemType}-${item.id}`}
+                        >
+                          <GripVertical className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                          <Checkbox
+                            checked={selectedItems.includes(itemKey)}
+                            onCheckedChange={() => toggleItemSelection(itemKey)}
+                            data-testid={`checkbox-${item.itemType}-${item.id}`}
+                          />
+                          {isBlankPage ? (
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                <p className="text-gray-300 truncate">{item.title || "Untitled Section"}</p>
+                              </div>
+                              {item.notes && (
+                                <p className="text-gray-500 text-xs truncate ml-6">{item.notes}</p>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex-1 min-w-0">
+                              <p className="text-white truncate">{item.name}</p>
+                              <p className="text-gray-400 text-xs truncate">
+                                {item.type} {item.formation && `• ${item.formation}`} {item.concept && `• ${item.concept}`}
+                              </p>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -666,7 +747,7 @@ export default function GoogleDriveExportModal({
             {isConnected && !exportResult && (
               <Button
                 onClick={handleExport}
-                disabled={isExporting || exportMutation.isPending || orderedPlays.length === 0 || !documentName.trim()}
+                disabled={isExporting || exportMutation.isPending || orderedItems.length === 0 || !documentName.trim()}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
                 data-testid="button-generate-files"
               >
