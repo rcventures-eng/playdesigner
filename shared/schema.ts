@@ -251,7 +251,8 @@ export const COACH_ROLES = [
   "Offensive Coordinator",
   "Defensive Coordinator",
   "Special Teams",
-  "Assistant"
+  "Assistant",
+  "Student Coach"
 ] as const;
 
 export type CoachRole = typeof COACH_ROLES[number];
