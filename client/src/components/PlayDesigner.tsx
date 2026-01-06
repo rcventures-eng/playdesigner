@@ -3342,7 +3342,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
             className="bg-white hover:bg-gray-100 text-black"
             onClick={() => {
               // Navigate back to the team playbook
-              setLocation(`/team-playbooks?teamId=${fromPlaybookId}`);
+              setLocation(`/team-playbooks/${fromPlaybookId}`);
             }}
             data-testid="button-back-to-playbook"
           >
