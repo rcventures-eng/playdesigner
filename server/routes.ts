@@ -3170,7 +3170,7 @@ Return ONLY the JSON object, no markdown formatting or explanation.`;
     }
   });
 
-  // Create a new blank page
+  // Create a new page (blank, roster, or splits)
   app.post("/api/teams/:teamId/blank-pages", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
@@ -3188,13 +3188,32 @@ Return ONLY the JSON object, no markdown formatting or explanation.`;
         return res.status(404).json({ error: "Team not found or you don't have access" });
       }
 
-      // Count existing blank pages to create unique title
+      const { pageType = 'blank', pageData } = req.body;
+      
+      // Validate pageType
+      if (!['blank', 'roster', 'splits'].includes(pageType)) {
+        return res.status(400).json({ error: "Invalid page type. Must be 'blank', 'roster', or 'splits'" });
+      }
+
+      // Count existing pages of this type to create unique title
       const existingPages = await db.select({ count: sql<number>`count(*)` })
         .from(teamBlankPages)
-        .where(eq(teamBlankPages.teamId, teamId));
+        .where(and(
+          eq(teamBlankPages.teamId, teamId),
+          eq(teamBlankPages.pageType, pageType)
+        ));
       
       const pageNumber = (existingPages[0]?.count || 0) + 1;
-      const title = `Blank Page ${pageNumber}`;
+      
+      // Create title based on page type
+      let title: string;
+      if (pageType === 'roster') {
+        title = pageNumber === 1 ? 'Team Roster' : `Team Roster ${pageNumber}`;
+      } else if (pageType === 'splits') {
+        title = pageNumber === 1 ? 'Team Splits' : `Team Splits ${pageNumber}`;
+      } else {
+        title = `Blank Page ${pageNumber}`;
+      }
 
       // Get max display order from both plays and blank pages
       const [maxPlayOrder] = await db.select({ maxOrder: sql<number>`COALESCE(MAX(display_order), 0)` })
@@ -3207,20 +3226,32 @@ Return ONLY the JSON object, no markdown formatting or explanation.`;
       
       const displayOrder = Math.max(maxPlayOrder?.maxOrder || 0, maxBlankOrder?.maxOrder || 0) + 1;
 
+      // Initialize pageData for splits pages if not provided
+      let initialPageData = pageData;
+      if (pageType === 'splits' && !pageData) {
+        initialPageData = {
+          formations: [],
+          situations: [],
+          custom: []
+        };
+      }
+
       const [blankPage] = await db.insert(teamBlankPages).values({
         teamId,
         title,
         displayOrder,
+        pageType,
+        pageData: initialPageData,
       }).returning();
 
       res.json(blankPage);
     } catch (error: any) {
-      console.error("Create blank page error:", error);
-      res.status(500).json({ error: error.message || "Failed to create blank page" });
+      console.error("Create page error:", error);
+      res.status(500).json({ error: error.message || "Failed to create page" });
     }
   });
 
-  // Update a blank page
+  // Update a page (blank, roster, or splits)
   app.patch("/api/teams/:teamId/blank-pages/:pageId", requireAuth, async (req, res) => {
     try {
       const userId = req.session.userId!;
@@ -3239,12 +3270,13 @@ Return ONLY the JSON object, no markdown formatting or explanation.`;
         return res.status(404).json({ error: "Team not found or you don't have access" });
       }
 
-      const { title, customContent, displayOrder } = req.body;
-      const updateData: Partial<{ title: string; customContent: string | null; displayOrder: number }> = {};
+      const { title, customContent, displayOrder, pageData } = req.body;
+      const updateData: Partial<{ title: string; customContent: string | null; displayOrder: number; pageData: any }> = {};
       
       if (title !== undefined) updateData.title = title;
       if (customContent !== undefined) updateData.customContent = customContent;
       if (displayOrder !== undefined) updateData.displayOrder = displayOrder;
+      if (pageData !== undefined) updateData.pageData = pageData;
 
       const [updated] = await db.update(teamBlankPages)
         .set(updateData)
@@ -3252,13 +3284,13 @@ Return ONLY the JSON object, no markdown formatting or explanation.`;
         .returning();
 
       if (!updated) {
-        return res.status(404).json({ error: "Blank page not found" });
+        return res.status(404).json({ error: "Page not found" });
       }
 
       res.json(updated);
     } catch (error: any) {
-      console.error("Update blank page error:", error);
-      res.status(500).json({ error: error.message || "Failed to update blank page" });
+      console.error("Update page error:", error);
+      res.status(500).json({ error: error.message || "Failed to update page" });
     }
   });
 

@@ -1,0 +1,1008 @@
+Team Playbook - Expanded Page Types (Roster & Splits)
+Overview
+Expand the "Add Blank Page" feature in Team Playbooks to support multiple page types. Transform the single button into a dropdown menu with three options:
+
+Blank Page (existing functionality)
+Roster Page (new - auto-generated team roster)
+Splits Page (new - auto-generated team splits/statistics)
+
+All page types should render cleanly on 8.5" x 11" format for Google Docs export.
+
+UI Changes
+Change 1: Transform Button to Dropdown
+Before:
+[+ Add Blank Page]
+After:
+[+ Add Page Type ▼]
+    ├── Blank Page
+    ├── Roster Page
+    └── Splits Page
+Implementation:
+tsxconst AddPageTypeButton = ({ playbookId, onAddPage }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+  
+  const pageTypes = [
+    { 
+      id: 'blank', 
+      label: 'Blank Page', 
+      icon: FileIcon,
+      description: 'Empty divider page'
+    },
+    { 
+      id: 'roster', 
+      label: 'Roster Page', 
+      icon: UsersIcon,
+      description: 'Team players & coaches'
+    },
+    { 
+      id: 'splits', 
+      label: 'Splits Page', 
+      icon: ChartBarIcon,
+      description: 'Team statistics & splits'
+    }
+  ];
+  
+  const handleSelect = (pageType: string) => {
+    onAddPage(pageType);
+    setIsOpen(false);
+  };
+  
+  return (
+    <div className="add-page-dropdown" ref={dropdownRef}>
+      <button 
+        className="add-page-trigger"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <PlusIcon size={16} />
+        <span>Add Page Type</span>
+        <ChevronDownIcon size={14} className={isOpen ? 'rotated' : ''} />
+      </button>
+      
+      {isOpen && (
+        <div className="page-type-menu">
+          {pageTypes.map(type => (
+            <button
+              key={type.id}
+              className="page-type-option"
+              onClick={() => handleSelect(type.id)}
+            >
+              <type.icon size={18} className="option-icon" />
+              <div className="option-text">
+                <span className="option-label">{type.label}</span>
+                <span className="option-description">{type.description}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+Styling:
+css.add-page-dropdown {
+  position: relative;
+}
+
+.add-page-trigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: transparent;
+  border: 1px dashed #666;
+  border-radius: 8px;
+  color: #888;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.add-page-trigger:hover {
+  border-color: #f97316;
+  color: #f97316;
+  background: rgba(249, 115, 22, 0.1);
+}
+
+.add-page-trigger .rotated {
+  transform: rotate(180deg);
+}
+
+.page-type-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 220px;
+  background: #1a1a2e;
+  border: 1px solid #333;
+  border-radius: 10px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.page-type-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  background: transparent;
+  border: none;
+  color: white;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.2s;
+}
+
+.page-type-option:hover {
+  background: #2a2a3e;
+}
+
+.page-type-option:not(:last-child) {
+  border-bottom: 1px solid #333;
+}
+
+.option-icon {
+  color: #888;
+  flex-shrink: 0;
+}
+
+.page-type-option:hover .option-icon {
+  color: #f97316;
+}
+
+.option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.option-label {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.option-description {
+  font-size: 11px;
+  color: #666;
+}
+
+Page Type A: Blank Page (Existing)
+Keep existing functionality. No changes needed.
+
+Page Type B: Roster Page
+Data Model
+typescriptinterface RosterPage {
+  id: string;
+  playbookId: string;
+  type: 'roster';
+  title: string;              // Default: "Team Roster"
+  position: number;
+  players: RosterPlayer[];
+  coaches: RosterCoach[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface RosterPlayer {
+  id: string;
+  number: string;
+  name: string;
+  position: string;
+  grade?: string;             // For youth leagues: "5th Grade"
+  notes?: string;
+}
+
+interface RosterCoach {
+  id: string;
+  name: string;
+  role: string;               // "Head Coach", "Offensive Coordinator", etc.
+  phone?: string;
+  email?: string;
+}
+Auto-Generation Logic
+When "Roster Page" is selected, pull data from the team's existing roster (if available) or create a template:
+typescriptconst createRosterPage = async (playbookId: string) => {
+  // Get team associated with this playbook
+  const playbook = await getPlaybook(playbookId);
+  const teamId = playbook.teamId;
+  
+  // Fetch existing roster data if available
+  let players: RosterPlayer[] = [];
+  let coaches: RosterCoach[] = [];
+  
+  if (teamId) {
+    const team = await getTeam(teamId);
+    players = team.players || [];
+    coaches = team.coaches || [];
+  }
+  
+  // If no existing data, create template placeholders
+  if (players.length === 0) {
+    players = [
+      { id: '1', number: '', name: 'Player Name', position: 'Position', notes: '' },
+      { id: '2', number: '', name: 'Player Name', position: 'Position', notes: '' },
+      { id: '3', number: '', name: 'Player Name', position: 'Position', notes: '' },
+    ];
+  }
+  
+  if (coaches.length === 0) {
+    coaches = [
+      { id: '1', name: 'Coach Name', role: 'Head Coach', phone: '', email: '' },
+      { id: '2', name: 'Coach Name', role: 'Assistant Coach', phone: '', email: '' },
+    ];
+  }
+  
+  // Get next position in playbook
+  const entries = await getPlaybookEntries(playbookId);
+  const nextPosition = entries.length;
+  
+  // Create the roster page entry
+  const rosterPage = await db.insert(playbookEntries).values({
+    id: generateId(),
+    playbookId,
+    playId: null,
+    type: 'roster',
+    title: 'Team Roster',
+    position: nextPosition,
+    rosterData: JSON.stringify({ players, coaches }),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }).returning();
+  
+  return rosterPage[0];
+};
+Roster Page Display in Playbook List
+tsxconst RosterPageListItem = ({ entry, isSelected, onClick, onDelete }) => {
+  const rosterData = JSON.parse(entry.rosterData || '{}');
+  const playerCount = rosterData.players?.length || 0;
+  const coachCount = rosterData.coaches?.length || 0;
+  
+  return (
+    <div 
+      className={`playbook-item roster-page ${isSelected ? 'selected' : ''}`}
+      onClick={() => onClick(entry.id)}
+    >
+      <div className="roster-page-icon">
+        <UsersIcon size={24} />
+      </div>
+      
+      <div className="entry-info">
+        <span className="entry-title">{entry.title}</span>
+        <span className="entry-meta">
+          {playerCount} players • {coachCount} coaches
+        </span>
+      </div>
+      
+      {isSelected && (
+        <button 
+          className="delete-button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(entry.id);
+          }}
+        >
+          <TrashIcon size={18} />
+        </button>
+      )}
+    </div>
+  );
+};
+Roster Page Editor (Double-Click)
+tsxconst RosterPageEditor = ({ entry, onSave, onClose }) => {
+  const [title, setTitle] = useState(entry.title);
+  const [players, setPlayers] = useState(JSON.parse(entry.rosterData || '{}').players || []);
+  const [coaches, setCoaches] = useState(JSON.parse(entry.rosterData || '{}').coaches || []);
+  
+  const addPlayer = () => {
+    setPlayers([...players, {
+      id: generateId(),
+      number: '',
+      name: '',
+      position: '',
+      notes: ''
+    }]);
+  };
+  
+  const addCoach = () => {
+    setCoaches([...coaches, {
+      id: generateId(),
+      name: '',
+      role: '',
+      phone: '',
+      email: ''
+    }]);
+  };
+  
+  const updatePlayer = (id: string, field: string, value: string) => {
+    setPlayers(players.map(p => 
+      p.id === id ? { ...p, [field]: value } : p
+    ));
+  };
+  
+  const updateCoach = (id: string, field: string, value: string) => {
+    setCoaches(coaches.map(c => 
+      c.id === id ? { ...c, [field]: value } : c
+    ));
+  };
+  
+  const removePlayer = (id: string) => {
+    setPlayers(players.filter(p => p.id !== id));
+  };
+  
+  const removeCoach = (id: string) => {
+    setCoaches(coaches.filter(c => c.id !== id));
+  };
+  
+  const handleSave = () => {
+    onSave({
+      ...entry,
+      title,
+      rosterData: JSON.stringify({ players, coaches }),
+      updatedAt: new Date().toISOString()
+    });
+    onClose();
+  };
+  
+  return (
+    <div className="roster-editor-modal">
+      <div className="modal-header">
+        <h3>Edit Roster Page</h3>
+        <button onClick={onClose}>✕</button>
+      </div>
+      
+      <div className="modal-body">
+        <div className="form-group">
+          <label>Page Title</label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Team Roster"
+          />
+        </div>
+        
+        {/* PLAYERS SECTION */}
+        <div className="roster-section">
+          <div className="section-header">
+            <h4>Players</h4>
+            <button className="add-btn" onClick={addPlayer}>
+              <PlusIcon size={14} /> Add Player
+            </button>
+          </div>
+          
+          <div className="roster-table">
+            <div className="table-header">
+              <span className="col-num">#</span>
+              <span className="col-name">Name</span>
+              <span className="col-pos">Position</span>
+              <span className="col-notes">Notes</span>
+              <span className="col-action"></span>
+            </div>
+            
+            {players.map((player, index) => (
+              <div key={player.id} className="table-row">
+                <input
+                  className="col-num"
+                  value={player.number}
+                  onChange={(e) => updatePlayer(player.id, 'number', e.target.value)}
+                  placeholder="#"
+                />
+                <input
+                  className="col-name"
+                  value={player.name}
+                  onChange={(e) => updatePlayer(player.id, 'name', e.target.value)}
+                  placeholder="Player Name"
+                />
+                <input
+                  className="col-pos"
+                  value={player.position}
+                  onChange={(e) => updatePlayer(player.id, 'position', e.target.value)}
+                  placeholder="QB, WR, etc."
+                />
+                <input
+                  className="col-notes"
+                  value={player.notes || ''}
+                  onChange={(e) => updatePlayer(player.id, 'notes', e.target.value)}
+                  placeholder="Notes"
+                />
+                <button 
+                  className="col-action remove-btn"
+                  onClick={() => removePlayer(player.id)}
+                >
+                  <TrashIcon size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        {/* COACHES SECTION */}
+        <div className="roster-section">
+          <div className="section-header">
+            <h4>Coaches</h4>
+            <button className="add-btn" onClick={addCoach}>
+              <PlusIcon size={14} /> Add Coach
+            </button>
+          </div>
+          
+          <div className="roster-table">
+            <div className="table-header">
+              <span className="col-name">Name</span>
+              <span className="col-role">Role</span>
+              <span className="col-phone">Phone</span>
+              <span className="col-email">Email</span>
+              <span className="col-action"></span>
+            </div>
+            
+            {coaches.map((coach) => (
+              <div key={coach.id} className="table-row">
+                <input
+                  className="col-name"
+                  value={coach.name}
+                  onChange={(e) => updateCoach(coach.id, 'name', e.target.value)}
+                  placeholder="Coach Name"
+                />
+                <input
+                  className="col-role"
+                  value={coach.role}
+                  onChange={(e) => updateCoach(coach.id, 'role', e.target.value)}
+                  placeholder="Head Coach"
+                />
+                <input
+                  className="col-phone"
+                  value={coach.phone || ''}
+                  onChange={(e) => updateCoach(coach.id, 'phone', e.target.value)}
+                  placeholder="555-555-5555"
+                />
+                <input
+                  className="col-email"
+                  value={coach.email || ''}
+                  onChange={(e) => updateCoach(coach.id, 'email', e.target.value)}
+                  placeholder="email@team.com"
+                />
+                <button 
+                  className="col-action remove-btn"
+                  onClick={() => removeCoach(coach.id)}
+                >
+                  <TrashIcon size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      
+      <div className="modal-footer">
+        <button className="cancel-btn" onClick={onClose}>Cancel</button>
+        <button className="save-btn" onClick={handleSave}>Save</button>
+      </div>
+    </div>
+  );
+};
+
+Page Type C: Splits Page
+Data Model
+typescriptinterface SplitsPage {
+  id: string;
+  playbookId: string;
+  type: 'splits';
+  title: string;              // Default: "Team Splits"
+  position: number;
+  splitsData: TeamSplits;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface TeamSplits {
+  // Formation splits
+  formations: FormationSplit[];
+  
+  // Situation splits
+  situations: SituationSplit[];
+  
+  // Personnel splits
+  personnel: PersonnelSplit[];
+  
+  // Custom splits
+  custom: CustomSplit[];
+}
+
+interface FormationSplit {
+  id: string;
+  name: string;              // "Spread", "I-Form", "Trips Right"
+  runPlays: number;
+  passPlays: number;
+  percentage: number;
+}
+
+interface SituationSplit {
+  id: string;
+  situation: string;         // "1st & 10", "3rd & Long", "Red Zone"
+  runPlays: number;
+  passPlays: number;
+  totalPlays: number;
+}
+
+interface PersonnelSplit {
+  id: string;
+  personnel: string;         // "11 Personnel", "12 Personnel", "21 Personnel"
+  usage: number;             // Percentage
+  avgYards: number;
+}
+
+interface CustomSplit {
+  id: string;
+  label: string;
+  value: string;
+}
+Auto-Generation Logic
+typescriptconst createSplitsPage = async (playbookId: string) => {
+  // Get playbook entries to analyze
+  const entries = await getPlaybookEntries(playbookId);
+  const plays = entries.filter(e => e.type === 'play').map(e => e.play);
+  
+  // Calculate formation splits from existing plays
+  const formationCounts = {};
+  plays.forEach(play => {
+    const formation = play.formation || 'Unknown';
+    if (!formationCounts[formation]) {
+      formationCounts[formation] = { run: 0, pass: 0 };
+    }
+    if (play.concept === 'run') {
+      formationCounts[formation].run++;
+    } else {
+      formationCounts[formation].pass++;
+    }
+  });
+  
+  const formations = Object.entries(formationCounts).map(([name, counts]: [string, any]) => ({
+    id: generateId(),
+    name,
+    runPlays: counts.run,
+    passPlays: counts.pass,
+    percentage: Math.round(((counts.run + counts.pass) / plays.length) * 100)
+  }));
+  
+  // Calculate situation splits
+  const situationCounts = {};
+  plays.forEach(play => {
+    (play.situations || []).forEach(situation => {
+      if (!situationCounts[situation]) {
+        situationCounts[situation] = { run: 0, pass: 0 };
+      }
+      if (play.concept === 'run') {
+        situationCounts[situation].run++;
+      } else {
+        situationCounts[situation].pass++;
+      }
+    });
+  });
+  
+  const situations = Object.entries(situationCounts).map(([situation, counts]: [string, any]) => ({
+    id: generateId(),
+    situation,
+    runPlays: counts.run,
+    passPlays: counts.pass,
+    totalPlays: counts.run + counts.pass
+  }));
+  
+  // Create template if no data
+  if (formations.length === 0) {
+    formations.push(
+      { id: '1', name: 'Spread', runPlays: 0, passPlays: 0, percentage: 0 },
+      { id: '2', name: 'Trips Right', runPlays: 0, passPlays: 0, percentage: 0 },
+      { id: '3', name: 'I-Form', runPlays: 0, passPlays: 0, percentage: 0 }
+    );
+  }
+  
+  if (situations.length === 0) {
+    situations.push(
+      { id: '1', situation: '1st & 10', runPlays: 0, passPlays: 0, totalPlays: 0 },
+      { id: '2', situation: '3rd & Long', runPlays: 0, passPlays: 0, totalPlays: 0 },
+      { id: '3', situation: 'Red Zone', runPlays: 0, passPlays: 0, totalPlays: 0 }
+    );
+  }
+  
+  const splitsData: TeamSplits = {
+    formations,
+    situations,
+    personnel: [],
+    custom: []
+  };
+  
+  // Get next position
+  const allEntries = await getPlaybookEntries(playbookId);
+  const nextPosition = allEntries.length;
+  
+  // Create the splits page entry
+  const splitsPage = await db.insert(playbookEntries).values({
+    id: generateId(),
+    playbookId,
+    playId: null,
+    type: 'splits',
+    title: 'Team Splits',
+    position: nextPosition,
+    splitsData: JSON.stringify(splitsData),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }).returning();
+  
+  return splitsPage[0];
+};
+Splits Page Editor (Double-Click)
+tsxconst SplitsPageEditor = ({ entry, onSave, onClose }) => {
+  const [title, setTitle] = useState(entry.title);
+  const [splitsData, setSplitsData] = useState<TeamSplits>(
+    JSON.parse(entry.splitsData || '{}')
+  );
+  
+  const updateFormation = (id: string, field: string, value: string | number) => {
+    setSplitsData({
+      ...splitsData,
+      formations: splitsData.formations.map(f =>
+        f.id === id ? { ...f, [field]: value } : f
+      )
+    });
+  };
+  
+  const addFormation = () => {
+    setSplitsData({
+      ...splitsData,
+      formations: [...splitsData.formations, {
+        id: generateId(),
+        name: '',
+        runPlays: 0,
+        passPlays: 0,
+        percentage: 0
+      }]
+    });
+  };
+  
+  const removeFormation = (id: string) => {
+    setSplitsData({
+      ...splitsData,
+      formations: splitsData.formations.filter(f => f.id !== id)
+    });
+  };
+  
+  // Similar functions for situations, personnel, custom...
+  
+  const handleSave = () => {
+    onSave({
+      ...entry,
+      title,
+      splitsData: JSON.stringify(splitsData),
+      updatedAt: new Date().toISOString()
+    });
+    onClose();
+  };
+  
+  return (
+    <div className="splits-editor-modal">
+      <div className="modal-header">
+        <h3>Edit Splits Page</h3>
+        <button onClick={onClose}>✕</button>
+      </div>
+      
+      <div className="modal-body">
+        <div className="form-group">
+          <label>Page Title</label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Team Splits"
+          />
+        </div>
+        
+        {/* FORMATION SPLITS */}
+        <div className="splits-section">
+          <div className="section-header">
+            <h4>Formation Splits</h4>
+            <button className="add-btn" onClick={addFormation}>
+              <PlusIcon size={14} /> Add Formation
+            </button>
+          </div>
+          
+          <div className="splits-table">
+            <div className="table-header">
+              <span className="col-name">Formation</span>
+              <span className="col-run">Run</span>
+              <span className="col-pass">Pass</span>
+              <span className="col-pct">%</span>
+              <span className="col-action"></span>
+            </div>
+            
+            {splitsData.formations.map(formation => (
+              <div key={formation.id} className="table-row">
+                <input
+                  className="col-name"
+                  value={formation.name}
+                  onChange={(e) => updateFormation(formation.id, 'name', e.target.value)}
+                  placeholder="Formation Name"
+                />
+                <input
+                  className="col-run"
+                  type="number"
+                  value={formation.runPlays}
+                  onChange={(e) => updateFormation(formation.id, 'runPlays', parseInt(e.target.value) || 0)}
+                />
+                <input
+                  className="col-pass"
+                  type="number"
+                  value={formation.passPlays}
+                  onChange={(e) => updateFormation(formation.id, 'passPlays', parseInt(e.target.value) || 0)}
+                />
+                <input
+                  className="col-pct"
+                  type="number"
+                  value={formation.percentage}
+                  onChange={(e) => updateFormation(formation.id, 'percentage', parseInt(e.target.value) || 0)}
+                />
+                <button 
+                  className="col-action remove-btn"
+                  onClick={() => removeFormation(formation.id)}
+                >
+                  <TrashIcon size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        {/* SITUATION SPLITS */}
+        <div className="splits-section">
+          <div className="section-header">
+            <h4>Situation Splits</h4>
+            <button className="add-btn" onClick={() => addSituation()}>
+              <PlusIcon size={14} /> Add Situation
+            </button>
+          </div>
+          
+          {/* Similar table structure */}
+        </div>
+        
+        {/* CUSTOM SPLITS */}
+        <div className="splits-section">
+          <div className="section-header">
+            <h4>Custom Data</h4>
+            <button className="add-btn" onClick={() => addCustom()}>
+              <PlusIcon size={14} /> Add Row
+            </button>
+          </div>
+          
+          {/* Simple key-value rows */}
+        </div>
+      </div>
+      
+      <div className="modal-footer">
+        <button className="cancel-btn" onClick={onClose}>Cancel</button>
+        <button className="save-btn" onClick={handleSave}>Save</button>
+      </div>
+    </div>
+  );
+};
+
+Google Docs Export Format (8.5" x 11")
+Document Generation for All Page Types
+typescriptconst generatePlaybookDocument = async (playbookId: string) => {
+  const entries = await getPlaybookEntries(playbookId);
+  const playbook = await getPlaybook(playbookId);
+  
+  // Create document with 8.5 x 11 page size
+  const doc = new PDFDocument({
+    size: 'LETTER', // 8.5" x 11"
+    margins: {
+      top: 72,      // 1 inch
+      bottom: 72,
+      left: 72,
+      right: 72
+    }
+  });
+  
+  // Title page
+  doc.fontSize(28).text(playbook.name, { align: 'center' });
+  doc.moveDown(2);
+  doc.fontSize(14).text(playbook.teamName || 'Team Playbook', { align: 'center' });
+  doc.addPage();
+  
+  // Generate each page by type
+  for (const entry of entries) {
+    switch (entry.type) {
+      case 'play':
+        await renderPlayPage(doc, entry.play);
+        break;
+      case 'blank':
+        renderBlankPage(doc, entry);
+        break;
+      case 'roster':
+        renderRosterPage(doc, entry);
+        break;
+      case 'splits':
+        renderSplitsPage(doc, entry);
+        break;
+    }
+    
+    // Add new page after each entry (except last)
+    if (entries.indexOf(entry) < entries.length - 1) {
+      doc.addPage();
+    }
+  }
+  
+  return doc;
+};
+Roster Page Export (Players at Top, Coaches Below)
+typescriptconst renderRosterPage = (doc: PDFDocument, entry: PlaybookEntry) => {
+  const { players, coaches } = JSON.parse(entry.rosterData || '{}');
+  const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+  
+  // Page Title - Centered
+  doc.fontSize(24).text(entry.title || 'Team Roster', { align: 'center' });
+  doc.moveDown(1.5);
+  
+  // PLAYERS SECTION - At top
+  doc.fontSize(16).fillColor('#333').text('Players', { underline: true });
+  doc.moveDown(0.5);
+  
+  // Player table header
+  const playerColWidths = {
+    number: 40,
+    name: 150,
+    position: 80,
+    notes: pageWidth - 270
+  };
+  
+  doc.fontSize(10).fillColor('#666');
+  doc.text('#', doc.x, doc.y, { width: playerColWidths.number });
+  doc.text('Name', doc.x + playerColWidths.number, doc.y - 12, { width: playerColWidths.name });
+  doc.text('Position', doc.x + playerColWidths.number + playerColWidths.name, doc.y - 12, { width: playerColWidths.position });
+  doc.text('Notes', doc.x + playerColWidths.number + playerColWidths.name + playerColWidths.position, doc.y - 12);
+  doc.moveDown(0.5);
+  
+  // Horizontal line
+  doc.moveTo(doc.page.margins.left, doc.y)
+     .lineTo(doc.page.width - doc.page.margins.right, doc.y)
+     .stroke('#ddd');
+  doc.moveDown(0.5);
+  
+  // Player rows
+  doc.fontSize(11).fillColor('#000');
+  players.forEach((player: RosterPlayer) => {
+    const y = doc.y;
+    doc.text(player.number || '-', doc.page.margins.left, y, { width: playerColWidths.number });
+    doc.text(player.name, doc.page.margins.left + playerColWidths.number, y, { width: playerColWidths.name });
+    doc.text(player.position, doc.page.margins.left + playerColWidths.number + playerColWidths.name, y, { width: playerColWidths.position });
+    doc.text(player.notes || '', doc.page.margins.left + playerColWidths.number + playerColWidths.name + playerColWidths.position, y);
+    doc.moveDown(0.8);
+  });
+  
+  doc.moveDown(1.5);
+  
+  // COACHES SECTION - Below players
+  doc.fontSize(16).fillColor('#333').text('Coaching Staff', { underline: true });
+  doc.moveDown(0.5);
+  
+  // Coach table header
+  const coachColWidths = {
+    name: 150,
+    role: 120,
+    phone: 100,
+    email: pageWidth - 370
+  };
+  
+  doc.fontSize(10).fillColor('#666');
+  doc.text('Name', doc.x, doc.y, { width: coachColWidths.name });
+  doc.text('Role', doc.x + coachColWidths.name, doc.y - 12, { width: coachColWidths.role });
+  doc.text('Phone', doc.x + coachColWidths.name + coachColWidths.role, doc.y - 12, { width: coachColWidths.phone });
+  doc.text('Email', doc.x + coachColWidths.name + coachColWidths.role + coachColWidths.phone, doc.y - 12);
+  doc.moveDown(0.5);
+  
+  // Horizontal line
+  doc.moveTo(doc.page.margins.left, doc.y)
+     .lineTo(doc.page.width - doc.page.margins.right, doc.y)
+     .stroke('#ddd');
+  doc.moveDown(0.5);
+  
+  // Coach rows
+  doc.fontSize(11).fillColor('#000');
+  coaches.forEach((coach: RosterCoach) => {
+    const y = doc.y;
+    doc.text(coach.name, doc.page.margins.left, y, { width: coachColWidths.name });
+    doc.text(coach.role, doc.page.margins.left + coachColWidths.name, y, { width: coachColWidths.role });
+    doc.text(coach.phone || '', doc.page.margins.left + coachColWidths.name + coachColWidths.role, y, { width: coachColWidths.phone });
+    doc.text(coach.email || '', doc.page.margins.left + coachColWidths.name + coachColWidths.role + coachColWidths.phone, y);
+    doc.moveDown(0.8);
+  });
+};
+Splits Page Export
+typescriptconst renderSplitsPage = (doc: PDFDocument, entry: PlaybookEntry) => {
+  const splitsData = JSON.parse(entry.splitsData || '{}');
+  const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+  
+  // Page Title - Centered
+  doc.fontSize(24).text(entry.title || 'Team Splits', { align: 'center' });
+  doc.moveDown(1.5);
+  
+  // FORMATION SPLITS
+  if (splitsData.formations?.length > 0) {
+    doc.fontSize(16).fillColor('#333').text('Formation Splits', { underline: true });
+    doc.moveDown(0.5);
+    
+    // Table header
+    doc.fontSize(10).fillColor('#666');
+    doc.text('Formation', doc.x, doc.y, { width: 150 });
+    doc.text('Run', doc.x + 150, doc.y - 12, { width: 60, align: 'center' });
+    doc.text('Pass', doc.x + 210, doc.y - 12, { width: 60, align: 'center' });
+    doc.text('%', doc.x + 270, doc.y - 12, { width: 60, align: 'center' });
+    doc.moveDown(0.5);
+    
+    // Line
+    doc.moveTo(doc.page.margins.left, doc.y)
+       .lineTo(doc.page.margins.left + 330, doc.y)
+       .stroke('#ddd');
+    doc.moveDown(0.5);
+    
+    // Rows
+    doc.fontSize(11).fillColor('#000');
+    splitsData.formations.forEach((f: FormationSplit) => {
+      const y = doc.y;
+      doc.text(f.name, doc.page.margins.left, y, { width: 150 });
+      doc.text(f.runPlays.toString(), doc.page.margins.left + 150, y, { width: 60, align: 'center' });
+      doc.text(f.passPlays.toString(), doc.page.margins.left + 210, y, { width: 60, align: 'center' });
+      doc.text(`${f.percentage}%`, doc.page.margins.left + 270, y, { width: 60, align: 'center' });
+      doc.moveDown(0.8);
+    });
+    
+    doc.moveDown(1);
+  }
+  
+  // SITUATION SPLITS
+  if (splitsData.situations?.length > 0) {
+    doc.fontSize(16).fillColor('#333').text('Situation Splits', { underline: true });
+    doc.moveDown(0.5);
+    
+    // Similar table structure...
+  }
+  
+  // CUSTOM DATA
+  if (splitsData.custom?.length > 0) {
+    doc.fontSize(16).fillColor('#333').text('Additional Notes', { underline: true });
+    doc.moveDown(0.5);
+    
+    splitsData.custom.forEach((item: CustomSplit) => {
+      doc.fontSize(11).fillColor('#000');
+      doc.text(`${item.label}: ${item.value}`);
+      doc.moveDown(0.5);
+    });
+  }
+};
+
+Summary
+Page TypeContentAuto-Generated FromBlank PageEmpty dividerN/A - template onlyRoster PagePlayers (top) + Coaches (bottom)Team data or templateSplits PageFormation, Situation, Personnel splitsExisting playbook plays
+Files to Modify
+Frontend:
+
+client/src/components/TeamPlaybook.tsx — Replace button with dropdown
+client/src/components/AddPageTypeDropdown.tsx — Create new component
+client/src/components/RosterPageEditor.tsx — Create new component
+client/src/components/SplitsPageEditor.tsx — Create new component
+client/src/components/PlaybookEntry.tsx — Handle roster/splits display
+
+Backend:
+
+server/routes.ts — Add endpoints for roster/splits page creation
+shared/schema.ts — Update PlaybookEntry schema with new types
+server/documentGenerator.ts — Add roster/splits page rendering

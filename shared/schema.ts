@@ -164,12 +164,14 @@ export const insertPlayTeamSchema = createInsertSchema(playTeams).omit({
 export type InsertPlayTeam = z.infer<typeof insertPlayTeamSchema>;
 export type PlayTeam = typeof playTeams.$inferSelect;
 
-// Blank pages for playbook dividers/sections
+// Playbook pages (blank dividers, roster pages, splits pages)
 export const teamBlankPages = pgTable("team_blank_pages", {
   id: serial("id").primaryKey(),
   teamId: integer("team_id").notNull().references(() => teams.id, { onDelete: 'cascade' }),
   title: text("title").notNull().default("Blank Page 1"),
   customContent: text("custom_content"),
+  pageType: text("page_type").notNull().default("blank"), // 'blank' | 'roster' | 'splits'
+  pageData: jsonb("page_data"), // JSON data for splits (formations, situations, custom)
   displayOrder: integer("display_order").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -181,6 +183,35 @@ export const insertTeamBlankPageSchema = createInsertSchema(teamBlankPages).omit
 
 export type InsertTeamBlankPage = z.infer<typeof insertTeamBlankPageSchema>;
 export type TeamBlankPage = typeof teamBlankPages.$inferSelect;
+
+// Type definitions for splits page data
+export interface SplitsPageData {
+  formations: FormationSplit[];
+  situations: SituationSplit[];
+  custom: CustomSplit[];
+}
+
+export interface FormationSplit {
+  id: string;
+  name: string;
+  runPlays: number;
+  passPlays: number;
+  percentage: number;
+}
+
+export interface SituationSplit {
+  id: string;
+  situation: string;
+  runPlays: number;
+  passPlays: number;
+  totalPlays: number;
+}
+
+export interface CustomSplit {
+  id: string;
+  label: string;
+  value: string;
+}
 
 // Team coaching staff
 export const teamCoaches = pgTable("team_coaches", {
