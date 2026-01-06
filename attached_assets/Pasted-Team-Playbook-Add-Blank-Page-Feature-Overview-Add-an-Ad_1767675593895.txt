@@ -1,0 +1,415 @@
+Team Playbook - Add Blank Page Feature
+Overview
+Add an "Add Blank Page" feature to the Team Playbooks section on BOTH desktop and mobile. This allows coaches to insert blank divider pages into their playbooks that can be customized later or used as section separators (e.g., between offensive and defensive plays, or between different formations).
+
+Feature Requirements
+Button Placement
+Add an "Add Blank Page" button in the Team Playbooks header area, positioned to the far right of the text/title area.
+Desktop Layout:
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Team Playbook: [Playbook Name]                      [+ Add Blank Page]     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Play 1 | Play 2 | Blank Page 1 | Play 3 | Blank Page 2 | Play 4 | ...     │
+└─────────────────────────────────────────────────────────────────────────────┘
+Mobile Layout:
+┌────────────────────────────────────────┐
+│ Team Playbook              [+ Blank]   │
+├────────────────────────────────────────┤
+│ ...                                    │
+└────────────────────────────────────────┘
+Naming Convention
+
+First blank page: "Blank Page 1"
+Second blank page: "Blank Page 2"
+And so on...
+No limit on the number of blank pages
+
+The numbering should be based on the COUNT of existing blank pages in that specific playbook, not a global counter.
+
+Implementation
+Data Model
+Add a new type or flag to distinguish blank pages from regular plays:
+typescriptinterface PlaybookEntry {
+  id: string;
+  playbookId: string;
+  playId: string | null;      // null for blank pages
+  position: number;           // Order in playbook
+  type: 'play' | 'blank';     // ADD THIS
+  blankPageTitle?: string;    // "Blank Page 1", etc. (only for blank type)
+  customContent?: string;     // Optional: user-added notes/text for blank pages
+  createdAt: string;
+  updatedAt: string;
+}
+Or use a separate table:
+typescript// Option B: Separate blank pages table
+interface BlankPage {
+  id: string;
+  playbookId: string;
+  title: string;              // "Blank Page 1"
+  position: number;
+  customContent?: string;
+  backgroundColor?: string;   // Optional: custom divider color
+  createdAt: string;
+}
+Button Component
+tsxconst AddBlankPageButton = ({ playbookId, existingBlankPages, onAdd }) => {
+  const handleAddBlankPage = async () => {
+    // Calculate next blank page number
+    const blankPageCount = existingBlankPages.length;
+    const nextNumber = blankPageCount + 1;
+    const title = `Blank Page ${nextNumber}`;
+    
+    await onAdd({
+      playbookId,
+      type: 'blank',
+      blankPageTitle: title,
+      position: getNextPosition(), // Add to end of playbook
+    });
+  };
+  
+  return (
+    <button 
+      className="add-blank-page-btn"
+      onClick={handleAddBlankPage}
+    >
+      <PlusIcon size={16} />
+      <span className="btn-text-full">Add Blank Page</span>
+      <span className="btn-text-short">Blank</span>
+    </button>
+  );
+};
+Styling
+css.add-blank-page-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: transparent;
+  border: 1px dashed #666;
+  border-radius: 8px;
+  color: #888;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.add-blank-page-btn:hover {
+  border-color: #f97316;
+  color: #f97316;
+  background: rgba(249, 115, 22, 0.1);
+}
+
+.add-blank-page-btn:active {
+  transform: scale(0.98);
+}
+
+/* Responsive text */
+.btn-text-short {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .btn-text-full {
+    display: none;
+  }
+  .btn-text-short {
+    display: inline;
+  }
+}
+Calculate Next Blank Page Number
+typescriptconst getNextBlankPageNumber = (playbookEntries: PlaybookEntry[]): number => {
+  // Filter to only blank pages in this playbook
+  const blankPages = playbookEntries.filter(entry => entry.type === 'blank');
+  
+  if (blankPages.length === 0) {
+    return 1;
+  }
+  
+  // Find the highest existing number
+  const existingNumbers = blankPages.map(page => {
+    const match = page.blankPageTitle?.match(/Blank Page (\d+)/);
+    return match ? parseInt(match[1], 10) : 0;
+  });
+  
+  const maxNumber = Math.max(...existingNumbers);
+  return maxNumber + 1;
+};
+API Endpoint
+typescript// POST /api/playbooks/:playbookId/blank-page
+app.post('/api/playbooks/:playbookId/blank-page', async (req, res) => {
+  const { playbookId } = req.params;
+  const userId = req.user.id;
+  
+  // Verify user owns this playbook
+  const playbook = await db.query.playbooks.findFirst({
+    where: and(
+      eq(playbooks.id, playbookId),
+      eq(playbooks.userId, userId)
+    )
+  });
+  
+  if (!playbook) {
+    return res.status(404).json({ error: 'Playbook not found' });
+  }
+  
+  // Get existing entries to calculate position and blank page number
+  const existingEntries = await db.query.playbookEntries.findMany({
+    where: eq(playbookEntries.playbookId, playbookId),
+    orderBy: desc(playbookEntries.position)
+  });
+  
+  const blankPages = existingEntries.filter(e => e.type === 'blank');
+  const nextNumber = getNextBlankPageNumber(blankPages);
+  const nextPosition = existingEntries.length > 0 
+    ? existingEntries[0].position + 1 
+    : 0;
+  
+  // Create blank page entry
+  const newEntry = await db.insert(playbookEntries).values({
+    id: generateId(),
+    playbookId,
+    playId: null,
+    type: 'blank',
+    blankPageTitle: `Blank Page ${nextNumber}`,
+    position: nextPosition,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }).returning();
+  
+  res.json(newEntry[0]);
+});
+Blank Page Display in Playbook List
+tsxconst PlaybookEntry = ({ entry, isSelected, onClick, onDelete }) => {
+  if (entry.type === 'blank') {
+    return (
+      <div 
+        className={`playbook-item blank-page ${isSelected ? 'selected' : ''}`}
+        onClick={() => onClick(entry.id)}
+      >
+        <div className="blank-page-icon">
+          <FileIcon size={24} />
+        </div>
+        
+        <div className="entry-info">
+          <span className="entry-title">{entry.blankPageTitle}</span>
+          <span className="entry-type">Divider Page</span>
+        </div>
+        
+        {isSelected && (
+          <button 
+            className="delete-button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(entry.id);
+            }}
+          >
+            <TrashIcon size={18} />
+          </button>
+        )}
+      </div>
+    );
+  }
+  
+  // Regular play entry
+  return (
+    <div className={`playbook-item play ${isSelected ? 'selected' : ''}`}>
+      {/* ... existing play display */}
+    </div>
+  );
+};
+Blank Page Styling:
+css.playbook-item.blank-page {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #2a2a3e;
+  border: 2px dashed #444;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.playbook-item.blank-page:hover {
+  border-color: #666;
+  background: #333;
+}
+
+.playbook-item.blank-page.selected {
+  border-color: #f97316;
+  border-style: solid;
+  background: rgba(249, 115, 22, 0.1);
+}
+
+.blank-page-icon {
+  width: 80px;
+  height: 50px;
+  background: #1a1a2e;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+}
+
+.entry-type {
+  font-size: 11px;
+  color: #666;
+  font-style: italic;
+}
+Double-Click to Edit Blank Page
+When a blank page is double-clicked, open it in an edit mode where users can:
+
+Rename the page (e.g., "DEFENSE SECTION" or "Red Zone Plays")
+Add custom notes/content
+Optionally change background color
+
+tsxconst handleBlankPageDoubleClick = (entryId: string) => {
+  setEditingBlankPageId(entryId);
+  setShowBlankPageEditor(true);
+};
+
+// Blank Page Editor Modal
+const BlankPageEditor = ({ entry, onSave, onClose }) => {
+  const [title, setTitle] = useState(entry.blankPageTitle);
+  const [content, setContent] = useState(entry.customContent || '');
+  
+  const handleSave = async () => {
+    await onSave({
+      ...entry,
+      blankPageTitle: title,
+      customContent: content,
+      updatedAt: new Date().toISOString()
+    });
+    onClose();
+  };
+  
+  return (
+    <div className="blank-page-editor-modal">
+      <div className="modal-header">
+        <h3>Edit Blank Page</h3>
+        <button onClick={onClose}>✕</button>
+      </div>
+      
+      <div className="modal-body">
+        <label>
+          Page Title
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="e.g., DEFENSE SECTION"
+          />
+        </label>
+        
+        <label>
+          Notes (Optional)
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="Add any notes for this divider page..."
+            rows={4}
+          />
+        </label>
+      </div>
+      
+      <div className="modal-footer">
+        <button className="cancel-btn" onClick={onClose}>Cancel</button>
+        <button className="save-btn" onClick={handleSave}>Save</button>
+      </div>
+    </div>
+  );
+};
+Google Drive Sync Integration
+When syncing the playbook to Google Drive, blank pages should be included as actual pages in the exported document/PDF.
+typescriptconst syncPlaybookToGoogleDrive = async (playbookId: string) => {
+  const entries = await getPlaybookEntries(playbookId);
+  
+  // Build document pages in order
+  const pages = entries.map((entry, index) => {
+    if (entry.type === 'blank') {
+      // Create a blank/divider page
+      return {
+        type: 'divider',
+        title: entry.blankPageTitle,
+        content: entry.customContent || '',
+        pageNumber: index + 1
+      };
+    } else {
+      // Create a play page
+      return {
+        type: 'play',
+        playData: entry.play,
+        pageNumber: index + 1
+      };
+    }
+  });
+  
+  // Generate PDF/document with all pages including blanks
+  const document = await generatePlaybookDocument(pages);
+  
+  // Upload to Google Drive
+  await uploadToGoogleDrive(document);
+};
+
+// When generating the document/PDF
+const generatePlaybookDocument = async (pages: Page[]) => {
+  const doc = new PDFDocument();
+  
+  for (const page of pages) {
+    if (page.type === 'divider') {
+      // Add a divider/blank page
+      doc.addPage();
+      doc.fontSize(24).text(page.title, { align: 'center' });
+      
+      if (page.content) {
+        doc.fontSize(14).text(page.content, { align: 'center' });
+      }
+    } else {
+      // Add play page (existing logic)
+      doc.addPage();
+      await renderPlayToPage(doc, page.playData);
+    }
+  }
+  
+  return doc;
+};
+Drag to Reorder (Optional Enhancement)
+Allow blank pages to be reordered within the playbook list:
+typescript// Use existing drag-to-reorder logic if available
+// Blank pages should be reorderable just like plays
+
+const handleDragEnd = async (result: DropResult) => {
+  if (!result.destination) return;
+  
+  const entries = Array.from(playbookEntries);
+  const [removed] = entries.splice(result.source.index, 1);
+  entries.splice(result.destination.index, 0, removed);
+  
+  // Update positions
+  const updatedEntries = entries.map((entry, index) => ({
+    ...entry,
+    position: index
+  }));
+  
+  await updatePlaybookOrder(playbookId, updatedEntries);
+};
+
+Summary
+ComponentDescriptionButton"Add Blank Page" in header, far rightNamingAuto-increments: Blank Page 1, 2, 3...DisplayDashed border, file icon, "Divider Page" labelSingle-clickSelects, shows delete optionDouble-clickOpens editor to customize title/notesGoogle SyncExports as actual pages in playbook document
+Files to Modify
+Frontend:
+
+client/src/components/TeamPlaybook.tsx — Add button, handle blank page display
+client/src/components/PlaybookEntry.tsx — Render blank pages differently
+client/src/components/BlankPageEditor.tsx — Create new modal component
+client/src/components/mobile/TeamPlaybook.tsx — Same changes for mobile
+
+Backend:
+
+server/routes.ts — Add POST endpoint for creating blank pages
+shared/schema.ts — Update PlaybookEntry schema with type field
+
+Google Drive Integration:
+
+server/googleDrive.ts (or equivalent) — Include blank pages in sync/export
