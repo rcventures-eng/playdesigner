@@ -42,6 +42,7 @@ import {
   Trash2,
   Pencil,
   Upload,
+  FileText,
 } from "lucide-react";
 
 export default function TeamPlaybooks() {
@@ -226,6 +227,29 @@ export default function TeamPlaybooks() {
       toast({
         title: "Error",
         description: error.message || "Failed to update team",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const createBlankPageMutation = useMutation({
+    mutationFn: async (teamId: number) => {
+      return apiRequest("POST", `/api/teams/${teamId}/blank-pages`);
+    },
+    onSuccess: () => {
+      if (selectedTeamId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/teams", selectedTeamId, "plays-for-export"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/teams", selectedTeamId, "blank-pages"] });
+      }
+      toast({
+        title: "Blank page added!",
+        description: "A new blank divider page has been added to the playbook.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create blank page",
         variant: "destructive",
       });
     },
@@ -593,12 +617,26 @@ export default function TeamPlaybooks() {
 
                 {/* Right Column: Plays Rail (YouTube Playlist Style) - Now 50% width */}
                 <div className="flex-1 flex flex-col border-l border-gray-200 pl-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3 flex-shrink-0">
-                    Plays in this Playbook
-                    <span className="ml-2 text-sm font-normal text-gray-500">
-                      ({teamPlays.length} {teamPlays.length === 1 ? "play" : "plays"})
-                    </span>
-                  </h3>
+                  <div className="flex items-center justify-between mb-3 flex-shrink-0">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Plays in this Playbook
+                      <span className="ml-2 text-sm font-normal text-gray-500">
+                        ({teamPlays.length} {teamPlays.length === 1 ? "play" : "plays"})
+                      </span>
+                    </h3>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => createBlankPageMutation.mutate(selectedTeam.id)}
+                      disabled={createBlankPageMutation.isPending}
+                      className="border-dashed border-gray-400 text-gray-600 hover:bg-gray-50"
+                      data-testid="button-add-blank-page"
+                    >
+                      <FileText className="w-4 h-4 mr-1" />
+                      <span className="hidden sm:inline">Add Blank Page</span>
+                      <span className="sm:hidden">Blank</span>
+                    </Button>
+                  </div>
                   <div className="flex-1 overflow-y-auto min-h-0">
                     {playsLoading ? (
                       <div className="text-gray-500 animate-pulse py-4">Loading plays...</div>
