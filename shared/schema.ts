@@ -7,7 +7,7 @@ import { z } from "zod";
 export const session = pgTable("session", {
   sid: varchar("sid").primaryKey(),
   sess: json("sess").notNull(),
-  expire: timestamp("expire").notNull(),
+  expire: timestamp("expire", { precision: 6 }).notNull(),
 });
 
 export const users = pgTable("users", {
