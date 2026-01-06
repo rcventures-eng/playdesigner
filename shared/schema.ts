@@ -162,6 +162,24 @@ export const insertPlayTeamSchema = createInsertSchema(playTeams).omit({
 export type InsertPlayTeam = z.infer<typeof insertPlayTeamSchema>;
 export type PlayTeam = typeof playTeams.$inferSelect;
 
+// Blank pages for playbook dividers/sections
+export const teamBlankPages = pgTable("team_blank_pages", {
+  id: serial("id").primaryKey(),
+  teamId: integer("team_id").notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  title: text("title").notNull().default("Blank Page 1"),
+  customContent: text("custom_content"),
+  displayOrder: integer("display_order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertTeamBlankPageSchema = createInsertSchema(teamBlankPages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertTeamBlankPage = z.infer<typeof insertTeamBlankPageSchema>;
+export type TeamBlankPage = typeof teamBlankPages.$inferSelect;
+
 // Team coaching staff
 export const teamCoaches = pgTable("team_coaches", {
   id: serial("id").primaryKey(),
