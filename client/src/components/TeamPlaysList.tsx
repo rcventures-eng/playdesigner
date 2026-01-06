@@ -3,7 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { GripVertical, Trash2, FileText } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { PlayPreview } from "@/components/PlayPreview";
+import { PlayThumbnail } from "@/components/PlayThumbnail";
 import { CONCEPT_OPTIONS } from "@/components/TagPopover";
 import type { TeamBlankPage } from "@shared/schema";
 
@@ -23,6 +23,7 @@ interface PlayItem {
   situation?: string | null;
   data?: any;
   displayOrder?: number;
+  notes?: string | null;
 }
 
 // Combined list item for sorting
@@ -340,13 +341,16 @@ export default function TeamPlaysList({ teamId, plays, onPlayClick, onPlayDouble
               <GripVertical className="w-5 h-5" />
             </div>
 
-            {/* Play thumbnail - larger size for better visibility */}
+            {/* Play thumbnail with smart centering */}
             <div className="w-32 h-20 flex-shrink-0 rounded-md overflow-hidden border border-gray-200">
               {useStructuredPreview ? (
-                <PlayPreview
+                <PlayThumbnail
                   playData={play.data}
                   playType={play.type as "offense" | "defense" | "special"}
-                  scale={0.25}
+                  notes={play.notes}
+                  width={128}
+                  height={80}
+                  showNoteIndicator={true}
                 />
               ) : hasRasterPreview ? (
                 <img 
