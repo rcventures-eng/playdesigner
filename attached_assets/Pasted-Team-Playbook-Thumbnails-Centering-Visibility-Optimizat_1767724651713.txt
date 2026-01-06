@@ -1,0 +1,480 @@
+Team Playbook Thumbnails - Centering, Visibility & Optimization
+Overview
+Improve the play diagram thumbnails in the Team Playbooks "YouTube-style playlist" view on BOTH desktop and mobile. Current issues:
+
+Plays are not centered in thumbnails
+Display is inconsistent across different plays
+Lines are too thin/hard to see at thumbnail size
+Too much wasted space showing empty endzone area
+Offensive and defensive plays may need different framing logic
+
+
+Problem Analysis
+Current Issues
+Issue 1: Poor Centering
+
+Plays appear off-center, often pushed to one side
+The thumbnail captures the entire field instead of focusing on the play content
+
+Issue 2: Wasted Space
+
+Large portions of the thumbnail show empty endzone/field
+The play name is already in text metadata, so endzone title space is redundant
+Players and routes are too small relative to thumbnail size
+
+Issue 3: Low Visibility
+
+Line weights designed for full-size canvas are too thin at thumbnail scale
+Player circles are hard to distinguish
+Route colors may not pop against the green field
+
+Issue 4: Offensive vs Defensive Differences
+
+Offensive plays: Players start at LOS, routes go UP toward endzone
+Defensive plays: Players spread across field, assignments go DOWN toward LOS
+One-size-fits-all framing doesn't work for both
+
+
+Solution: Smart Bounding Box + Enhanced Rendering
+Step 1: Calculate Play Bounding Box
+Instead of capturing the entire field, calculate a bounding box around the actual play content (players + routes).
+typescriptinterface BoundingBox {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+  width: number;
+  height: number;
+  centerX: number;
+  centerY: number;
+}
+
+const calculatePlayBoundingBox = (
+  players: Player[], 
+  routes: Route[],
+  playType: 'offense' | 'defense'
+): BoundingBox => {
+  // Collect all points (players + route points)
+  const allPoints: { x: number; y: number }[] = [];
+  
+  // Add player positions
+  players.forEach(player => {
+    allPoints.push({ x: player.x, y: player.y });
+  });
+  
+  // Add route points
+  routes.forEach(route => {
+    route.points.forEach(point => {
+      allPoints.push({ x: point.x, y: point.y });
+    });
+  });
+  
+  if (allPoints.length === 0) {
+    // Fallback to default field center
+    return getDefaultBoundingBox(playType);
+  }
+  
+  // Calculate bounds
+  const minX = Math.min(...allPoints.map(p => p.x));
+  const maxX = Math.max(...allPoints.map(p => p.x));
+  const minY = Math.min(...allPoints.map(p => p.y));
+  const maxY = Math.max(...allPoints.map(p => p.y));
+  
+  // Add padding (percentage of dimensions)
+  const paddingPercent = 0.15; // 15% padding
+  const width = maxX - minX;
+  const height = maxY - minY;
+  const paddingX = width * paddingPercent;
+  const paddingY = height * paddingPercent;
+  
+  return {
+    minX: minX - paddingX,
+    maxX: maxX + paddingX,
+    minY: minY - paddingY,
+    maxY: maxY + paddingY,
+    width: width + (paddingX * 2),
+    height: height + (paddingY * 2),
+    centerX: (minX + maxX) / 2,
+    centerY: (minY + maxY) / 2
+  };
+};
+Step 2: Different Framing for Offense vs Defense
+typescriptconst getOptimizedViewport = (
+  boundingBox: BoundingBox,
+  playType: 'offense' | 'defense',
+  fieldConfig: FieldConfig
+): Viewport => {
+  const { losY, pixelsPerYard } = fieldConfig;
+  
+  if (playType === 'offense') {
+    // Offensive plays: Include LOS at bottom, routes go up
+    // Frame from just below LOS to top of routes
+    
+    const viewMinY = Math.min(boundingBox.minY, losY + (pixelsPerYard * 2)); // Include 2 yards behind LOS
+    const viewMaxY = boundingBox.maxY;
+    
+    // Ensure we capture full width of formation
+    const viewMinX = boundingBox.minX;
+    const viewMaxX = boundingBox.maxX;
+    
+    return {
+      x: viewMinX,
+      y: viewMinY,
+      width: viewMaxX - viewMinX,
+      height: viewMaxY - viewMinY,
+      includeEndzone: false // Don't waste space on endzone
+    };
+  } 
+  else {
+    // Defensive plays: Players spread out, assignments go toward LOS
+    // Frame from top of defensive players down to LOS
+    
+    const viewMinY = boundingBox.minY;
+    const viewMaxY = Math.max(boundingBox.maxY, losY - (pixelsPerYard * 1)); // Include 1 yard past LOS
+    
+    const viewMinX = boundingBox.minX;
+    const viewMaxX = boundingBox.maxX;
+    
+    return {
+      x: viewMinX,
+      y: viewMinY,
+      width: viewMaxX - viewMinX,
+      height: viewMaxY - viewMinY,
+      includeEndzone: false
+    };
+  }
+};
+Step 3: Enhanced Thumbnail Rendering
+Create a dedicated thumbnail renderer with increased line weights and sizes.
+typescriptinterface ThumbnailConfig {
+  width: number;           // Thumbnail output width (e.g., 160px)
+  height: number;          // Thumbnail output height (e.g., 100px)
+  playerCircleRadius: number;
+  routeLineWidth: number;
+  losLineWidth: number;
+  playerLabelSize: number;
+  backgroundColor: string;
+}
+
+const THUMBNAIL_CONFIG: ThumbnailConfig = {
+  width: 160,
+  height: 100,
+  playerCircleRadius: 8,      // Larger than normal (was ~5)
+  routeLineWidth: 3,          // Thicker than normal (was ~2)
+  losLineWidth: 2,            // Visible LOS
+  playerLabelSize: 8,         // Readable labels
+  backgroundColor: '#22c55e'  // Field green
+};
+
+const renderPlayThumbnail = (
+  play: Play,
+  canvas: HTMLCanvasElement,
+  config: ThumbnailConfig = THUMBNAIL_CONFIG
+): void => {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  
+  canvas.width = config.width;
+  canvas.height = config.height;
+  
+  const players = play.players || [];
+  const routes = play.routes || [];
+  const playType = play.type as 'offense' | 'defense';
+  
+  // Calculate optimal viewport
+  const boundingBox = calculatePlayBoundingBox(players, routes, playType);
+  const viewport = getOptimizedViewport(boundingBox, playType, FOOTBALL_CONFIG.field);
+  
+  // Calculate scale to fit viewport into thumbnail
+  const scaleX = config.width / viewport.width;
+  const scaleY = config.height / viewport.height;
+  const scale = Math.min(scaleX, scaleY) * 0.9; // 90% to leave some margin
+  
+  // Calculate offset to center the play
+  const offsetX = (config.width - viewport.width * scale) / 2 - viewport.x * scale;
+  const offsetY = (config.height - viewport.height * scale) / 2 - viewport.y * scale;
+  
+  // Clear and fill background
+  ctx.fillStyle = config.backgroundColor;
+  ctx.fillRect(0, 0, config.width, config.height);
+  
+  // Draw yard lines (subtle)
+  drawThumbnailYardLines(ctx, viewport, scale, offsetX, offsetY);
+  
+  // Draw LOS
+  drawThumbnailLOS(ctx, viewport, scale, offsetX, offsetY, config.losLineWidth);
+  
+  // Draw routes (BEFORE players so players appear on top)
+  routes.forEach(route => {
+    drawThumbnailRoute(ctx, route, players, scale, offsetX, offsetY, config.routeLineWidth);
+  });
+  
+  // Draw players
+  players.forEach(player => {
+    drawThumbnailPlayer(ctx, player, scale, offsetX, offsetY, config.playerCircleRadius, config.playerLabelSize);
+  });
+};
+Step 4: Enhanced Route Drawing for Thumbnails
+typescriptconst drawThumbnailRoute = (
+  ctx: CanvasRenderingContext2D,
+  route: Route,
+  players: Player[],
+  scale: number,
+  offsetX: number,
+  offsetY: number,
+  lineWidth: number
+): void => {
+  if (route.points.length < 2) return;
+  
+  const player = players.find(p => p.id === route.playerId);
+  
+  // Determine route color
+  let strokeColor: string;
+  if (route.routeType === 'man') {
+    strokeColor = '#888888'; // Gray for man coverage
+  } else if (route.routeType === 'run') {
+    strokeColor = '#000000'; // Black for run
+  } else if (route.routeType === 'block') {
+    strokeColor = '#FFFFFF'; // White for block
+  } else if (route.routeType === 'blitz') {
+    strokeColor = '#ef4444'; // Red for blitz
+  } else {
+    // Pass route - use player color
+    strokeColor = player?.color || '#FFFFFF';
+  }
+  
+  ctx.beginPath();
+  ctx.strokeStyle = strokeColor;
+  ctx.lineWidth = lineWidth;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  
+  // Set dash pattern for certain route types
+  if (route.routeType === 'man' || route.isMotion) {
+    ctx.setLineDash([4, 3]);
+  } else {
+    ctx.setLineDash([]);
+  }
+  
+  // Draw route path
+  const startPoint = route.points[0];
+  ctx.moveTo(startPoint.x * scale + offsetX, startPoint.y * scale + offsetY);
+  
+  for (let i = 1; i < route.points.length; i++) {
+    const point = route.points[i];
+    ctx.lineTo(point.x * scale + offsetX, point.y * scale + offsetY);
+  }
+  
+  ctx.stroke();
+  ctx.setLineDash([]);
+  
+  // Draw arrowhead at end
+  if (route.points.length >= 2) {
+    const lastPoint = route.points[route.points.length - 1];
+    const prevPoint = route.points[route.points.length - 2];
+    drawThumbnailArrowhead(
+      ctx, 
+      prevPoint.x * scale + offsetX,
+      prevPoint.y * scale + offsetY,
+      lastPoint.x * scale + offsetX,
+      lastPoint.y * scale + offsetY,
+      strokeColor,
+      lineWidth
+    );
+  }
+  
+  // Draw primary indicator if applicable
+  if (route.isPrimary) {
+    const endPoint = route.points[route.points.length - 1];
+    const x = endPoint.x * scale + offsetX;
+    const y = endPoint.y * scale + offsetY;
+    
+    ctx.beginPath();
+    ctx.arc(x, y, 5, 0, Math.PI * 2);
+    ctx.fillStyle = 'white';
+    ctx.fill();
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    
+    ctx.fillStyle = 'black';
+    ctx.font = 'bold 6px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('1', x, y);
+  }
+};
+Step 5: Enhanced Player Drawing for Thumbnails
+typescriptconst drawThumbnailPlayer = (
+  ctx: CanvasRenderingContext2D,
+  player: Player,
+  scale: number,
+  offsetX: number,
+  offsetY: number,
+  radius: number,
+  labelSize: number
+): void => {
+  const x = player.x * scale + offsetX;
+  const y = player.y * scale + offsetY;
+  
+  // Draw circle with border for better visibility
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fillStyle = player.color;
+  ctx.fill();
+  
+  // Add contrasting border
+  ctx.strokeStyle = getContrastBorder(player.color);
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  
+  // Draw label
+  ctx.fillStyle = getContrastText(player.color);
+  ctx.font = `bold ${labelSize}px Arial`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(player.label, x, y);
+};
+
+// Helper: Get contrasting border color
+const getContrastBorder = (bgColor: string): string => {
+  // Dark backgrounds get light border, light backgrounds get dark border
+  const rgb = hexToRgb(bgColor);
+  if (!rgb) return '#FFFFFF';
+  
+  const brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000;
+  return brightness > 128 ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.5)';
+};
+
+// Helper: Get contrasting text color
+const getContrastText = (bgColor: string): string => {
+  const rgb = hexToRgb(bgColor);
+  if (!rgb) return '#FFFFFF';
+  
+  const brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000;
+  return brightness > 128 ? '#000000' : '#FFFFFF';
+};
+Step 6: Subtle Yard Lines for Context
+typescriptconst drawThumbnailYardLines = (
+  ctx: CanvasRenderingContext2D,
+  viewport: Viewport,
+  scale: number,
+  offsetX: number,
+  offsetY: number
+): void => {
+  const { pixelsPerYard, losY } = FOOTBALL_CONFIG.field;
+  
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'; // Very subtle
+  ctx.lineWidth = 1;
+  
+  // Draw yard lines every 5 yards within viewport
+  for (let yard = 0; yard <= 100; yard += 5) {
+    const y = losY - (yard * pixelsPerYard); // Assuming losY is reference
+    const scaledY = y * scale + offsetY;
+    
+    if (scaledY >= 0 && scaledY <= ctx.canvas.height) {
+      ctx.beginPath();
+      ctx.moveTo(0, scaledY);
+      ctx.lineTo(ctx.canvas.width, scaledY);
+      ctx.stroke();
+    }
+  }
+};
+
+const drawThumbnailLOS = (
+  ctx: CanvasRenderingContext2D,
+  viewport: Viewport,
+  scale: number,
+  offsetX: number,
+  offsetY: number,
+  lineWidth: number
+): void => {
+  const { losY } = FOOTBALL_CONFIG.field;
+  const scaledY = losY * scale + offsetY;
+  
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)'; // More visible than yard lines
+  ctx.lineWidth = lineWidth;
+  
+  ctx.beginPath();
+  ctx.moveTo(0, scaledY);
+  ctx.lineTo(ctx.canvas.width, scaledY);
+  ctx.stroke();
+};
+Step 7: React Component for Thumbnail
+tsxconst PlayThumbnail = ({ play, width = 160, height = 100, className = '' }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  
+  useEffect(() => {
+    if (canvasRef.current && play) {
+      renderPlayThumbnail(play, canvasRef.current, {
+        ...THUMBNAIL_CONFIG,
+        width,
+        height
+      });
+    }
+  }, [play, width, height]);
+  
+  return (
+    <canvas
+      ref={canvasRef}
+      width={width}
+      height={height}
+      className={`play-thumbnail ${className}`}
+    />
+  );
+};
+Styling:
+css.play-thumbnail {
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Ensure crisp rendering */
+.play-thumbnail {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+Step 8: Usage in Playbook List
+tsxconst PlaybookListItem = ({ play, entry, isSelected, onClick, onDelete }) => {
+  return (
+    <div 
+      className={`playbook-item ${isSelected ? 'selected' : ''}`}
+      onClick={() => onClick(entry.id)}
+    >
+      <div className="play-thumbnail-container">
+        <PlayThumbnail 
+          play={play} 
+          width={120} 
+          height={75}
+        />
+      </div>
+      
+      <div className="play-info">
+        <span className="play-number">#{entry.position + 1}</span>
+        <span className="play-name">{play.name}</span>
+        <span className="play-type">{play.type}</span>
+      </div>
+      
+      {isSelected && (
+        <button className="delete-button" onClick={(e) => {
+          e.stopPropagation();
+          onDelete(entry.id);
+        }}>
+          <TrashIcon size={18} />
+        </button>
+      )}
+    </div>
+  );
+};
+
+Configuration Reference
+ParameterThumbnail ValueFull Canvas ValueNotesPlayer circle radius8px12-15pxLarger relative to thumbnailRoute line width3px2-3pxThicker for visibilityLOS line width2px1-2pxMore prominentPlayer label font8px bold10-12pxScaled for thumbnailYard line opacity15%20-30%Subtle backgroundLOS opacity60%80-100%Key reference line
+
+Summary
+FixDescriptionSmart bounding boxCalculate actual play bounds, ignore empty spaceOffense/Defense framingDifferent viewport logic for play directionIncreased line weights3px routes, 2px LOS for thumbnail visibilityLarger player circles8px radius with contrasting bordersRemove endzone wasteCrop to play content, not full fieldCentered renderingCalculate proper offsets to center in thumbnail
+Files to Modify
+
+client/src/components/PlayThumbnail.tsx — Create/update thumbnail renderer
+client/src/components/TeamPlaybook.tsx — Use new thumbnail component
+client/src/components/PlaybookListItem.tsx — Integrate thumbnail
+client/src/lib/thumbnailRenderer.ts — Create dedicated thumbnail rendering logic

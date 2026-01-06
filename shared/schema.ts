@@ -70,6 +70,8 @@ export const plays = pgTable("plays", {
   isArchived: boolean("is_archived").default(false),
   clonedFromId: integer("cloned_from_id"),
   createdAt: timestamp("created_at").defaultNow(),
+  thumbnailBase64: text("thumbnail_base64"),
+  notes: text("notes"),
 });
 
 export const insertPlaySchema = createInsertSchema(plays).omit({
