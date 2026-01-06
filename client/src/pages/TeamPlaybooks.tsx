@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
 import { Team } from "@shared/schema";
@@ -73,6 +73,18 @@ export default function TeamPlaybooks() {
 
   // Google Drive export modal state (admin only)
   const [showExportModal, setShowExportModal] = useState(false);
+
+  // Auto-select team from URL query param (e.g., when returning from view-only mode)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const teamIdParam = params.get("teamId");
+    if (teamIdParam) {
+      const teamId = parseInt(teamIdParam, 10);
+      if (!isNaN(teamId)) {
+        setSelectedTeamId(teamId);
+      }
+    }
+  }, []);
 
   const { data: user, isLoading: userLoading } = useQuery<{
     id: string;
