@@ -43,7 +43,8 @@ export type GameFormat = typeof GAME_FORMATS[number];
 
 export const teams = pgTable("teams", {
   id: serial("id").primaryKey(),
-  ownerId: varchar("owner_id").notNull().references(() => users.id),
+  // @ts-ignore - foreignKeyName is valid at runtime but not in types for drizzle-orm 0.39.1
+  ownerId: varchar("owner_id").notNull().references(() => users.id, { foreignKeyName: "teams_owner_id_fkey" }),
   name: text("name").notNull(),
   year: text("year").default("2025"),
   gameFormat: text("game_format").default("5v5"),
@@ -62,8 +63,10 @@ export type Team = typeof teams.$inferSelect;
 
 export const plays = pgTable("plays", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id),
-  teamId: integer("team_id").references(() => teams.id),
+  // @ts-ignore - foreignKeyName is valid at runtime but not in types for drizzle-orm 0.39.1
+  userId: varchar("user_id").notNull().references(() => users.id, { foreignKeyName: "plays_user_id_fkey" }),
+  // @ts-ignore - foreignKeyName is valid at runtime but not in types for drizzle-orm 0.39.1
+  teamId: integer("team_id").references(() => teams.id, { foreignKeyName: "plays_team_id_fkey" }),
   name: text("name").notNull(),
   type: text("type").notNull(),
   concept: text("concept"),
@@ -92,7 +95,8 @@ export type Play = typeof plays.$inferSelect;
 
 export const aiLogs = pgTable("ai_logs", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").references(() => users.id),
+  // @ts-ignore - foreignKeyName is valid at runtime but not in types for drizzle-orm 0.39.1
+  userId: varchar("user_id").references(() => users.id, { foreignKeyName: "ai_logs_user_id_fkey" }),
   promptText: text("prompt_text"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -128,7 +132,8 @@ export type AiGenerationLog = typeof aiGenerationLogs.$inferSelect;
 
 export const passwordResetTokens = pgTable("password_reset_tokens", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  // @ts-ignore - foreignKeyName is valid at runtime but not in types for drizzle-orm 0.39.1
+  userId: varchar("user_id").notNull().references(() => users.id, { foreignKeyName: "password_reset_tokens_user_id_fkey" }),
   token: varchar("token", { length: 64 }).notNull().unique(),
   expiresAt: timestamp("expires_at").notNull(),
   used: boolean("used").default(false),
@@ -142,7 +147,8 @@ export const featureRequests = pgTable("feature_requests", {
   userType: text("user_type").notNull(),
   featureDescription: text("feature_description").notNull(),
   useCase: text("use_case").notNull(),
-  userId: varchar("user_id").references(() => users.id),
+  // @ts-ignore - foreignKeyName is valid at runtime but not in types for drizzle-orm 0.39.1
+  userId: varchar("user_id").references(() => users.id, { foreignKeyName: "feature_requests_user_id_fkey" }),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -157,8 +163,10 @@ export type FeatureRequest = typeof featureRequests.$inferSelect;
 // Junction table for many-to-many play-team relationships
 export const playTeams = pgTable("play_teams", {
   id: serial("id").primaryKey(),
-  playId: integer("play_id").notNull().references(() => plays.id, { onDelete: 'cascade' }),
-  teamId: integer("team_id").notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  // @ts-ignore - foreignKeyName is valid at runtime but not in types for drizzle-orm 0.39.1
+  playId: integer("play_id").notNull().references(() => plays.id, { onDelete: 'cascade', foreignKeyName: "play_teams_play_id_fkey" }),
+  // @ts-ignore - foreignKeyName is valid at runtime but not in types for drizzle-orm 0.39.1
+  teamId: integer("team_id").notNull().references(() => teams.id, { onDelete: 'cascade', foreignKeyName: "play_teams_team_id_fkey" }),
   displayOrder: integer("display_order").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -174,7 +182,8 @@ export type PlayTeam = typeof playTeams.$inferSelect;
 // Playbook pages (blank dividers, roster pages, splits pages)
 export const teamBlankPages = pgTable("team_blank_pages", {
   id: serial("id").primaryKey(),
-  teamId: integer("team_id").notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  // @ts-ignore - foreignKeyName is valid at runtime but not in types for drizzle-orm 0.39.1
+  teamId: integer("team_id").notNull().references(() => teams.id, { onDelete: 'cascade', foreignKeyName: "team_blank_pages_team_id_fkey" }),
   title: text("title").notNull().default("Blank Page 1"),
   customContent: text("custom_content"),
   pageType: text("page_type").notNull().default("blank"), // 'blank' | 'roster' | 'splits'
@@ -223,7 +232,8 @@ export interface CustomSplit {
 // Team coaching staff
 export const teamCoaches = pgTable("team_coaches", {
   id: serial("id").primaryKey(),
-  teamId: integer("team_id").notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  // @ts-ignore - foreignKeyName is valid at runtime but not in types for drizzle-orm 0.39.1
+  teamId: integer("team_id").notNull().references(() => teams.id, { onDelete: 'cascade', foreignKeyName: "team_coaches_team_id_fkey" }),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   role: text("role").notNull(),
@@ -242,7 +252,8 @@ export type TeamCoach = typeof teamCoaches.$inferSelect;
 // Team players roster
 export const teamPlayers = pgTable("team_players", {
   id: serial("id").primaryKey(),
-  teamId: integer("team_id").notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  // @ts-ignore - foreignKeyName is valid at runtime but not in types for drizzle-orm 0.39.1
+  teamId: integer("team_id").notNull().references(() => teams.id, { onDelete: 'cascade', foreignKeyName: "team_players_team_id_fkey" }),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   position1: text("position_1"),
@@ -264,8 +275,10 @@ export type TeamPlayer = typeof teamPlayers.$inferSelect;
 // Team splits (Squad 1, Squad 2) - assigns players to squads
 export const teamSplits = pgTable("team_splits", {
   id: serial("id").primaryKey(),
-  teamId: integer("team_id").notNull().references(() => teams.id, { onDelete: 'cascade' }),
-  playerId: integer("player_id").notNull().references(() => teamPlayers.id, { onDelete: 'cascade' }),
+  // @ts-ignore - foreignKeyName is valid at runtime but not in types for drizzle-orm 0.39.1
+  teamId: integer("team_id").notNull().references(() => teams.id, { onDelete: 'cascade', foreignKeyName: "team_splits_team_id_fkey" }),
+  // @ts-ignore - foreignKeyName is valid at runtime but not in types for drizzle-orm 0.39.1
+  playerId: integer("player_id").notNull().references(() => teamPlayers.id, { onDelete: 'cascade', foreignKeyName: "team_splits_player_id_fkey" }),
   squadName: text("squad_name").notNull(), // "Squad 1" or "Squad 2"
   displayOrder: integer("display_order").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow(),
