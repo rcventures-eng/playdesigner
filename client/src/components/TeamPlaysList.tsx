@@ -134,6 +134,7 @@ export default function TeamPlaysList({ teamId, plays, onPlayClick, onPlayDouble
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/teams", teamId, "blank-pages"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/teams", teamId, "plays-for-export"] });
       toast({
         title: "Blank page removed",
         description: "The blank page has been removed from the playbook.",
@@ -149,16 +150,17 @@ export default function TeamPlaysList({ teamId, plays, onPlayClick, onPlayDouble
   });
 
   const reorderMutation = useMutation({
-    mutationFn: async (playOrder: number[]) => {
-      return apiRequest("POST", `/api/teams/${teamId}/reorder-plays`, { playOrder });
+    mutationFn: async (itemOrder: { type: 'play' | 'blankPage'; id: number }[]) => {
+      return apiRequest("POST", `/api/teams/${teamId}/reorder-items`, { itemOrder });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/teams", teamId, "plays-for-export"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/teams", teamId, "blank-pages"] });
     },
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to save play order",
+        description: error.message || "Failed to save item order",
         variant: "destructive",
       });
     },
@@ -188,7 +190,6 @@ export default function TeamPlaysList({ teamId, plays, onPlayClick, onPlayDouble
       return;
     }
 
-    // For now, only reorder plays (blank pages not included in reorder API yet)
     const newItems = [...localItems];
     const [draggedItem] = newItems.splice(draggedIndex, 1);
     newItems.splice(dropIndex, 0, draggedItem);
@@ -197,9 +198,12 @@ export default function TeamPlaysList({ teamId, plays, onPlayClick, onPlayDouble
     setDraggedIndex(null);
     setDragOverIndex(null);
 
-    // Only send play IDs for reordering (plays only for now)
-    const playOrder = newItems.filter(item => item.itemType === 'play').map(item => item.id);
-    reorderMutation.mutate(playOrder);
+    // Send both plays and blank pages in order for unified reordering
+    const itemOrder = newItems.map(item => ({
+      type: item.itemType,
+      id: item.id,
+    }));
+    reorderMutation.mutate(itemOrder);
   };
 
   const handleDragEnd = () => {

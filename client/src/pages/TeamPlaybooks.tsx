@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
-import { Team } from "@shared/schema";
+import { Team, TeamBlankPage } from "@shared/schema";
 import TopNav from "@/components/TopNav";
 import TeamPlaysList from "@/components/TeamPlaysList";
 import TeamRosterCard from "@/components/TeamRosterCard";
@@ -74,6 +74,12 @@ export default function TeamPlaybooks() {
 
   // Google Drive export modal state (admin only)
   const [showExportModal, setShowExportModal] = useState(false);
+
+  // Blank page editor modal state
+  const [showBlankPageEditor, setShowBlankPageEditor] = useState(false);
+  const [editingBlankPage, setEditingBlankPage] = useState<TeamBlankPage | null>(null);
+  const [blankPageTitle, setBlankPageTitle] = useState("");
+  const [blankPageContent, setBlankPageContent] = useState("");
 
   // Auto-select team from URL query param (e.g., when returning from view-only mode)
   useEffect(() => {
@@ -254,6 +260,54 @@ export default function TeamPlaybooks() {
       });
     },
   });
+
+  const updateBlankPageMutation = useMutation({
+    mutationFn: async (data: { pageId: number; teamId: number; title: string; customContent?: string }) => {
+      return apiRequest("PATCH", `/api/teams/${data.teamId}/blank-pages/${data.pageId}`, {
+        title: data.title,
+        customContent: data.customContent,
+      });
+    },
+    onSuccess: () => {
+      if (selectedTeamId) {
+        // Invalidate both blank-pages and plays-for-export to refresh merged list
+        queryClient.invalidateQueries({ queryKey: ["/api/teams", selectedTeamId, "blank-pages"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/teams", selectedTeamId, "plays-for-export"] });
+      }
+      setShowBlankPageEditor(false);
+      setEditingBlankPage(null);
+      setBlankPageTitle("");
+      setBlankPageContent("");
+      toast({
+        title: "Blank page updated!",
+        description: "The blank page has been saved.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update blank page",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleBlankPageDoubleClick = (blankPage: TeamBlankPage) => {
+    setEditingBlankPage(blankPage);
+    setBlankPageTitle(blankPage.title);
+    setBlankPageContent(blankPage.customContent || "");
+    setShowBlankPageEditor(true);
+  };
+
+  const handleSaveBlankPage = () => {
+    if (!editingBlankPage || !selectedTeamId) return;
+    updateBlankPageMutation.mutate({
+      pageId: editingBlankPage.id,
+      teamId: selectedTeamId,
+      title: blankPageTitle.trim() || editingBlankPage.title,
+      customContent: blankPageContent.trim() || undefined,
+    });
+  };
 
   const handleEditTeam = (team: Team) => {
     setEditTeamId(team.id);
@@ -645,6 +699,7 @@ export default function TeamPlaybooks() {
                         teamId={selectedTeam.id} 
                         plays={teamPlays}
                         onPlayDoubleClick={(playId) => navigate(`/?loadPlay=${playId}&viewOnly=true&fromPlaybook=${selectedTeam.id}`)}
+                        onBlankPageDoubleClick={handleBlankPageDoubleClick}
                       />
                     )}
                   </div>
@@ -961,6 +1016,73 @@ export default function TeamPlaybooks() {
                 data-testid="button-submit-edit"
               >
                 {updateTeamMutation.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Blank Page Editor Modal */}
+      <Dialog open={showBlankPageEditor} onOpenChange={setShowBlankPageEditor}>
+        <DialogContent className="sm:max-w-md bg-zinc-900 border-zinc-800 text-white">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <FileText className="w-5 h-5 text-gray-400" />
+              Edit Blank Page
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Edit the title and notes for this divider page.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="blank-page-title" className="text-white">
+                Title
+              </Label>
+              <Input
+                id="blank-page-title"
+                value={blankPageTitle}
+                onChange={(e) => setBlankPageTitle(e.target.value)}
+                placeholder="e.g., Running Plays, 3rd Down Conversions"
+                className="bg-zinc-800 border-zinc-700 text-white placeholder:text-gray-500"
+                data-testid="input-blank-page-title"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="blank-page-content" className="text-white">
+                Notes (optional)
+              </Label>
+              <textarea
+                id="blank-page-content"
+                value={blankPageContent}
+                onChange={(e) => setBlankPageContent(e.target.value)}
+                placeholder="Add any notes or section descriptions..."
+                rows={4}
+                className="w-full rounded-md bg-zinc-800 border border-zinc-700 text-white placeholder:text-gray-500 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                data-testid="textarea-blank-page-content"
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowBlankPageEditor(false);
+                  setEditingBlankPage(null);
+                  setBlankPageTitle("");
+                  setBlankPageContent("");
+                }}
+                className="border-zinc-700 text-white hover:bg-zinc-800"
+                data-testid="button-cancel-blank-page"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveBlankPage}
+                disabled={updateBlankPageMutation.isPending}
+                className="bg-orange-500 hover:bg-orange-600 text-white"
+                data-testid="button-save-blank-page"
+              >
+                {updateBlankPageMutation.isPending ? "Saving..." : "Save"}
               </Button>
             </div>
           </div>

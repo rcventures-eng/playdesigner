@@ -2475,6 +2475,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Reorder plays and blank pages (combined items) within a team playbook
+  app.post("/api/teams/:teamId/reorder-items", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const teamId = parseInt(req.params.teamId);
+      if (isNaN(teamId)) {
+        return res.status(400).json({ error: "Invalid team ID" });
+      }
+
+      const { itemOrder } = req.body;
+      if (!Array.isArray(itemOrder)) {
+        return res.status(400).json({ error: "itemOrder must be an array of { type, id } objects" });
+      }
+
+      // Verify user owns the team
+      const [team] = await db.select().from(teams).where(
+        and(eq(teams.id, teamId), eq(teams.ownerId, userId))
+      ).limit(1);
+      
+      if (!team) {
+        return res.status(404).json({ error: "Team not found or you don't have access" });
+      }
+
+      // Update displayOrder for each item
+      for (let i = 0; i < itemOrder.length; i++) {
+        const item = itemOrder[i];
+        if (item.type === 'play') {
+          await db.update(playTeams)
+            .set({ displayOrder: i })
+            .where(and(
+              eq(playTeams.teamId, teamId),
+              eq(playTeams.playId, item.id)
+            ));
+        } else if (item.type === 'blankPage') {
+          await db.update(teamBlankPages)
+            .set({ displayOrder: i })
+            .where(and(
+              eq(teamBlankPages.teamId, teamId),
+              eq(teamBlankPages.id, item.id)
+            ));
+        }
+      }
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Reorder items error:", error);
+      res.status(500).json({ error: error.message || "Failed to reorder items" });
+    }
+  });
+
   // ================== TEAM ROSTER: COACHES ==================
 
   // Get all coaches for a team
