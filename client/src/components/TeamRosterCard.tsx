@@ -48,6 +48,7 @@ import { UsersRound } from "lucide-react";
 interface TeamRosterCardProps {
   teamId: number;
   gameFormat?: GameFormat;
+  onAdvancedSplits?: () => void;
 }
 
 // Helper to determine if a color is dark and needs white text
@@ -94,7 +95,7 @@ function parseColors(colorString: string | null | undefined): string[] {
   return colors;
 }
 
-export default function TeamRosterCard({ teamId, gameFormat = "5v5" }: TeamRosterCardProps) {
+export default function TeamRosterCard({ teamId, gameFormat = "5v5", onAdvancedSplits }: TeamRosterCardProps) {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -877,9 +878,22 @@ export default function TeamRosterCard({ teamId, gameFormat = "5v5" }: TeamRoste
 
         {/* Splits Section */}
         <div className="border-t border-gray-200 pt-4">
-          <div className="flex items-center gap-2 text-primary mb-3">
-            <UsersRound className="w-4 h-4" />
-            <span className="font-semibold">Splits</span>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2 text-primary">
+              <UsersRound className="w-4 h-4" />
+              <span className="font-semibold">Splits</span>
+            </div>
+            {onAdvancedSplits && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onAdvancedSplits}
+                className="text-xs h-7"
+                data-testid="button-advanced-splits"
+              >
+                Advanced Splits
+              </Button>
+            )}
           </div>
 
           {splitsLoading ? (
