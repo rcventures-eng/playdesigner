@@ -3,11 +3,11 @@ import { pgTable, text, varchar, serial, timestamp, boolean, jsonb, integer, jso
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Session table for connect-pg-simple (express-session storage)
+// Session table managed by connect-pg-simple - included here so Drizzle doesn't try to delete it
 export const session = pgTable("session", {
   sid: varchar("sid").primaryKey(),
   sess: json("sess").notNull(),
-  expire: timestamp("expire", { precision: 6 }).notNull(),
+  expire: timestamp("expire").notNull(),
 });
 
 export const users = pgTable("users", {
