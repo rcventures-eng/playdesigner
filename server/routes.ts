@@ -5,7 +5,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { FOOTBALL_CONFIG, FORMATIONS, resolveColorKey } from "../shared/football-config";
 import { LOGIC_DICTIONARY } from "../shared/logic-dictionary";
 import { db } from "./db";
-import { aiGenerationLogs, users, teams, plays, passwordResetTokens, featureRequests, playTeams, teamCoaches, teamPlayers, teamSplits, insertUserSchema, insertTeamSchema, insertPlaySchema, insertFeatureRequestSchema, insertTeamCoachSchema, insertTeamPlayerSchema, SQUAD_NAMES } from "@shared/schema";
+import { aiGenerationLogs, users, teams, plays, passwordResetTokens, featureRequests, playTeams, teamCoaches, teamPlayers, teamSplits, teamBlankPages, insertUserSchema, insertTeamSchema, insertPlaySchema, insertFeatureRequestSchema, insertTeamCoachSchema, insertTeamPlayerSchema, insertTeamBlankPageSchema, SQUAD_NAMES } from "@shared/schema";
 import { desc, eq, and, gt, asc, sql, or } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
@@ -3057,6 +3057,158 @@ Return ONLY the JSON object, no markdown formatting or explanation.`;
     } catch (error: any) {
       console.error("Remove split error:", error);
       res.status(500).json({ error: error.message || "Failed to remove player from squad" });
+    }
+  });
+
+  // ================== TEAM BLANK PAGES ==================
+
+  // Get all blank pages for a team
+  app.get("/api/teams/:teamId/blank-pages", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const teamId = parseInt(req.params.teamId);
+      if (isNaN(teamId)) {
+        return res.status(400).json({ error: "Invalid team ID" });
+      }
+
+      // Verify user owns the team
+      const [team] = await db.select().from(teams).where(
+        and(eq(teams.id, teamId), eq(teams.ownerId, userId))
+      ).limit(1);
+      
+      if (!team) {
+        return res.status(404).json({ error: "Team not found or you don't have access" });
+      }
+
+      const blankPages = await db.select().from(teamBlankPages)
+        .where(eq(teamBlankPages.teamId, teamId))
+        .orderBy(asc(teamBlankPages.displayOrder));
+
+      res.json(blankPages);
+    } catch (error: any) {
+      console.error("Get blank pages error:", error);
+      res.status(500).json({ error: error.message || "Failed to fetch blank pages" });
+    }
+  });
+
+  // Create a new blank page
+  app.post("/api/teams/:teamId/blank-pages", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const teamId = parseInt(req.params.teamId);
+      if (isNaN(teamId)) {
+        return res.status(400).json({ error: "Invalid team ID" });
+      }
+
+      // Verify user owns the team
+      const [team] = await db.select().from(teams).where(
+        and(eq(teams.id, teamId), eq(teams.ownerId, userId))
+      ).limit(1);
+      
+      if (!team) {
+        return res.status(404).json({ error: "Team not found or you don't have access" });
+      }
+
+      // Count existing blank pages to create unique title
+      const existingPages = await db.select({ count: sql<number>`count(*)` })
+        .from(teamBlankPages)
+        .where(eq(teamBlankPages.teamId, teamId));
+      
+      const pageNumber = (existingPages[0]?.count || 0) + 1;
+      const title = `Blank Page ${pageNumber}`;
+
+      // Get max display order from both plays and blank pages
+      const [maxPlayOrder] = await db.select({ maxOrder: sql<number>`COALESCE(MAX(display_order), 0)` })
+        .from(playTeams)
+        .where(eq(playTeams.teamId, teamId));
+      
+      const [maxBlankOrder] = await db.select({ maxOrder: sql<number>`COALESCE(MAX(display_order), 0)` })
+        .from(teamBlankPages)
+        .where(eq(teamBlankPages.teamId, teamId));
+      
+      const displayOrder = Math.max(maxPlayOrder?.maxOrder || 0, maxBlankOrder?.maxOrder || 0) + 1;
+
+      const [blankPage] = await db.insert(teamBlankPages).values({
+        teamId,
+        title,
+        displayOrder,
+      }).returning();
+
+      res.json(blankPage);
+    } catch (error: any) {
+      console.error("Create blank page error:", error);
+      res.status(500).json({ error: error.message || "Failed to create blank page" });
+    }
+  });
+
+  // Update a blank page
+  app.patch("/api/teams/:teamId/blank-pages/:pageId", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const teamId = parseInt(req.params.teamId);
+      const pageId = parseInt(req.params.pageId);
+      if (isNaN(teamId) || isNaN(pageId)) {
+        return res.status(400).json({ error: "Invalid team or page ID" });
+      }
+
+      // Verify user owns the team
+      const [team] = await db.select().from(teams).where(
+        and(eq(teams.id, teamId), eq(teams.ownerId, userId))
+      ).limit(1);
+      
+      if (!team) {
+        return res.status(404).json({ error: "Team not found or you don't have access" });
+      }
+
+      const { title, customContent, displayOrder } = req.body;
+      const updateData: Partial<{ title: string; customContent: string | null; displayOrder: number }> = {};
+      
+      if (title !== undefined) updateData.title = title;
+      if (customContent !== undefined) updateData.customContent = customContent;
+      if (displayOrder !== undefined) updateData.displayOrder = displayOrder;
+
+      const [updated] = await db.update(teamBlankPages)
+        .set(updateData)
+        .where(and(eq(teamBlankPages.id, pageId), eq(teamBlankPages.teamId, teamId)))
+        .returning();
+
+      if (!updated) {
+        return res.status(404).json({ error: "Blank page not found" });
+      }
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Update blank page error:", error);
+      res.status(500).json({ error: error.message || "Failed to update blank page" });
+    }
+  });
+
+  // Delete a blank page
+  app.delete("/api/teams/:teamId/blank-pages/:pageId", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const teamId = parseInt(req.params.teamId);
+      const pageId = parseInt(req.params.pageId);
+      if (isNaN(teamId) || isNaN(pageId)) {
+        return res.status(400).json({ error: "Invalid team or page ID" });
+      }
+
+      // Verify user owns the team
+      const [team] = await db.select().from(teams).where(
+        and(eq(teams.id, teamId), eq(teams.ownerId, userId))
+      ).limit(1);
+      
+      if (!team) {
+        return res.status(404).json({ error: "Team not found or you don't have access" });
+      }
+
+      await db.delete(teamBlankPages)
+        .where(and(eq(teamBlankPages.id, pageId), eq(teamBlankPages.teamId, teamId)));
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Delete blank page error:", error);
+      res.status(500).json({ error: error.message || "Failed to delete blank page" });
     }
   });
 
