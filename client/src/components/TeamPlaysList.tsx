@@ -1,11 +1,23 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { GripVertical, Trash2, FileText } from "lucide-react";
+import { GripVertical, Trash2, FileText, Users, BarChart3 } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { PlayThumbnail } from "@/components/PlayThumbnail";
 import { CONCEPT_OPTIONS } from "@/components/TagPopover";
 import type { TeamBlankPage } from "@shared/schema";
+
+// Get icon and color for page type
+function getPageTypeDisplay(pageType: string | undefined | null) {
+  switch (pageType) {
+    case 'roster':
+      return { Icon: Users, color: 'text-blue-500', bgColor: 'bg-blue-50', label: 'Roster' };
+    case 'splits':
+      return { Icon: BarChart3, color: 'text-green-500', bgColor: 'bg-green-50', label: 'Splits' };
+    default:
+      return { Icon: FileText, color: 'text-gray-400', bgColor: 'bg-white', label: 'Blank' };
+  }
+}
 
 // Format concept value to display label (e.g., "play-action" -> "Play-Action")
 function formatConceptLabel(concept: string | null | undefined): string | null {
@@ -264,12 +276,17 @@ export default function TeamPlaysList({ teamId, plays, onPlayClick, onPlayDouble
                 <GripVertical className="w-5 h-5" />
               </div>
 
-              {/* Blank page icon placeholder */}
-              <div className="w-32 h-20 flex-shrink-0 rounded-md border-2 border-dashed border-gray-300 flex items-center justify-center bg-white">
-                <FileText className="w-8 h-8 text-gray-400" />
-              </div>
+              {/* Page type icon placeholder */}
+              {(() => {
+                const { Icon, color, bgColor } = getPageTypeDisplay((item.blankPage as any).pageType);
+                return (
+                  <div className={`w-32 h-20 flex-shrink-0 rounded-md border-2 border-dashed border-gray-300 flex items-center justify-center ${bgColor}`}>
+                    <Icon className={`w-8 h-8 ${color}`} />
+                  </div>
+                );
+              })()}
 
-              {/* Blank page metadata */}
+              {/* Page metadata */}
               <div className="flex-1 min-w-0">
                 <div className="font-medium text-gray-700 truncate" data-testid={`blank-page-title-${item.id}`}>
                   {item.blankPage.title}
@@ -280,7 +297,9 @@ export default function TeamPlaysList({ teamId, plays, onPlayClick, onPlayDouble
                   </div>
                 )}
                 <div className="text-xs text-gray-400 italic">
-                  Double-click to edit
+                  {(item.blankPage as any).pageType === 'roster' ? 'Double-click to preview' :
+                   (item.blankPage as any).pageType === 'splits' ? 'Double-click to edit splits' :
+                   'Double-click to edit'}
                 </div>
               </div>
 

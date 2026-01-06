@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
-import { Team, TeamBlankPage } from "@shared/schema";
+import { Team, TeamBlankPage, TeamPlayer, TeamCoach, SplitsPageData, FormationSplit, SituationSplit, CustomSplit } from "@shared/schema";
 import TopNav from "@/components/TopNav";
 import TeamPlaysList from "@/components/TeamPlaysList";
 import TeamRosterCard from "@/components/TeamRosterCard";
@@ -28,12 +28,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import GoogleDriveExportModal from "@/components/GoogleDriveExportModal";
 import {
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Plus,
   Users,
   LogIn,
@@ -43,7 +50,10 @@ import {
   Pencil,
   Upload,
   FileText,
+  BarChart3,
+  X,
 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function TeamPlaybooks() {
   const [, navigate] = useLocation();
@@ -80,6 +90,14 @@ export default function TeamPlaybooks() {
   const [editingBlankPage, setEditingBlankPage] = useState<TeamBlankPage | null>(null);
   const [blankPageTitle, setBlankPageTitle] = useState("");
   const [blankPageContent, setBlankPageContent] = useState("");
+
+  // Roster preview modal state
+  const [showRosterPreview, setShowRosterPreview] = useState(false);
+  const [previewingRosterPage, setPreviewingRosterPage] = useState<TeamBlankPage | null>(null);
+
+  // Splits editor modal state
+  const [showSplitsEditor, setShowSplitsEditor] = useState(false);
+  const [editingSplitsPage, setEditingSplitsPage] = useState<TeamBlankPage | null>(null);
 
   // Auto-select team from URL query param (e.g., when returning from view-only mode)
   useEffect(() => {
@@ -128,6 +146,18 @@ export default function TeamPlaybooks() {
   });
 
   const teamPlays = teamPlaysData?.plays || [];
+
+  // Fetch players for roster preview
+  const { data: teamPlayers = [] } = useQuery<TeamPlayer[]>({
+    queryKey: ["/api/teams", selectedTeamId, "players"],
+    enabled: !!selectedTeamId && showRosterPreview,
+  });
+
+  // Fetch coaches for roster preview
+  const { data: teamCoaches = [] } = useQuery<TeamCoach[]>({
+    queryKey: ["/api/teams", selectedTeamId, "coaches"],
+    enabled: !!selectedTeamId && showRosterPreview,
+  });
 
   const createTeamMutation = useMutation({
     mutationFn: async (data: {
@@ -238,24 +268,29 @@ export default function TeamPlaybooks() {
     },
   });
 
-  const createBlankPageMutation = useMutation({
-    mutationFn: async (teamId: number) => {
-      return apiRequest("POST", `/api/teams/${teamId}/blank-pages`);
+  const createPageMutation = useMutation({
+    mutationFn: async ({ teamId, pageType }: { teamId: number; pageType: 'blank' | 'roster' | 'splits' }) => {
+      return apiRequest("POST", `/api/teams/${teamId}/blank-pages`, { pageType });
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       if (selectedTeamId) {
         queryClient.invalidateQueries({ queryKey: ["/api/teams", selectedTeamId, "plays-for-export"] });
         queryClient.invalidateQueries({ queryKey: ["/api/teams", selectedTeamId, "blank-pages"] });
       }
+      const pageTypeLabels = {
+        blank: "Blank divider page",
+        roster: "Team Roster page",
+        splits: "Team Splits page"
+      };
       toast({
-        title: "Blank page added!",
-        description: "A new blank divider page has been added to the playbook.",
+        title: "Page added!",
+        description: `A new ${pageTypeLabels[variables.pageType]} has been added to the playbook.`,
       });
     },
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to create blank page",
+        description: error.message || "Failed to create page",
         variant: "destructive",
       });
     },
@@ -292,11 +327,50 @@ export default function TeamPlaybooks() {
     },
   });
 
+  const updateSplitsPageMutation = useMutation({
+    mutationFn: async (data: { pageId: number; teamId: number; title: string; pageData: SplitsPageData }) => {
+      return apiRequest("PATCH", `/api/teams/${data.teamId}/blank-pages/${data.pageId}`, {
+        title: data.title,
+        pageData: data.pageData,
+      });
+    },
+    onSuccess: () => {
+      if (selectedTeamId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/teams", selectedTeamId, "blank-pages"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/teams", selectedTeamId, "plays-for-export"] });
+      }
+      setShowSplitsEditor(false);
+      setEditingSplitsPage(null);
+      toast({
+        title: "Splits page updated!",
+        description: "Your team splits have been saved.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update splits page",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleBlankPageDoubleClick = (blankPage: TeamBlankPage) => {
-    setEditingBlankPage(blankPage);
-    setBlankPageTitle(blankPage.title);
-    setBlankPageContent(blankPage.customContent || "");
-    setShowBlankPageEditor(true);
+    const pageType = (blankPage as any).pageType || 'blank';
+    
+    if (pageType === 'roster') {
+      setPreviewingRosterPage(blankPage);
+      setShowRosterPreview(true);
+    } else if (pageType === 'splits') {
+      setEditingSplitsPage(blankPage);
+      setShowSplitsEditor(true);
+    } else {
+      // Default: blank page editor
+      setEditingBlankPage(blankPage);
+      setBlankPageTitle(blankPage.title);
+      setBlankPageContent(blankPage.customContent || "");
+      setShowBlankPageEditor(true);
+    }
   };
 
   const handleSaveBlankPage = () => {
@@ -678,18 +752,57 @@ export default function TeamPlaybooks() {
                         ({teamPlays.length} {teamPlays.length === 1 ? "play" : "plays"})
                       </span>
                     </h3>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => createBlankPageMutation.mutate(selectedTeam.id)}
-                      disabled={createBlankPageMutation.isPending}
-                      className="border-dashed border-gray-400 text-gray-600 hover:bg-gray-50"
-                      data-testid="button-add-blank-page"
-                    >
-                      <FileText className="w-4 h-4 mr-1" />
-                      <span className="hidden sm:inline">Add Blank Page</span>
-                      <span className="sm:hidden">Blank</span>
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={createPageMutation.isPending}
+                          className="border-dashed border-gray-400 text-gray-600 hover:bg-gray-50"
+                          data-testid="button-add-page-type"
+                        >
+                          <Plus className="w-4 h-4 mr-1" />
+                          <span className="hidden sm:inline">Add Page</span>
+                          <span className="sm:hidden">Add</span>
+                          <ChevronDown className="w-3 h-3 ml-1" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem
+                          onClick={() => createPageMutation.mutate({ teamId: selectedTeam.id, pageType: 'blank' })}
+                          className="cursor-pointer"
+                          data-testid="menu-item-blank-page"
+                        >
+                          <FileText className="w-4 h-4 mr-2 text-gray-500" />
+                          <div className="flex flex-col">
+                            <span>Blank Page</span>
+                            <span className="text-xs text-gray-500">Empty divider page</span>
+                          </div>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => createPageMutation.mutate({ teamId: selectedTeam.id, pageType: 'roster' })}
+                          className="cursor-pointer"
+                          data-testid="menu-item-roster-page"
+                        >
+                          <Users className="w-4 h-4 mr-2 text-gray-500" />
+                          <div className="flex flex-col">
+                            <span>Roster Page</span>
+                            <span className="text-xs text-gray-500">Team players & coaches</span>
+                          </div>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => createPageMutation.mutate({ teamId: selectedTeam.id, pageType: 'splits' })}
+                          className="cursor-pointer"
+                          data-testid="menu-item-splits-page"
+                        >
+                          <BarChart3 className="w-4 h-4 mr-2 text-gray-500" />
+                          <div className="flex flex-col">
+                            <span>Splits Page</span>
+                            <span className="text-xs text-gray-500">Team statistics & splits</span>
+                          </div>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                   <div className="flex-1 overflow-y-auto min-h-0">
                     {playsLoading ? (
@@ -1089,6 +1202,132 @@ export default function TeamPlaybooks() {
         </DialogContent>
       </Dialog>
 
+      {/* Roster Preview Modal */}
+      <Dialog open={showRosterPreview} onOpenChange={setShowRosterPreview}>
+        <DialogContent className="sm:max-w-2xl bg-zinc-900 border-zinc-800 text-white max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <Users className="w-5 h-5 text-blue-500" />
+              {previewingRosterPage?.title || "Team Roster"}
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Preview of your team roster as it will appear in exports.
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="flex-1 pr-4">
+            <div className="space-y-6 pt-4">
+              {/* Players Section */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
+                  Players
+                  <span className="text-xs text-gray-500">({teamPlayers.length})</span>
+                </h4>
+                <div className="space-y-2">
+                  {teamPlayers.length === 0 ? (
+                    <p className="text-sm text-gray-500 italic">No players added yet</p>
+                  ) : (
+                    [...teamPlayers]
+                      .sort((a, b) => (a.lastName || '').localeCompare(b.lastName || ''))
+                      .map((player) => (
+                        <div
+                          key={player.id}
+                          className="flex items-center gap-3 bg-zinc-800 rounded-md px-3 py-2"
+                          data-testid={`roster-preview-player-${player.id}`}
+                        >
+                          <span className="font-medium text-white">
+                            {player.firstName} {player.lastName}
+                          </span>
+                          {player.position1 && (
+                            <span className="text-gray-400 text-sm">
+                              Off: {player.position1}
+                              {player.position2 && `, ${player.position2}`}
+                            </span>
+                          )}
+                          {player.defPosition1 && (
+                            <span className="text-gray-400 text-sm">
+                              • Def: {player.defPosition1}
+                            </span>
+                          )}
+                          {player.mainColor && player.mainColor.split(',').map((color, idx) => (
+                            <span
+                              key={idx}
+                              className="w-4 h-4 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: color.trim() }}
+                              title={color.trim()}
+                            />
+                          ))}
+                        </div>
+                      ))
+                  )}
+                </div>
+              </div>
+
+              {/* Coaches Section */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
+                  Coaching Staff
+                  <span className="text-xs text-gray-500">({teamCoaches.length})</span>
+                </h4>
+                <div className="space-y-2">
+                  {teamCoaches.length === 0 ? (
+                    <p className="text-sm text-gray-500 italic">No coaches added yet</p>
+                  ) : (
+                    [...teamCoaches]
+                      .sort((a, b) => (a.lastName || '').localeCompare(b.lastName || ''))
+                      .map((coach) => (
+                        <div
+                          key={coach.id}
+                          className="flex items-center gap-3 bg-zinc-800 rounded-md px-3 py-2"
+                          data-testid={`roster-preview-coach-${coach.id}`}
+                        >
+                          <span className="font-medium text-white">
+                            {coach.firstName} {coach.lastName}
+                          </span>
+                          <span className="text-gray-400 text-sm">
+                            {coach.role}
+                          </span>
+                        </div>
+                      ))
+                  )}
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
+          <div className="flex justify-end pt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowRosterPreview(false);
+                setPreviewingRosterPage(null);
+              }}
+              className="border-zinc-700 text-white hover:bg-zinc-800"
+              data-testid="button-close-roster-preview"
+            >
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Splits Editor Modal */}
+      {editingSplitsPage && (
+        <SplitsEditorModal
+          open={showSplitsEditor}
+          onOpenChange={setShowSplitsEditor}
+          splitsPage={editingSplitsPage}
+          teamId={selectedTeamId!}
+          onSave={(title, pageData) => {
+            updateSplitsPageMutation.mutate({
+              pageId: editingSplitsPage.id,
+              teamId: selectedTeamId!,
+              title,
+              pageData,
+            });
+          }}
+          isPending={updateSplitsPageMutation.isPending}
+        />
+      )}
+
       {/* Google Drive Export Modal (Admin Only) */}
       {selectedTeam && (
         <GoogleDriveExportModal
@@ -1099,5 +1338,352 @@ export default function TeamPlaybooks() {
         />
       )}
     </div>
+  );
+}
+
+// Splits Editor Modal Component
+function SplitsEditorModal({
+  open,
+  onOpenChange,
+  splitsPage,
+  teamId,
+  onSave,
+  isPending,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  splitsPage: TeamBlankPage;
+  teamId: number;
+  onSave: (title: string, pageData: SplitsPageData) => void;
+  isPending: boolean;
+}) {
+  const [title, setTitle] = useState(splitsPage.title);
+  const [pageData, setPageData] = useState<SplitsPageData>(() => {
+    const data = (splitsPage as any).pageData as SplitsPageData | null;
+    return data || { formations: [], situations: [], custom: [] };
+  });
+
+  // Reset state when splitsPage changes
+  useEffect(() => {
+    setTitle(splitsPage.title);
+    const data = (splitsPage as any).pageData as SplitsPageData | null;
+    setPageData(data || { formations: [], situations: [], custom: [] });
+  }, [splitsPage]);
+
+  const addFormation = () => {
+    setPageData({
+      ...pageData,
+      formations: [...pageData.formations, {
+        id: crypto.randomUUID(),
+        name: '',
+        runPlays: 0,
+        passPlays: 0,
+        percentage: 0,
+      }],
+    });
+  };
+
+  const updateFormation = (id: string, field: keyof FormationSplit, value: string | number) => {
+    setPageData({
+      ...pageData,
+      formations: pageData.formations.map(f =>
+        f.id === id ? { ...f, [field]: value } : f
+      ),
+    });
+  };
+
+  const removeFormation = (id: string) => {
+    setPageData({
+      ...pageData,
+      formations: pageData.formations.filter(f => f.id !== id),
+    });
+  };
+
+  const addSituation = () => {
+    setPageData({
+      ...pageData,
+      situations: [...pageData.situations, {
+        id: crypto.randomUUID(),
+        situation: '',
+        runPlays: 0,
+        passPlays: 0,
+        totalPlays: 0,
+      }],
+    });
+  };
+
+  const updateSituation = (id: string, field: keyof SituationSplit, value: string | number) => {
+    setPageData({
+      ...pageData,
+      situations: pageData.situations.map(s =>
+        s.id === id ? { ...s, [field]: value } : s
+      ),
+    });
+  };
+
+  const removeSituation = (id: string) => {
+    setPageData({
+      ...pageData,
+      situations: pageData.situations.filter(s => s.id !== id),
+    });
+  };
+
+  const addCustom = () => {
+    setPageData({
+      ...pageData,
+      custom: [...pageData.custom, {
+        id: crypto.randomUUID(),
+        label: '',
+        value: '',
+      }],
+    });
+  };
+
+  const updateCustom = (id: string, field: keyof CustomSplit, value: string) => {
+    setPageData({
+      ...pageData,
+      custom: pageData.custom.map(c =>
+        c.id === id ? { ...c, [field]: value } : c
+      ),
+    });
+  };
+
+  const removeCustom = (id: string) => {
+    setPageData({
+      ...pageData,
+      custom: pageData.custom.filter(c => c.id !== id),
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-2xl bg-zinc-900 border-zinc-800 text-white max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="text-white flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-green-500" />
+            Edit Splits Page
+          </DialogTitle>
+          <DialogDescription className="text-gray-400">
+            Enter your team's formation and situation splits manually.
+          </DialogDescription>
+        </DialogHeader>
+        <ScrollArea className="flex-1 pr-4">
+          <div className="space-y-6 pt-4">
+            {/* Title */}
+            <div className="space-y-2">
+              <Label htmlFor="splits-title" className="text-white">Page Title</Label>
+              <Input
+                id="splits-title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Team Splits"
+                className="bg-zinc-800 border-zinc-700 text-white"
+                data-testid="input-splits-title"
+              />
+            </div>
+
+            {/* Formation Splits */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold text-gray-300">Formation Splits</h4>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={addFormation}
+                  className="border-zinc-700 text-white hover:bg-zinc-800"
+                  data-testid="button-add-formation"
+                >
+                  <Plus className="w-3 h-3 mr-1" /> Add
+                </Button>
+              </div>
+              {pageData.formations.length === 0 ? (
+                <p className="text-sm text-gray-500 italic">No formations added</p>
+              ) : (
+                <div className="space-y-2">
+                  {pageData.formations.map((formation) => (
+                    <div key={formation.id} className="flex items-center gap-2 bg-zinc-800 rounded-md p-2">
+                      <Input
+                        value={formation.name}
+                        onChange={(e) => updateFormation(formation.id, 'name', e.target.value)}
+                        placeholder="Formation name"
+                        className="flex-1 bg-zinc-700 border-zinc-600 text-white h-8"
+                      />
+                      <Input
+                        type="number"
+                        value={formation.runPlays}
+                        onChange={(e) => updateFormation(formation.id, 'runPlays', parseInt(e.target.value) || 0)}
+                        placeholder="Run"
+                        className="w-16 bg-zinc-700 border-zinc-600 text-white h-8 text-center"
+                      />
+                      <Input
+                        type="number"
+                        value={formation.passPlays}
+                        onChange={(e) => updateFormation(formation.id, 'passPlays', parseInt(e.target.value) || 0)}
+                        placeholder="Pass"
+                        className="w-16 bg-zinc-700 border-zinc-600 text-white h-8 text-center"
+                      />
+                      <Input
+                        type="number"
+                        value={formation.percentage}
+                        onChange={(e) => updateFormation(formation.id, 'percentage', parseInt(e.target.value) || 0)}
+                        placeholder="%"
+                        className="w-16 bg-zinc-700 border-zinc-600 text-white h-8 text-center"
+                      />
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => removeFormation(formation.id)}
+                        className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-zinc-700"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <div className="flex gap-2 text-xs text-gray-500 px-2">
+                    <span className="flex-1">Formation</span>
+                    <span className="w-16 text-center">Run</span>
+                    <span className="w-16 text-center">Pass</span>
+                    <span className="w-16 text-center">%</span>
+                    <span className="w-8"></span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Situation Splits */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold text-gray-300">Situation Splits</h4>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={addSituation}
+                  className="border-zinc-700 text-white hover:bg-zinc-800"
+                  data-testid="button-add-situation"
+                >
+                  <Plus className="w-3 h-3 mr-1" /> Add
+                </Button>
+              </div>
+              {pageData.situations.length === 0 ? (
+                <p className="text-sm text-gray-500 italic">No situations added</p>
+              ) : (
+                <div className="space-y-2">
+                  {pageData.situations.map((situation) => (
+                    <div key={situation.id} className="flex items-center gap-2 bg-zinc-800 rounded-md p-2">
+                      <Input
+                        value={situation.situation}
+                        onChange={(e) => updateSituation(situation.id, 'situation', e.target.value)}
+                        placeholder="Situation (e.g., 3rd & Long)"
+                        className="flex-1 bg-zinc-700 border-zinc-600 text-white h-8"
+                      />
+                      <Input
+                        type="number"
+                        value={situation.runPlays}
+                        onChange={(e) => updateSituation(situation.id, 'runPlays', parseInt(e.target.value) || 0)}
+                        placeholder="Run"
+                        className="w-16 bg-zinc-700 border-zinc-600 text-white h-8 text-center"
+                      />
+                      <Input
+                        type="number"
+                        value={situation.passPlays}
+                        onChange={(e) => updateSituation(situation.id, 'passPlays', parseInt(e.target.value) || 0)}
+                        placeholder="Pass"
+                        className="w-16 bg-zinc-700 border-zinc-600 text-white h-8 text-center"
+                      />
+                      <Input
+                        type="number"
+                        value={situation.totalPlays}
+                        onChange={(e) => updateSituation(situation.id, 'totalPlays', parseInt(e.target.value) || 0)}
+                        placeholder="Total"
+                        className="w-16 bg-zinc-700 border-zinc-600 text-white h-8 text-center"
+                      />
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => removeSituation(situation.id)}
+                        className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-zinc-700"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <div className="flex gap-2 text-xs text-gray-500 px-2">
+                    <span className="flex-1">Situation</span>
+                    <span className="w-16 text-center">Run</span>
+                    <span className="w-16 text-center">Pass</span>
+                    <span className="w-16 text-center">Total</span>
+                    <span className="w-8"></span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Custom Data */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold text-gray-300">Custom Data</h4>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={addCustom}
+                  className="border-zinc-700 text-white hover:bg-zinc-800"
+                  data-testid="button-add-custom"
+                >
+                  <Plus className="w-3 h-3 mr-1" /> Add
+                </Button>
+              </div>
+              {pageData.custom.length === 0 ? (
+                <p className="text-sm text-gray-500 italic">No custom data added</p>
+              ) : (
+                <div className="space-y-2">
+                  {pageData.custom.map((item) => (
+                    <div key={item.id} className="flex items-center gap-2 bg-zinc-800 rounded-md p-2">
+                      <Input
+                        value={item.label}
+                        onChange={(e) => updateCustom(item.id, 'label', e.target.value)}
+                        placeholder="Label"
+                        className="w-1/3 bg-zinc-700 border-zinc-600 text-white h-8"
+                      />
+                      <Input
+                        value={item.value}
+                        onChange={(e) => updateCustom(item.id, 'value', e.target.value)}
+                        placeholder="Value"
+                        className="flex-1 bg-zinc-700 border-zinc-600 text-white h-8"
+                      />
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => removeCustom(item.id)}
+                        className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-zinc-700"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </ScrollArea>
+        <div className="flex justify-end gap-3 pt-4">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            className="border-zinc-700 text-white hover:bg-zinc-800"
+            data-testid="button-cancel-splits"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={() => onSave(title.trim() || splitsPage.title, pageData)}
+            disabled={isPending}
+            className="bg-green-600 hover:bg-green-700 text-white"
+            data-testid="button-save-splits"
+          >
+            {isPending ? "Saving..." : "Save Splits"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

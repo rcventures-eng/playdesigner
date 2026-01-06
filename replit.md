@@ -65,7 +65,16 @@ The system supports comprehensive team management, including:
 
 Users can connect their personal Google Drive accounts via OAuth 2.0 to export team playbooks. Exports support Google Docs (handout format, 2 plays per page with metadata) and Google Slides (one play per slide). The system handles play selection, reordering, and secure token storage.
 
-**Blank Pages (Section Dividers)**: The export system supports blank pages that act as section dividers in exported documents. These are stored in `teamBlankPages` table with unified displayOrder. In Google Docs exports, section dividers appear as full pages with centered title (36pt bold) and optional notes (18pt). In Google Slides exports, section dividers get their own slide with centered title (48pt bold) and notes (24pt). The frontend export modal shows a unified list with plays and blank pages, allowing drag-and-drop reordering.
+**Playbook Page Types**: The `teamBlankPages` table supports three page types via `pageType` field:
+- **Blank Page (pageType='blank')**: Section dividers with title and optional notes. Double-click opens text editor modal.
+- **Roster Page (pageType='roster')**: Displays team players and coaching staff from existing data. Double-click opens read-only preview modal showing players/coaches sorted alphabetically by last name with positions and color tags.
+- **Splits Page (pageType='splits')**: Manual entry form for team statistics. Double-click opens editor modal with three sections:
+  - Formation Splits: Name, Run plays, Pass plays, Percentage
+  - Situation Splits: Situation name, Run plays, Pass plays, Total plays
+  - Custom Data: Label/value pairs for additional statistics
+  - Data stored in `pageData` JSON column with type `SplitsPageData`
+
+The dropdown menu offers "Add Blank Page", "Add Roster Page", and "Add Splits Page" options with color-coded icons (FileText gray, Users blue, BarChart3 green).
 
 **Single Play Export to Drive**: Users can export individual plays directly to Google Drive from the Play Designer. The feature uses a 3-state flow: (1) unauthenticated users see a sign-up modal, (2) authenticated users without Drive connection are redirected to OAuth, (3) connected users can upload directly. The button shows dynamic text based on state and displays a success link with the file name after upload.
 
