@@ -30,7 +30,8 @@ import {
   X,
   Check,
   Users,
-  UserCog
+  UserCog,
+  GripVertical
 } from "lucide-react";
 import { 
   COACH_ROLES, 
@@ -269,13 +270,29 @@ export default function TeamRosterCard({ teamId, gameFormat = "5v5" }: TeamRoste
     },
   });
 
-  // Get players assigned to each squad
-  const squad1Players = splits.filter(s => s.squadName === "Squad 1");
-  const squad2Players = splits.filter(s => s.squadName === "Squad 2");
+  // Sort coaches alphabetically by lastName
+  const sortedCoaches = [...coaches].sort((a, b) => 
+    a.lastName.localeCompare(b.lastName)
+  );
   
-  // Get players not yet assigned to a squad
+  // Sort players alphabetically by lastName
+  const sortedPlayers = [...players].sort((a, b) => 
+    a.lastName.localeCompare(b.lastName)
+  );
+
+  // Get players assigned to each squad, sorted alphabetically by lastName
+  const squad1Players = splits
+    .filter(s => s.squadName === "Squad 1")
+    .sort((a, b) => a.player.lastName.localeCompare(b.player.lastName));
+  const squad2Players = splits
+    .filter(s => s.squadName === "Squad 2")
+    .sort((a, b) => a.player.lastName.localeCompare(b.player.lastName));
+  
+  // Get players not yet assigned to a squad, sorted alphabetically
   const assignedPlayerIds = splits.map(s => s.playerId);
-  const unassignedPlayers = players.filter(p => !assignedPlayerIds.includes(p.id));
+  const unassignedPlayers = players
+    .filter(p => !assignedPlayerIds.includes(p.id))
+    .sort((a, b) => a.lastName.localeCompare(b.lastName));
 
   const importRosterMutation = useMutation({
     mutationFn: async (data: { coaches: any[]; players: any[] }) => {
@@ -468,7 +485,7 @@ export default function TeamRosterCard({ teamId, gameFormat = "5v5" }: TeamRoste
             <div className="text-muted-foreground text-sm py-2">No coaching staff added yet</div>
           ) : (
             <div className="space-y-2">
-              {coaches.map((coach) => (
+              {sortedCoaches.map((coach) => (
                 <div
                   key={coach.id}
                   className="flex items-center justify-between bg-gray-50 rounded-md px-3 py-2"
@@ -548,6 +565,7 @@ export default function TeamRosterCard({ teamId, gameFormat = "5v5" }: TeamRoste
                         >
                           <Trash2 className="w-3 h-3 text-destructive" />
                         </Button>
+                        <GripVertical className="w-4 h-4 text-gray-400 cursor-grab ml-1" />
                       </div>
                     </>
                   )}
@@ -631,7 +649,7 @@ export default function TeamRosterCard({ teamId, gameFormat = "5v5" }: TeamRoste
             <div className="text-muted-foreground text-sm py-2">No players added yet</div>
           ) : (
             <div className="space-y-2">
-              {players.map((player) => (
+              {sortedPlayers.map((player) => (
                 <div
                   key={player.id}
                   className="flex items-center justify-between bg-gray-50 rounded-md px-3 py-2"
@@ -772,6 +790,7 @@ export default function TeamRosterCard({ teamId, gameFormat = "5v5" }: TeamRoste
                         >
                           <Trash2 className="w-3 h-3 text-destructive" />
                         </Button>
+                        <GripVertical className="w-4 h-4 text-gray-400 cursor-grab ml-1" />
                       </div>
                     </>
                   )}
@@ -898,15 +917,18 @@ export default function TeamRosterCard({ teamId, gameFormat = "5v5" }: TeamRoste
                           />
                         ))}
                       </div>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-6 w-6 flex-shrink-0"
-                        onClick={() => removeFromSquadMutation.mutate(split.id)}
-                        data-testid={`button-remove-squad1-${split.playerId}`}
-                      >
-                        <X className="w-3 h-3 text-muted-foreground" />
-                      </Button>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6"
+                          onClick={() => removeFromSquadMutation.mutate(split.id)}
+                          data-testid={`button-remove-squad1-${split.playerId}`}
+                        >
+                          <X className="w-3 h-3 text-muted-foreground" />
+                        </Button>
+                        <GripVertical className="w-3 h-3 text-gray-400 cursor-grab" />
+                      </div>
                     </div>
                   ))}
                   {squad1Players.length < 6 && unassignedPlayers.length > 0 && (
@@ -964,15 +986,18 @@ export default function TeamRosterCard({ teamId, gameFormat = "5v5" }: TeamRoste
                           />
                         ))}
                       </div>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-6 w-6 flex-shrink-0"
-                        onClick={() => removeFromSquadMutation.mutate(split.id)}
-                        data-testid={`button-remove-squad2-${split.playerId}`}
-                      >
-                        <X className="w-3 h-3 text-muted-foreground" />
-                      </Button>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6"
+                          onClick={() => removeFromSquadMutation.mutate(split.id)}
+                          data-testid={`button-remove-squad2-${split.playerId}`}
+                        >
+                          <X className="w-3 h-3 text-muted-foreground" />
+                        </Button>
+                        <GripVertical className="w-3 h-3 text-gray-400 cursor-grab" />
+                      </div>
                     </div>
                   ))}
                   {squad2Players.length < 6 && unassignedPlayers.length > 0 && (
