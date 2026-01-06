@@ -53,6 +53,14 @@ The system supports comprehensive team management, including:
 - View-only mode: Displays amber banner with "Viewing play (read-only mode)" and "Back to Playbook" button
 - Sidebar and canvas interactions disabled in view-only mode
 
+**Play Thumbnails (Smart Centering):**
+- The `PlayThumbnail` component (`client/src/components/PlayThumbnail.tsx`) renders play diagrams at thumbnail scale with smart framing
+- Calculates bounding box around all players, routes, shapes, and footballs to center content
+- Uses enhanced rendering: thicker lines (3-5px routes), larger player markers, bolder text with stroke outlines for visibility
+- Note indicator: Amber badge with sticky note icon appears in bottom-right corner when play has notes; hover shows full note text via tooltip
+- Responsive sizing via width/height props (default 128x80px)
+- Falls back to LOS-centered view when play data is empty
+
 ### Google Drive Export
 
 Users can connect their personal Google Drive accounts via OAuth 2.0 to export team playbooks. Exports support Google Docs (handout format, 2 plays per page with metadata) and Google Slides (one play per slide). The system handles play selection, reordering, and secure token storage.
