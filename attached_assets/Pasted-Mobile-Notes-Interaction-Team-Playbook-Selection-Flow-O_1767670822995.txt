@@ -1,0 +1,602 @@
+Mobile Notes Interaction & Team Playbook Selection Flow
+Overview
+Implement the following features on BOTH desktop and mobile versions of the RC Football app:
+
+Mobile notes: drag to move, long-press menu for delete/resize, pinch-to-resize
+Team Playbook: single-click highlights with trash icon, double-click opens in view-only mode
+
+
+Feature 1: Mobile Notes - Move, Delete, Resize
+Problem: On mobile web, notes cannot be moved around the screen like players can. There's no way to delete or resize notes on mobile.
+Fix Required:
+Part A: Drag to Move Notes
+Notes should be movable by touch-dragging, similar to how players are moved.
+typescriptconst [draggingNoteId, setDraggingNoteId] = useState<string | null>(null);
+const [noteOffset, setNoteOffset] = useState({ x: 0, y: 0 });
+
+const handleNotePointerDown = (e: PointerEvent, noteId: string) => {
+  const note = notes.find(n => n.id === noteId);
+  if (!note) return;
+  
+  // Calculate offset from touch point to note position
+  const rect = (e.target as HTMLElement).getBoundingClientRect();
+  setNoteOffset({
+    x: e.clientX - rect.left,
+    y: e.clientY - rect.top
+  });
+  
+  setDraggingNoteId(noteId);
+  
+  // Capture pointer for smooth dragging
+  (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  
+  // Lock scrolling while dragging
+  document.body.style.overflow = 'hidden';
+  document.body.style.touchAction = 'none';
+};
+
+const handleNotePointerMove = (e: PointerEvent) => {
+  if (!draggingNoteId) return;
+  
+  e.preventDefault();
+  
+  // Calculate new position relative to canvas
+  const canvas = document.querySelector('.field-canvas');
+  const canvasRect = canvas?.getBoundingClientRect();
+  if (!canvasRect) return;
+  
+  const newX = e.clientX - canvasRect.left - noteOffset.x;
+  const newY = e.clientY - canvasRect.top - noteOffset.y;
+  
+  // Update note position
+  setNotes(notes.map(n => 
+    n.id === draggingNoteId 
+      ? { ...n, x: newX, y: newY }
+      : n
+  ));
+};
+
+const handleNotePointerUp = (e: PointerEvent) => {
+  if (draggingNoteId) {
+    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    setDraggingNoteId(null);
+    
+    // Restore scrolling
+    document.body.style.overflow = '';
+    document.body.style.touchAction = '';
+  }
+};
+```
+
+### Part B: Long-Press Menu (Delete / Resize)
+
+Similar to player long-press, holding on a note should show a menu with options.
+
+**Menu Design:**
+```
+┌─────────────────────────┐
+│ Note Options         ✕  │
+├─────────────────────────┤
+│ ┌─────────┐ ┌─────────┐ │
+│ │  🗑️    │ │  ↔️    │ │
+│ │ Delete  │ │ Resize  │ │
+│ └─────────┘ └─────────┘ │
+└─────────────────────────┘
+Implementation:
+typescriptconst LONG_PRESS_DURATION = 300; // ms
+let longPressTimer: NodeJS.Timeout;
+
+const handleNoteTouchStart = (e: TouchEvent, noteId: string) => {
+  longPressTimer = setTimeout(() => {
+    // Show note options menu
+    setSelectedNoteId(noteId);
+    setShowNoteMenu(true);
+  }, LONG_PRESS_DURATION);
+};
+
+const handleNoteTouchEnd = () => {
+  clearTimeout(longPressTimer);
+};
+
+const handleNoteTouchMove = () => {
+  // Cancel long press if finger moves (user is dragging)
+  clearTimeout(longPressTimer);
+};
+Note Options Menu Component:
+tsxconst NoteOptionsMenu = ({ noteId, onClose, onDelete, onResize }) => {
+  return (
+    <div className="note-options-menu">
+      <div className="menu-header">
+        <span>Note Options</span>
+        <button onClick={onClose}>✕</button>
+      </div>
+      
+      <div className="menu-options">
+        <button 
+          className="menu-option delete"
+          onClick={() => {
+            onDelete(noteId);
+            onClose();
+          }}
+        >
+          <TrashIcon />
+          <span>Delete</span>
+        </button>
+        
+        <button 
+          className="menu-option resize"
+          onClick={() => {
+            onResize(noteId);
+            onClose();
+          }}
+        >
+          <ResizeIcon />
+          <span>Resize</span>
+        </button>
+      </div>
+    </div>
+  );
+};
+Styling:
+css.note-options-menu {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #1a1a2e;
+  border-top: 1px solid #333;
+  border-radius: 16px 16px 0 0;
+  padding: 16px;
+  z-index: 1000;
+  animation: slideUp 0.2s ease-out;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.note-options-menu .menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+
+.note-options-menu .menu-options {
+  display: flex;
+  gap: 12px;
+}
+
+.note-options-menu .menu-option {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  background: #2a2a3e;
+  border: 1px solid #333;
+  border-radius: 12px;
+  color: white;
+  font-size: 13px;
+}
+
+.note-options-menu .menu-option.delete {
+  color: #ef4444;
+}
+
+.note-options-menu .menu-option:active {
+  background: #333;
+}
+Part C: Pinch-to-Resize
+When "Resize" is selected from the menu, enable pinch gesture to adjust note size.
+Implementation:
+typescriptconst [resizingNoteId, setResizingNoteId] = useState<string | null>(null);
+const [initialPinchDistance, setInitialPinchDistance] = useState<number | null>(null);
+const [initialNoteSize, setInitialNoteSize] = useState({ width: 0, height: 0 });
+
+const handleResizeMode = (noteId: string) => {
+  setResizingNoteId(noteId);
+  const note = notes.find(n => n.id === noteId);
+  if (note) {
+    setInitialNoteSize({ width: note.width || 120, height: note.height || 60 });
+  }
+  
+  // Show resize indicator
+  showToast('Pinch to resize note');
+};
+
+const handleTouchStart = (e: TouchEvent) => {
+  if (!resizingNoteId) return;
+  
+  if (e.touches.length === 2) {
+    // Two fingers - start pinch
+    const distance = getPinchDistance(e.touches);
+    setInitialPinchDistance(distance);
+  }
+};
+
+const handleTouchMove = (e: TouchEvent) => {
+  if (!resizingNoteId || !initialPinchDistance) return;
+  
+  if (e.touches.length === 2) {
+    e.preventDefault();
+    
+    const currentDistance = getPinchDistance(e.touches);
+    const scale = currentDistance / initialPinchDistance;
+    
+    // Calculate new size with constraints
+    const newWidth = Math.max(60, Math.min(300, initialNoteSize.width * scale));
+    const newHeight = Math.max(40, Math.min(200, initialNoteSize.height * scale));
+    
+    setNotes(notes.map(n =>
+      n.id === resizingNoteId
+        ? { ...n, width: newWidth, height: newHeight }
+        : n
+    ));
+  }
+};
+
+const handleTouchEnd = (e: TouchEvent) => {
+  if (resizingNoteId && e.touches.length < 2) {
+    // Pinch ended
+    setInitialPinchDistance(null);
+    setResizingNoteId(null);
+  }
+};
+
+// Helper function
+const getPinchDistance = (touches: TouchList): number => {
+  const dx = touches[0].clientX - touches[1].clientX;
+  const dy = touches[0].clientY - touches[1].clientY;
+  return Math.sqrt(dx * dx + dy * dy);
+};
+Visual Feedback During Resize:
+tsx{resizingNoteId && (
+  <div className="resize-overlay">
+    <div className="resize-indicator">
+      <span>Pinch to resize</span>
+      <span className="size-preview">
+        {Math.round(currentNote.width)} × {Math.round(currentNote.height)}
+      </span>
+    </div>
+  </div>
+)}
+Styling:
+css.resize-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 999;
+  pointer-events: none;
+}
+
+.resize-indicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #1a1a2e;
+  padding: 12px 20px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.resize-indicator .size-preview {
+  display: block;
+  font-size: 12px;
+  color: #888;
+  margin-top: 4px;
+}
+
+/* Note in resize mode */
+.play-note.resizing {
+  border: 2px dashed #f97316;
+  box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.2);
+}
+Note Data Model Update:
+typescriptinterface PlayNote {
+  id: string;
+  x: number;
+  y: number;
+  text: string;
+  width: number;   // ADD - default 120
+  height: number;  // ADD - default 60
+}
+
+Feature 2: Team Playbook - Selection Highlight & View-Only Mode
+Problem: Single-clicking a play in Team Playbook doesn't highlight it. Double-clicking should open the play in view-only mode.
+Fix Required:
+Part A: Single-Click - Orange Highlight with Trash Icon
+When a play is single-clicked:
+
+Apply orange border/background highlight to the play card
+Show trash icon on the RIGHT side of the card
+
+Implementation:
+typescriptconst [selectedPlayId, setSelectedPlayId] = useState<string | null>(null);
+const [lastClickTime, setLastClickTime] = useState<number>(0);
+const [lastClickedId, setLastClickedId] = useState<string | null>(null);
+
+const DOUBLE_CLICK_THRESHOLD = 300; // ms
+
+const handlePlayClick = (playId: string) => {
+  const now = Date.now();
+  
+  // Check for double-click
+  if (lastClickedId === playId && (now - lastClickTime) < DOUBLE_CLICK_THRESHOLD) {
+    // Double-click detected
+    handlePlayDoubleClick(playId);
+    setLastClickTime(0);
+    setLastClickedId(null);
+    return;
+  }
+  
+  // Single-click - select and highlight
+  setSelectedPlayId(playId);
+  setLastClickTime(now);
+  setLastClickedId(playId);
+};
+
+const handleDeletePlay = (playId: string, e: React.MouseEvent) => {
+  e.stopPropagation();
+  
+  if (confirm('Remove this play from the playbook?')) {
+    deleteFromPlaybook(currentPlaybookId, playId);
+    setSelectedPlayId(null);
+  }
+};
+Playbook List Item Component:
+tsxconst PlaybookListItem = ({ play, isSelected, onClick, onDelete }) => {
+  return (
+    <div 
+      className={`playbook-item ${isSelected ? 'selected' : ''}`}
+      onClick={() => onClick(play.id)}
+    >
+      <div className="play-thumbnail">
+        {/* Mini play preview */}
+        <MiniPlayPreview play={play} />
+      </div>
+      
+      <div className="play-info">
+        <span className="play-number">#{play.number}</span>
+        <span className="play-name">{play.name}</span>
+      </div>
+      
+      {isSelected && (
+        <button 
+          className="delete-button"
+          onClick={(e) => onDelete(play.id, e)}
+          aria-label="Delete play from playbook"
+        >
+          <TrashIcon size={18} />
+        </button>
+      )}
+    </div>
+  );
+};
+Styling:
+css.playbook-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #1a1a2e;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.playbook-item:hover {
+  background: #2a2a3e;
+}
+
+/* Selected state - orange highlight */
+.playbook-item.selected {
+  border-color: #f97316;
+  background: rgba(249, 115, 22, 0.1);
+}
+
+.play-thumbnail {
+  width: 80px;
+  height: 50px;
+  background: #22c55e;
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.play-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.play-number {
+  font-size: 12px;
+  color: #888;
+}
+
+.play-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: white;
+}
+
+.delete-button {
+  padding: 8px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid #ef4444;
+  border-radius: 6px;
+  color: #ef4444;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.delete-button:hover {
+  background: #ef4444;
+  color: white;
+}
+Part B: Double-Click - Open in View-Only Mode
+When a play is double-clicked:
+
+Navigate to the Play Designer
+Load the play in view-only mode (no editing allowed)
+Show a banner/message above the canvas indicating view-only mode
+
+Implementation:
+typescriptconst handlePlayDoubleClick = (playId: string) => {
+  // Navigate to play designer with view-only flag
+  navigate(`/play-designer?playId=${playId}&viewOnly=true`);
+  
+  // OR if using state management:
+  setCurrentPlayId(playId);
+  setIsViewOnlyMode(true);
+  navigate('/play-designer');
+};
+Play Designer - View Only Mode:
+tsx// In PlayDesigner component
+const [searchParams] = useSearchParams();
+const isViewOnly = searchParams.get('viewOnly') === 'true';
+
+// Disable all editing interactions when in view-only mode
+useEffect(() => {
+  if (isViewOnly) {
+    // Disable editing features
+    setCanEdit(false);
+  }
+}, [isViewOnly]);
+
+return (
+  <div className="play-designer">
+    {/* View-Only Banner */}
+    {isViewOnly && (
+      <div className="view-only-banner">
+        <EyeIcon size={18} />
+        <span>View Only Mode</span>
+        <span className="banner-subtext">
+          This play is from your Team Playbook. To edit, open it from your Play Library.
+        </span>
+        <button 
+          className="exit-view-only"
+          onClick={() => navigate('/team-playbooks')}
+        >
+          Back to Playbook
+        </button>
+      </div>
+    )}
+    
+    <div className={`canvas-container ${isViewOnly ? 'view-only' : ''}`}>
+      {/* Canvas content */}
+    </div>
+  </div>
+);
+View-Only Banner Styling:
+css.view-only-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: linear-gradient(90deg, #3b82f6 0%, #1d4ed8 100%);
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.view-only-banner .banner-subtext {
+  font-weight: 400;
+  font-size: 12px;
+  opacity: 0.9;
+  margin-left: 8px;
+}
+
+.exit-view-only {
+  margin-left: auto;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  color: white;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.exit-view-only:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Disable interactions on canvas in view-only mode */
+.canvas-container.view-only {
+  pointer-events: none;
+}
+
+.canvas-container.view-only .player-circle,
+.canvas-container.view-only .route-line,
+.canvas-container.view-only .play-note {
+  cursor: default;
+}
+View-Only Restrictions:
+When isViewOnly is true, disable:
+
+Player dragging
+Route drawing
+Note creation/editing
+Any modification controls
+Save/export (or change to "Save a Copy")
+
+typescript// In all interaction handlers
+const handlePlayerDrag = (e: PointerEvent, playerId: string) => {
+  if (isViewOnly) return; // Block interaction
+  // ... normal drag logic
+};
+
+const handleLongPress = (playerId: string) => {
+  if (isViewOnly) return; // Block interaction
+  // ... normal menu logic
+};
+Optional: "Save a Copy" in View-Only Mode:
+tsx{isViewOnly && (
+  <button 
+    className="save-copy-button"
+    onClick={handleSaveAsCopy}
+  >
+    Save a Copy to My Library
+  </button>
+)}
+
+const handleSaveAsCopy = async () => {
+  // Create a duplicate in user's Play Library
+  const newPlay = {
+    ...currentPlay,
+    id: generateId(),
+    name: `${currentPlay.name} (Copy)`,
+    createdAt: new Date().toISOString()
+  };
+  
+  await savePlay(newPlay);
+  navigate(`/play-designer?playId=${newPlay.id}`); // Open editable copy
+};
+
+Summary
+FeatureWhat It DoesPriority1ADrag notes to move on mobileHigh1BLong-press menu (Delete/Resize)High1CPinch-to-resize notesMedium2ASingle-click orange highlight + trash iconHigh2BDouble-click opens view-only modeHigh
+Files to Modify
+Feature 1 (Mobile Notes):
+
+client/src/components/mobile/MobileCanvas.tsx
+client/src/components/mobile/PlayNote.tsx (or create)
+client/src/components/mobile/NoteOptionsMenu.tsx (create)
+
+Feature 2 (Playbook Selection):
+
+client/src/components/TeamPlaybook.tsx
+client/src/components/PlaybookListItem.tsx (or create)
+client/src/components/PlayDesigner.tsx (add view-only mode)
+client/src/components/mobile/MobilePlayDesigner.tsx (add view-only mode)
