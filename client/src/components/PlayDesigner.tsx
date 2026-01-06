@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Download, Copy, Plus, Trash2, Circle as CircleIcon, MoveHorizontal, PenTool, Square as SquareIcon, Type, Hexagon, RotateCcw, Flag, Camera, X, Loader2, Sparkles, Save, Heart, Tag, Magnet, StickyNote, FlipHorizontal2, ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
+import { Download, Copy, Plus, Trash2, Circle as CircleIcon, MoveHorizontal, PenTool, Square as SquareIcon, Type, Hexagon, RotateCcw, Flag, Camera, X, Loader2, Sparkles, Save, Heart, Tag, Magnet, StickyNote, FlipHorizontal2, ChevronDown, ChevronUp, ExternalLink, Eye, ArrowLeft } from "lucide-react";
 import { toPng } from "html-to-image";
 import { useToast } from "@/hooks/use-toast";
 import { getQueryFn, apiRequest, queryClient } from "@/lib/queryClient";
@@ -358,10 +358,33 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   const [loadedPlayId, setLoadedPlayId] = useState<number | null>(null);
   const [isLoadingPlay, setIsLoadingPlay] = useState(false);
   
+  // View-only mode state (for plays accessed from Team Playbook)
+  const [isViewOnly, setIsViewOnly] = useState(false);
+  const [fromPlaybookId, setFromPlaybookId] = useState<number | null>(null);
+  
   // Load play from URL parameter on mount
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const playIdParam = urlParams.get('playId');
+    // Support both playId and loadPlay params for backwards compatibility
+    const playIdParam = urlParams.get('playId') || urlParams.get('loadPlay');
+    
+    // Handle view-only mode params
+    const viewOnlyParam = urlParams.get('viewOnly');
+    const fromPlaybookParam = urlParams.get('fromPlaybook');
+    
+    if (viewOnlyParam === 'true') {
+      setIsViewOnly(true);
+    } else {
+      setIsViewOnly(false);  // Reset if not present
+    }
+    if (fromPlaybookParam) {
+      const playbookId = parseInt(fromPlaybookParam);
+      if (!isNaN(playbookId)) {
+        setFromPlaybookId(playbookId);
+      }
+    } else {
+      setFromPlaybookId(null);  // Reset if not present
+    }
     
     if (playIdParam) {
       const playId = parseInt(playIdParam);
@@ -776,6 +799,11 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Block all mutations in view-only mode
+      if (isViewOnly) {
+        return;
+      }
+      
       // Escape key cancels route drawing
       if (e.key === "Escape") {
         if (isDrawingRoute) {
@@ -841,7 +869,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedPlayer, selectedRoute, selectedShape, selectedFootball, selectedNote, editingPlayer, selectedElements, players, routes, shapes, footballs, notes, metadata, isDrawingRoute]);
+  }, [selectedPlayer, selectedRoute, selectedShape, selectedFootball, selectedNote, editingPlayer, selectedElements, players, routes, shapes, footballs, notes, metadata, isDrawingRoute, isViewOnly]);
 
   // Sync Play-Action and RPO checkboxes with selected football's state
   useEffect(() => {
@@ -1071,6 +1099,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   };
 
   const addPlayer = (color: string) => {
+    if (isViewOnly) return;
     saveToHistory();
     
     let position: { x: number; y: number };
@@ -1124,7 +1153,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   };
 
   const undo = () => {
-    if (history.length === 0) return;
+    if (isViewOnly || history.length === 0) return;
     const previousState = history[history.length - 1];
     setPlayers(previousState.players);
     setRoutes(previousState.routes);
@@ -1405,6 +1434,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   };
 
   const handleGameFormatClick = (format: "5v5" | "7v7" | "9v9" | "11v11") => {
+    if (isViewOnly) return;
     setSelectedGameFormat(format);
     if (playType === "defense") {
       loadDefensePreset(format, includeOffense);
@@ -1421,6 +1451,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   };
 
   const deleteSelected = () => {
+    if (isViewOnly) return;
     const hasSelection = selectedFootball || selectedPlayer || selectedRoute || selectedShape;
     if (hasSelection) saveToHistory();
     
@@ -2312,6 +2343,11 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   };
 
   const handleCanvasClick = (e: React.MouseEvent) => {
+    // Block interactions in view-only mode
+    if (isViewOnly) {
+      return;
+    }
+    
     // Handle click-to-place waypoints for straight routes
     if (tool === "route" && isDraggingStraightRoute && isDrawingRoute && routeStyle === "straight") {
       const rect = canvasRef.current?.getBoundingClientRect();
@@ -2343,6 +2379,11 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   };
 
   const handleCanvasDoubleClick = (e: React.MouseEvent) => {
+    // Block interactions in view-only mode
+    if (isViewOnly) {
+      return;
+    }
+    
     // Finish straight route on double-click
     if (tool === "route" && isDraggingStraightRoute && isDrawingRoute && routeStyle === "straight") {
       e.preventDefault();
@@ -2358,6 +2399,11 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   };
 
   const handleCanvasPointerDown = (e: React.PointerEvent) => {
+    // Block all interactions in view-only mode
+    if (isViewOnly) {
+      return;
+    }
+    
     if ((e.target as HTMLElement).closest('[data-testid^="player-"]')) {
       return;
     }
@@ -3282,6 +3328,30 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden">
       <TopNav isAdmin={isAdmin} setIsAdmin={setIsAdmin} showSignUp={showSignUp} setShowSignUp={handleShowSignUpChange} signUpMessage={signUpMessage} />
+      
+      {/* View-only mode banner */}
+      {isViewOnly && fromPlaybookId && (
+        <div className="bg-amber-500/90 text-black px-4 py-2 flex items-center justify-between">
+          <span className="font-medium flex items-center gap-2">
+            <Eye className="w-4 h-4" />
+            Viewing play (read-only mode)
+          </span>
+          <Button
+            size="sm"
+            variant="secondary"
+            className="bg-white hover:bg-gray-100 text-black"
+            onClick={() => {
+              // Navigate back to the team playbook
+              setLocation(`/team-playbooks?teamId=${fromPlaybookId}`);
+            }}
+            data-testid="button-back-to-playbook"
+          >
+            <ArrowLeft className="w-4 h-4 mr-1" />
+            Back to Playbook
+          </Button>
+        </div>
+      )}
+      
       <div className={`flex-1 bg-slate-950 px-10 pb-10 pt-3 flex flex-col gap-4 overflow-hidden ${isLongPressHolding || longPressMenuOpen ? "select-none" : ""}`}>
         {(metadata.name || metadata.formation || metadata.concept || metadata.defenseConcept || metadata.personnel || metadata.situation) && (
         <div className="bg-gradient-to-r from-[#1a2332] to-[#2a3342] rounded-2xl border border-white/10 px-6 py-3 flex items-center gap-3 flex-wrap">
@@ -3319,7 +3389,13 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
       )}
 
       <div className="flex flex-row flex-1 gap-4 overflow-hidden">
-        <div className="w-96 min-w-72 flex-shrink rounded-2xl border border-white/10 shadow-2xl overflow-hidden bg-slate-900/95 flex flex-col h-full overflow-y-auto">
+        <div className={`w-96 min-w-72 flex-shrink rounded-2xl border border-white/10 shadow-2xl overflow-hidden bg-slate-900/95 flex flex-col h-full overflow-y-auto relative ${isViewOnly ? 'opacity-50 pointer-events-none' : ''}`}>
+          {/* View-only overlay for sidebar */}
+          {isViewOnly && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 rounded-2xl">
+              <span className="text-white/80 font-medium text-sm">View Only Mode</span>
+            </div>
+          )}
           <div className="p-3 border-b border-border">
             <h1 className="text-xl font-bold text-foreground mb-2">Play Designer</h1>
             <Tabs value={playType} onValueChange={(v) => handlePlayTypeChange(v as PlayTypeKey)} className="w-full">

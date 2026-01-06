@@ -28,6 +28,7 @@ interface TeamPlaysListProps {
   teamId: number;
   plays: PlayItem[];
   onPlayClick?: (playId: number) => void;
+  onPlayDoubleClick?: (playId: number) => void;
 }
 
 function hasStructuredPlayData(data: any): boolean {
@@ -35,16 +36,40 @@ function hasStructuredPlayData(data: any): boolean {
   return Array.isArray(data.players) && data.players.length > 0;
 }
 
-export default function TeamPlaysList({ teamId, plays, onPlayClick }: TeamPlaysListProps) {
+const DOUBLE_CLICK_THRESHOLD = 300; // ms
+
+export default function TeamPlaysList({ teamId, plays, onPlayClick, onPlayDoubleClick }: TeamPlaysListProps) {
   const { toast } = useToast();
   const [localPlays, setLocalPlays] = useState<PlayItem[]>(plays);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [selectedPlayId, setSelectedPlayId] = useState<number | null>(null);
+  const [lastClickTime, setLastClickTime] = useState<number>(0);
+  const [lastClickedId, setLastClickedId] = useState<number | null>(null);
 
   useEffect(() => {
     setLocalPlays(plays);
   }, [plays]);
+
+  const handlePlayInteraction = (playId: number) => {
+    const now = Date.now();
+    
+    // Check for double-click
+    if (lastClickedId === playId && (now - lastClickTime) < DOUBLE_CLICK_THRESHOLD) {
+      // Double-click detected - open in view-only mode
+      if (onPlayDoubleClick) {
+        onPlayDoubleClick(playId);
+      }
+      setLastClickTime(0);
+      setLastClickedId(null);
+      return;
+    }
+    
+    // Single-click - select and highlight
+    setSelectedPlayId(playId);
+    setLastClickTime(now);
+    setLastClickedId(playId);
+  };
 
   // Remove play from this team's playbook only (doesn't delete from library)
   const removeFromPlaybookMutation = useMutation({
@@ -157,11 +182,7 @@ export default function TeamPlaysList({ teamId, plays, onPlayClick }: TeamPlaysL
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, index)}
             onDragEnd={handleDragEnd}
-            onClick={() => {
-              // Single click opens the play AND selects it
-              setSelectedPlayId(play.id);
-              onPlayClick?.(play.id);
-            }}
+            onClick={() => handlePlayInteraction(play.id)}
             className={`
               group relative flex items-center gap-3 p-2 rounded-lg border bg-white
               transition-all duration-150 cursor-pointer

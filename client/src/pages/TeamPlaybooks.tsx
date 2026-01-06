@@ -594,7 +594,7 @@ export default function TeamPlaybooks() {
                       <TeamPlaysList 
                         teamId={selectedTeam.id} 
                         plays={teamPlays}
-                        onPlayClick={(playId) => navigate(`/?loadPlay=${playId}`)}
+                        onPlayDoubleClick={(playId) => navigate(`/?loadPlay=${playId}&viewOnly=true&fromPlaybook=${selectedTeam.id}`)}
                       />
                     )}
                   </div>

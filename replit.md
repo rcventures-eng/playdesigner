@@ -47,6 +47,12 @@ The system supports comprehensive team management, including:
 -   **Team Roster Management**: Add/edit/delete coaches and players, import rosters via CSV or AI-powered image parsing, and store data in dedicated `teamCoaches` and `teamPlayers` tables.
 -   **Team Splits (Squad Assignments)**: Organize players into two squads for practice planning, with visual indicators and assignment management, stored in a `teamSplits` table.
 
+**Team Playbook Selection Flow:**
+- Single-click on play: Highlights with orange border, shows trash icon for removal from playbook
+- Double-click on play (300ms threshold): Opens play in view-only mode with URL params (`?loadPlay={id}&viewOnly=true&fromPlaybook={teamId}`)
+- View-only mode: Displays amber banner with "Viewing play (read-only mode)" and "Back to Playbook" button
+- Sidebar and canvas interactions disabled in view-only mode
+
 ### Google Drive Export
 
 Users can connect their personal Google Drive accounts via OAuth 2.0 to export team playbooks. Exports support Google Docs (handout format, 2 plays per page with metadata) and Google Slides (one play per slide). The system handles play selection, reordering, and secure token storage.
@@ -113,6 +119,13 @@ Key mobile components in `client/src/components/mobile/`:
 - Orange highlighting (#f97316) for selected options
 - Green "Draw Route" CTA button for Pass routes
 - Tapping outside auto-starts drawing with current selections
+
+**Mobile Note Interactions:**
+- Drag-to-move: Touch and drag notes to reposition them on the canvas
+- Long-press (300ms): Opens NoteOptionsMenu bottom sheet with Delete and Resize options
+- Pinch-to-resize: When resize mode is active, pinch with two fingers to resize (60-300 width, 40-200 height)
+- Visual feedback: Amber dashed border during drag, dashed border with size indicator during resize
+- Scroll locking during interactions with cleanup on unmount
 
 **Mobile Clear Play Feature:**
 - "Clear Play" button with Trash2 icon in bottom toolbar

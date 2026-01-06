@@ -10,6 +10,7 @@ import {
 import { Sparkles, Shield, Shirt } from "lucide-react";
 import { FOOTBALL_CONFIG } from "@shared/football-config";
 import { PlayerActionMenu } from "./PlayerActionMenu";
+import { NoteOptionsMenu } from "./NoteOptionsMenu";
 import type { DraftPlayer, DraftRoute } from "@/hooks/usePlayDraft";
 import { useToast } from "@/hooks/use-toast";
 
@@ -19,6 +20,8 @@ interface PlayNote {
   y: number;
   text: string;
   backgroundColor?: string;
+  width?: number;
+  height?: number;
 }
 
 interface MobileCanvasProps {
@@ -94,6 +97,15 @@ export function MobileCanvas({
 
   const { field, colors } = FOOTBALL_CONFIG;
   const [isTouchingPlayer, setIsTouchingPlayer] = useState(false);
+  
+  // Mobile note interaction state
+  const [draggingNoteId, setDraggingNoteId] = useState<string | null>(null);
+  const [noteOffset, setNoteOffset] = useState({ x: 0, y: 0 });
+  const noteLongPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [menuNote, setMenuNote] = useState<{ id: string } | null>(null);
+  const [resizingNoteId, setResizingNoteId] = useState<string | null>(null);
+  const [initialPinchDistance, setInitialPinchDistance] = useState<number | null>(null);
+  const [initialNoteSize, setInitialNoteSize] = useState({ width: 120, height: 60 });
 
   // Cleanup scroll locks when component unmounts
   useEffect(() => {
@@ -482,6 +494,217 @@ export function MobileCanvas({
     setMenuPlayer(null);
   }, [menuPlayer, players, routes, onRoutesChange, onPushToUndoStack, getQBPosition, getNearestOffensivePlayer, field, toast]);
 
+  // === Mobile Note Interaction Handlers ===
+  
+  // Helper: Find note at touch point
+  const findNoteAtPoint = useCallback(
+    (screenX: number, screenY: number): PlayNote | null => {
+      if (!containerRef.current) return null;
+      const rect = containerRef.current.getBoundingClientRect();
+      
+      for (const note of [...playNotes].reverse()) {
+        const noteWidth = note.width || 120;
+        const noteHeight = note.height || 60;
+        const noteScreenX = offset.x + note.x * scale;
+        const noteScreenY = offset.y + note.y * scale;
+        const noteScreenW = noteWidth * scale;
+        const noteScreenH = noteHeight * scale;
+        
+        const relX = screenX - rect.left;
+        const relY = screenY - rect.top;
+        
+        if (relX >= noteScreenX && relX <= noteScreenX + noteScreenW &&
+            relY >= noteScreenY && relY <= noteScreenY + noteScreenH) {
+          return note;
+        }
+      }
+      return null;
+    },
+    [playNotes, scale, offset]
+  );
+
+  // Note drag handling
+  const handleNotePointerDown = useCallback(
+    (e: React.PointerEvent, noteId: string) => {
+      // Don't interfere with editing mode
+      if (editingNoteId) return;
+      
+      const note = playNotes.find(n => n.id === noteId);
+      if (!note) return;
+      
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Calculate offset from touch point to note position
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const noteScreenX = offset.x + note.x * scale;
+      const noteScreenY = offset.y + note.y * scale;
+      
+      setNoteOffset({
+        x: e.clientX - rect.left - noteScreenX,
+        y: e.clientY - rect.top - noteScreenY,
+      });
+      
+      // Capture pointer for smooth dragging
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+      
+      // Lock scrolling while dragging
+      lockAllScroll();
+      
+      // Set up long-press for menu
+      noteLongPressTimerRef.current = setTimeout(() => {
+        setMenuNote({ id: noteId });
+        setDraggingNoteId(null); // Cancel drag if menu opens
+        noteLongPressTimerRef.current = null;
+        unlockAllScroll();
+      }, LONG_PRESS_DURATION);
+      
+      setDraggingNoteId(noteId);
+      onPushToUndoStack?.();
+    },
+    [playNotes, scale, offset, editingNoteId, onPushToUndoStack]
+  );
+
+  const handleNotePointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      if (!draggingNoteId) return;
+      
+      e.preventDefault();
+      
+      // Cancel long press if moved
+      if (noteLongPressTimerRef.current) {
+        clearTimeout(noteLongPressTimerRef.current);
+        noteLongPressTimerRef.current = null;
+      }
+      
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      
+      // Calculate new position in field coordinates
+      const screenX = e.clientX - rect.left - noteOffset.x;
+      const screenY = e.clientY - rect.top - noteOffset.y;
+      const fieldX = (screenX - offset.x) / scale;
+      const fieldY = (screenY - offset.y) / scale;
+      
+      onPlayNotesChange(
+        playNotes.map(n =>
+          n.id === draggingNoteId
+            ? { ...n, x: fieldX, y: fieldY }
+            : n
+        )
+      );
+    },
+    [draggingNoteId, noteOffset, scale, offset, playNotes, onPlayNotesChange]
+  );
+
+  const handleNotePointerUp = useCallback(
+    (e: React.PointerEvent) => {
+      if (noteLongPressTimerRef.current) {
+        clearTimeout(noteLongPressTimerRef.current);
+        noteLongPressTimerRef.current = null;
+      }
+      
+      if (draggingNoteId) {
+        (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+        setDraggingNoteId(null);
+        unlockAllScroll();
+      }
+    },
+    [draggingNoteId]
+  );
+
+  // Note menu actions
+  const handleDeleteNote = useCallback(
+    (noteId: string) => {
+      onPushToUndoStack?.();
+      onPlayNotesChange(playNotes.filter(n => n.id !== noteId));
+      toast({
+        title: "Note deleted",
+        description: "The note has been removed.",
+      });
+    },
+    [playNotes, onPlayNotesChange, onPushToUndoStack, toast]
+  );
+
+  const handleStartResize = useCallback(
+    (noteId: string) => {
+      const note = playNotes.find(n => n.id === noteId);
+      if (note) {
+        setResizingNoteId(noteId);
+        setInitialNoteSize({ width: note.width || 120, height: note.height || 60 });
+        onPushToUndoStack?.();
+        lockAllScroll();  // Lock scroll during resize
+        toast({
+          title: "Resize mode",
+          description: "Pinch with two fingers to resize the note.",
+        });
+      }
+    },
+    [playNotes, onPushToUndoStack, toast]
+  );
+
+  // Pinch-to-resize for notes
+  const getPinchDistance = (touches: React.TouchList): number => {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  const handleTouchStartForResize = useCallback(
+    (e: React.TouchEvent) => {
+      if (!resizingNoteId) return;
+      
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        const distance = getPinchDistance(e.touches);
+        setInitialPinchDistance(distance);
+      }
+    },
+    [resizingNoteId]
+  );
+
+  const handleTouchMoveForResize = useCallback(
+    (e: React.TouchEvent) => {
+      if (!resizingNoteId || initialPinchDistance === null) return;
+      
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        
+        const currentDistance = getPinchDistance(e.touches);
+        const pinchScale = currentDistance / initialPinchDistance;
+        
+        // Calculate new size with constraints
+        const newWidth = Math.max(60, Math.min(300, initialNoteSize.width * pinchScale));
+        const newHeight = Math.max(40, Math.min(200, initialNoteSize.height * pinchScale));
+        
+        onPlayNotesChange(
+          playNotes.map(n =>
+            n.id === resizingNoteId
+              ? { ...n, width: newWidth, height: newHeight }
+              : n
+          )
+        );
+      }
+    },
+    [resizingNoteId, initialPinchDistance, initialNoteSize, playNotes, onPlayNotesChange]
+  );
+
+  const handleTouchEndForResize = useCallback(
+    (e: React.TouchEvent) => {
+      if (resizingNoteId && e.touches.length < 2) {
+        setInitialPinchDistance(null);
+        setResizingNoteId(null);
+        unlockAllScroll();  // Unlock scroll when resize ends
+        toast({
+          title: "Resize complete",
+          description: "Note size has been updated.",
+        });
+      }
+    },
+    [resizingNoteId, toast]
+  );
+
   // Dynamic Man coverage sync: Keep Man routes updated when covered players move
   useEffect(() => {
     const manRoutes = routes.filter(r => r.routeType === "man" && r.targetPlayerId);
@@ -845,18 +1068,30 @@ export function MobileCanvas({
 
     // Render play notes (post-it style)
     playNotes.forEach((note) => {
-      const noteWidth = 100;
-      const noteHeight = 60;
+      const noteWidth = note.width || 120;
+      const noteHeight = note.height || 60;
+      const isDragging = draggingNoteId === note.id;
+      const isResizing = resizingNoteId === note.id;
       
       // Use note's background color or default yellow
       const bgColor = note.backgroundColor || "#FFFACD";
       ctx.fillStyle = bgColor;
       ctx.fillRect(note.x, note.y, noteWidth, noteHeight);
       
-      // Border - derive from background color
-      ctx.strokeStyle = "#E6DB74";
-      ctx.lineWidth = 1;
+      // Border - highlight if dragging or resizing
+      if (isDragging) {
+        ctx.strokeStyle = "#f59e0b"; // amber-500
+        ctx.lineWidth = 2;
+      } else if (isResizing) {
+        ctx.strokeStyle = "#f97316"; // orange-500
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 4]);
+      } else {
+        ctx.strokeStyle = "#E6DB74";
+        ctx.lineWidth = 1;
+      }
       ctx.strokeRect(note.x, note.y, noteWidth, noteHeight);
+      ctx.setLineDash([]); // Reset dash
       
       // Note text
       ctx.fillStyle = "#333";
@@ -886,7 +1121,7 @@ export function MobileCanvas({
     });
 
     ctx.restore();
-  }, [players, routes, playNotes, currentRoutePoints, scale, offset, field, colors, activeRoutePlayerId, activePlayerColor, draggedPlayerId, menuPlayer]);
+  }, [players, routes, playNotes, currentRoutePoints, scale, offset, field, colors, activeRoutePlayerId, activePlayerColor, draggedPlayerId, menuPlayer, draggingNoteId, resizingNoteId]);
 
   return (
     <div className="flex flex-col h-full" data-testid="mobile-canvas">
@@ -947,12 +1182,15 @@ export function MobileCanvas({
 
       <div
         ref={containerRef}
-        className={`flex-1 relative ${isTouchingPlayer || activeRoutePlayerId ? 'touch-none' : 'touch-pan-y'}`}
+        className={`flex-1 relative ${isTouchingPlayer || activeRoutePlayerId || draggingNoteId ? 'touch-none' : 'touch-pan-y'}`}
         style={{ backgroundColor: '#166534' }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
+        onTouchStart={handleTouchStartForResize}
+        onTouchMove={handleTouchMoveForResize}
+        onTouchEnd={handleTouchEndForResize}
       >
         <canvas
           ref={canvasRef}
@@ -980,27 +1218,54 @@ export function MobileCanvas({
           </div>
         )}
         
-        {/* Note editing overlays */}
+        {/* Note dragging indicator */}
+        {draggingNoteId && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-amber-500/90 text-black backdrop-blur px-4 py-2 rounded-full text-sm font-medium shadow-lg">
+            Dragging note...
+          </div>
+        )}
+        
+        {/* Note resize mode overlay */}
+        {resizingNoteId && (
+          <div className="absolute inset-0 bg-black/30 pointer-events-none z-30 flex items-center justify-center">
+            <div className="bg-card px-4 py-3 rounded-lg text-center shadow-lg">
+              <span className="text-sm font-medium">Pinch to resize</span>
+              <span className="block text-xs text-muted-foreground mt-1">
+                {Math.round(playNotes.find(n => n.id === resizingNoteId)?.width || 120)} × {Math.round(playNotes.find(n => n.id === resizingNoteId)?.height || 60)}
+              </span>
+            </div>
+          </div>
+        )}
+        
+        {/* Note editing/interaction overlays */}
         {playNotes.map((note) => {
           const isEditing = editingNoteId === note.id;
-          const noteWidth = 100;
-          const noteHeight = 60;
+          const isDragging = draggingNoteId === note.id;
+          const isResizing = resizingNoteId === note.id;
+          const noteWidth = note.width || 120;
+          const noteHeight = note.height || 60;
           const noteX = offset.x + note.x * scale;
           const noteY = offset.y + note.y * scale;
           
           return (
             <div
               key={note.id}
-              className={`absolute ${isEditing ? 'z-20' : 'z-10'}`}
+              className={`absolute ${isEditing ? 'z-20' : isResizing ? 'z-40' : 'z-10'} ${isDragging ? 'ring-2 ring-amber-500 ring-offset-1' : ''} ${isResizing ? 'border-2 border-dashed border-orange-500' : ''}`}
               style={{
                 left: noteX,
                 top: noteY,
                 width: noteWidth * scale,
                 height: noteHeight * scale,
+                touchAction: 'none',
               }}
+              onPointerDown={(e) => handleNotePointerDown(e, note.id)}
+              onPointerMove={handleNotePointerMove}
+              onPointerUp={handleNotePointerUp}
+              onPointerCancel={handleNotePointerUp}
               onClick={(e) => {
                 e.stopPropagation();
-                if (!isEditing) {
+                // Only enter edit mode if not dragging
+                if (!isEditing && !draggingNoteId && !resizingNoteId) {
                   setEditingNoteId(note.id);
                   setEditingNoteText(note.text);
                 }
@@ -1013,8 +1278,8 @@ export function MobileCanvas({
                   style={{ 
                     transform: `scale(${1/scale})`,
                     transformOrigin: 'top left',
-                    width: 120,
-                    height: 80,
+                    width: noteWidth,
+                    height: noteHeight,
                     backgroundColor: note.backgroundColor || '#FFFACD',
                   }}
                 >
@@ -1055,6 +1320,14 @@ export function MobileCanvas({
         side={side}
         onClose={() => setMenuPlayer(null)}
         onSelectAction={handleMenuAction}
+      />
+
+      <NoteOptionsMenu
+        isVisible={!!menuNote}
+        noteId={menuNote?.id || ""}
+        onClose={() => setMenuNote(null)}
+        onDelete={handleDeleteNote}
+        onResize={handleStartResize}
       />
     </div>
   );
