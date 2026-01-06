@@ -1,7 +1,20 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
-import { Team, TeamBlankPage, TeamPlayer, TeamCoach, SplitsPageData, FormationSplit, SituationSplit, CustomSplit } from "@shared/schema";
+import { Team, TeamBlankPage, TeamPlayer, TeamCoach, SplitsPageData, FormationSplit, SituationSplit, CustomSplit, TeamSplit } from "@shared/schema";
+
+// Extended type for splits with player info
+interface SplitWithPlayer extends TeamSplit {
+  player: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    position1: string | null;
+    position2: string | null;
+    defPosition1: string | null;
+    mainColor: string | null;
+  };
+}
 import TopNav from "@/components/TopNav";
 import TeamPlaysList from "@/components/TeamPlaysList";
 import TeamRosterCard from "@/components/TeamRosterCard";
@@ -158,6 +171,20 @@ export default function TeamPlaybooks() {
     queryKey: ["/api/teams", selectedTeamId, "coaches"],
     enabled: !!selectedTeamId && showRosterPreview,
   });
+
+  // Fetch squad splits for splits preview
+  const { data: teamSquadSplits = [] } = useQuery<SplitWithPlayer[]>({
+    queryKey: ["/api/teams", selectedTeamId, "splits"],
+    enabled: !!selectedTeamId && showSplitsEditor,
+  });
+
+  // Organize squad splits by squad name
+  const squad1Splits = teamSquadSplits
+    .filter(s => s.squadName === "Squad 1")
+    .sort((a, b) => (a.player.lastName || '').localeCompare(b.player.lastName || ''));
+  const squad2Splits = teamSquadSplits
+    .filter(s => s.squadName === "Squad 2")
+    .sort((a, b) => (a.player.lastName || '').localeCompare(b.player.lastName || ''));
 
   const createTeamMutation = useMutation({
     mutationFn: async (data: {
@@ -1309,13 +1336,15 @@ export default function TeamPlaybooks() {
         </DialogContent>
       </Dialog>
 
-      {/* Splits Editor Modal */}
+      {/* Splits Preview/Editor Modal */}
       {editingSplitsPage && (
-        <SplitsEditorModal
+        <SplitsPreviewModal
           open={showSplitsEditor}
           onOpenChange={setShowSplitsEditor}
           splitsPage={editingSplitsPage}
           teamId={selectedTeamId!}
+          squad1Splits={squad1Splits}
+          squad2Splits={squad2Splits}
           onSave={(title, pageData) => {
             updateSplitsPageMutation.mutate({
               pageId: editingSplitsPage.id,
@@ -1341,12 +1370,20 @@ export default function TeamPlaybooks() {
   );
 }
 
-// Splits Editor Modal Component
-function SplitsEditorModal({
+// Helper function to parse color strings
+function parseColorString(colorStr: string | null): string[] {
+  if (!colorStr) return [];
+  return colorStr.split(',').map(c => c.trim()).filter(Boolean);
+}
+
+// Splits Preview Modal Component - Shows Squad 1/Squad 2 with optional advanced splits
+function SplitsPreviewModal({
   open,
   onOpenChange,
   splitsPage,
   teamId,
+  squad1Splits,
+  squad2Splits,
   onSave,
   isPending,
 }: {
@@ -1354,20 +1391,32 @@ function SplitsEditorModal({
   onOpenChange: (open: boolean) => void;
   splitsPage: TeamBlankPage;
   teamId: number;
+  squad1Splits: SplitWithPlayer[];
+  squad2Splits: SplitWithPlayer[];
   onSave: (title: string, pageData: SplitsPageData) => void;
   isPending: boolean;
 }) {
   const [title, setTitle] = useState(splitsPage.title);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [pageData, setPageData] = useState<SplitsPageData>(() => {
     const data = (splitsPage as any).pageData as SplitsPageData | null;
     return data || { formations: [], situations: [], custom: [] };
   });
+
+  // Check if there's any advanced data
+  const hasAdvancedData = pageData.formations.length > 0 || 
+                          pageData.situations.length > 0 || 
+                          pageData.custom.length > 0;
 
   // Reset state when splitsPage changes
   useEffect(() => {
     setTitle(splitsPage.title);
     const data = (splitsPage as any).pageData as SplitsPageData | null;
     setPageData(data || { formations: [], situations: [], custom: [] });
+    // Auto-expand if there's existing advanced data
+    if (data && (data.formations.length > 0 || data.situations.length > 0 || data.custom.length > 0)) {
+      setShowAdvanced(true);
+    }
   }, [splitsPage]);
 
   const addFormation = () => {
@@ -1457,19 +1506,19 @@ function SplitsEditorModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl bg-zinc-900 border-zinc-800 text-white max-h-[85vh] overflow-hidden flex flex-col">
+      <DialogContent className="sm:max-w-3xl bg-zinc-900 border-zinc-800 text-white max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-white flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-green-500" />
-            Edit Splits Page
+            {title || "Team Splits"}
           </DialogTitle>
           <DialogDescription className="text-gray-400">
-            Enter your team's formation and situation splits manually.
+            Preview of your squad assignments as they will appear in exports.
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="flex-1 pr-4">
           <div className="space-y-6 pt-4">
-            {/* Title */}
+            {/* Title Editor */}
             <div className="space-y-2">
               <Label htmlFor="splits-title" className="text-white">Page Title</Label>
               <Input
@@ -1482,184 +1531,292 @@ function SplitsEditorModal({
               />
             </div>
 
-            {/* Formation Splits */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold text-gray-300">Formation Splits</h4>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={addFormation}
-                  className="border-zinc-700 text-white hover:bg-zinc-800"
-                  data-testid="button-add-formation"
-                >
-                  <Plus className="w-3 h-3 mr-1" /> Add
-                </Button>
-              </div>
-              {pageData.formations.length === 0 ? (
-                <p className="text-sm text-gray-500 italic">No formations added</p>
-              ) : (
-                <div className="space-y-2">
-                  {pageData.formations.map((formation) => (
-                    <div key={formation.id} className="flex items-center gap-2 bg-zinc-800 rounded-md p-2">
-                      <Input
-                        value={formation.name}
-                        onChange={(e) => updateFormation(formation.id, 'name', e.target.value)}
-                        placeholder="Formation name"
-                        className="flex-1 bg-zinc-700 border-zinc-600 text-white h-8"
-                      />
-                      <Input
-                        type="number"
-                        value={formation.runPlays}
-                        onChange={(e) => updateFormation(formation.id, 'runPlays', parseInt(e.target.value) || 0)}
-                        placeholder="Run"
-                        className="w-16 bg-zinc-700 border-zinc-600 text-white h-8 text-center"
-                      />
-                      <Input
-                        type="number"
-                        value={formation.passPlays}
-                        onChange={(e) => updateFormation(formation.id, 'passPlays', parseInt(e.target.value) || 0)}
-                        placeholder="Pass"
-                        className="w-16 bg-zinc-700 border-zinc-600 text-white h-8 text-center"
-                      />
-                      <Input
-                        type="number"
-                        value={formation.percentage}
-                        onChange={(e) => updateFormation(formation.id, 'percentage', parseInt(e.target.value) || 0)}
-                        placeholder="%"
-                        className="w-16 bg-zinc-700 border-zinc-600 text-white h-8 text-center"
-                      />
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => removeFormation(formation.id)}
-                        className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-zinc-700"
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ))}
-                  <div className="flex gap-2 text-xs text-gray-500 px-2">
-                    <span className="flex-1">Formation</span>
-                    <span className="w-16 text-center">Run</span>
-                    <span className="w-16 text-center">Pass</span>
-                    <span className="w-16 text-center">%</span>
-                    <span className="w-8"></span>
-                  </div>
+            {/* Squad Assignments - Primary Content */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* Squad 1 */}
+              <div className="bg-zinc-800 rounded-lg p-4" data-testid="splits-preview-squad-1">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-semibold text-white text-lg">Squad 1</span>
+                  <span className="text-sm text-gray-400">{squad1Splits.length}/6</span>
                 </div>
-              )}
+                <div className="space-y-2">
+                  {squad1Splits.length === 0 ? (
+                    <p className="text-sm text-gray-500 italic py-2">No players assigned</p>
+                  ) : (
+                    squad1Splits.map((split) => (
+                      <div
+                        key={split.id}
+                        className="flex items-center gap-2 bg-zinc-700 rounded px-3 py-2"
+                      >
+                        <span className="font-medium text-white">
+                          {split.player.firstName} {split.player.lastName}
+                        </span>
+                        {(split.player.position1 || split.player.defPosition1) && (
+                          <span className="text-xs text-gray-400">
+                            {[split.player.position1, split.player.defPosition1].filter(Boolean).join(" / ")}
+                          </span>
+                        )}
+                        <div className="flex gap-1 ml-auto">
+                          {parseColorString(split.player.mainColor).slice(0, 2).map((color, idx) => (
+                            <span
+                              key={idx}
+                              className="w-3 h-3 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: color }}
+                              title={color}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Squad 2 */}
+              <div className="bg-zinc-800 rounded-lg p-4" data-testid="splits-preview-squad-2">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-semibold text-white text-lg">Squad 2</span>
+                  <span className="text-sm text-gray-400">{squad2Splits.length}/6</span>
+                </div>
+                <div className="space-y-2">
+                  {squad2Splits.length === 0 ? (
+                    <p className="text-sm text-gray-500 italic py-2">No players assigned</p>
+                  ) : (
+                    squad2Splits.map((split) => (
+                      <div
+                        key={split.id}
+                        className="flex items-center gap-2 bg-zinc-700 rounded px-3 py-2"
+                      >
+                        <span className="font-medium text-white">
+                          {split.player.firstName} {split.player.lastName}
+                        </span>
+                        {(split.player.position1 || split.player.defPosition1) && (
+                          <span className="text-xs text-gray-400">
+                            {[split.player.position1, split.player.defPosition1].filter(Boolean).join(" / ")}
+                          </span>
+                        )}
+                        <div className="flex gap-1 ml-auto">
+                          {parseColorString(split.player.mainColor).slice(0, 2).map((color, idx) => (
+                            <span
+                              key={idx}
+                              className="w-3 h-3 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: color }}
+                              title={color}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             </div>
 
-            {/* Situation Splits */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold text-gray-300">Situation Splits</h4>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={addSituation}
-                  className="border-zinc-700 text-white hover:bg-zinc-800"
-                  data-testid="button-add-situation"
-                >
-                  <Plus className="w-3 h-3 mr-1" /> Add
-                </Button>
-              </div>
-              {pageData.situations.length === 0 ? (
-                <p className="text-sm text-gray-500 italic">No situations added</p>
-              ) : (
-                <div className="space-y-2">
-                  {pageData.situations.map((situation) => (
-                    <div key={situation.id} className="flex items-center gap-2 bg-zinc-800 rounded-md p-2">
-                      <Input
-                        value={situation.situation}
-                        onChange={(e) => updateSituation(situation.id, 'situation', e.target.value)}
-                        placeholder="Situation (e.g., 3rd & Long)"
-                        className="flex-1 bg-zinc-700 border-zinc-600 text-white h-8"
-                      />
-                      <Input
-                        type="number"
-                        value={situation.runPlays}
-                        onChange={(e) => updateSituation(situation.id, 'runPlays', parseInt(e.target.value) || 0)}
-                        placeholder="Run"
-                        className="w-16 bg-zinc-700 border-zinc-600 text-white h-8 text-center"
-                      />
-                      <Input
-                        type="number"
-                        value={situation.passPlays}
-                        onChange={(e) => updateSituation(situation.id, 'passPlays', parseInt(e.target.value) || 0)}
-                        placeholder="Pass"
-                        className="w-16 bg-zinc-700 border-zinc-600 text-white h-8 text-center"
-                      />
-                      <Input
-                        type="number"
-                        value={situation.totalPlays}
-                        onChange={(e) => updateSituation(situation.id, 'totalPlays', parseInt(e.target.value) || 0)}
-                        placeholder="Total"
-                        className="w-16 bg-zinc-700 border-zinc-600 text-white h-8 text-center"
-                      />
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => removeSituation(situation.id)}
-                        className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-zinc-700"
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ))}
-                  <div className="flex gap-2 text-xs text-gray-500 px-2">
-                    <span className="flex-1">Situation</span>
-                    <span className="w-16 text-center">Run</span>
-                    <span className="w-16 text-center">Pass</span>
-                    <span className="w-16 text-center">Total</span>
-                    <span className="w-8"></span>
-                  </div>
-                </div>
-              )}
-            </div>
+            {squad1Splits.length === 0 && squad2Splits.length === 0 && (
+              <p className="text-sm text-gray-400 text-center py-2">
+                Assign players to squads in your team's Roster section to see them here.
+              </p>
+            )}
 
-            {/* Custom Data */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold text-gray-300">Custom Data</h4>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={addCustom}
-                  className="border-zinc-700 text-white hover:bg-zinc-800"
-                  data-testid="button-add-custom"
-                >
-                  <Plus className="w-3 h-3 mr-1" /> Add
-                </Button>
-              </div>
-              {pageData.custom.length === 0 ? (
-                <p className="text-sm text-gray-500 italic">No custom data added</p>
-              ) : (
-                <div className="space-y-2">
-                  {pageData.custom.map((item) => (
-                    <div key={item.id} className="flex items-center gap-2 bg-zinc-800 rounded-md p-2">
-                      <Input
-                        value={item.label}
-                        onChange={(e) => updateCustom(item.id, 'label', e.target.value)}
-                        placeholder="Label"
-                        className="w-1/3 bg-zinc-700 border-zinc-600 text-white h-8"
-                      />
-                      <Input
-                        value={item.value}
-                        onChange={(e) => updateCustom(item.id, 'value', e.target.value)}
-                        placeholder="Value"
-                        className="flex-1 bg-zinc-700 border-zinc-600 text-white h-8"
-                      />
+            {/* Advanced Splits - Collapsible */}
+            <div className="border-t border-zinc-700 pt-4">
+              <button
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+                data-testid="button-toggle-advanced-splits"
+              >
+                <ChevronDown className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+                <span>Advanced Splits</span>
+                {hasAdvancedData && (
+                  <span className="text-xs bg-green-600 text-white px-1.5 py-0.5 rounded">
+                    {pageData.formations.length + pageData.situations.length + pageData.custom.length} items
+                  </span>
+                )}
+              </button>
+
+              {showAdvanced && (
+                <div className="mt-4 space-y-6">
+                  {/* Formation Splits */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-semibold text-gray-300">Formation Splits</h4>
                       <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => removeCustom(item.id)}
-                        className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-zinc-700"
+                        size="sm"
+                        variant="outline"
+                        onClick={addFormation}
+                        className="border-zinc-700 text-white hover:bg-zinc-800"
+                        data-testid="button-add-formation"
                       >
-                        <X className="w-4 h-4" />
+                        <Plus className="w-3 h-3 mr-1" /> Add
                       </Button>
                     </div>
-                  ))}
+                    {pageData.formations.length === 0 ? (
+                      <p className="text-sm text-gray-500 italic">No formations added</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {pageData.formations.map((formation) => (
+                          <div key={formation.id} className="flex items-center gap-2 bg-zinc-800 rounded-md p-2">
+                            <Input
+                              value={formation.name}
+                              onChange={(e) => updateFormation(formation.id, 'name', e.target.value)}
+                              placeholder="Formation name"
+                              className="flex-1 bg-zinc-700 border-zinc-600 text-white h-8"
+                            />
+                            <Input
+                              type="number"
+                              value={formation.runPlays}
+                              onChange={(e) => updateFormation(formation.id, 'runPlays', parseInt(e.target.value) || 0)}
+                              placeholder="Run"
+                              className="w-16 bg-zinc-700 border-zinc-600 text-white h-8 text-center"
+                            />
+                            <Input
+                              type="number"
+                              value={formation.passPlays}
+                              onChange={(e) => updateFormation(formation.id, 'passPlays', parseInt(e.target.value) || 0)}
+                              placeholder="Pass"
+                              className="w-16 bg-zinc-700 border-zinc-600 text-white h-8 text-center"
+                            />
+                            <Input
+                              type="number"
+                              value={formation.percentage}
+                              onChange={(e) => updateFormation(formation.id, 'percentage', parseInt(e.target.value) || 0)}
+                              placeholder="%"
+                              className="w-16 bg-zinc-700 border-zinc-600 text-white h-8 text-center"
+                            />
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => removeFormation(formation.id)}
+                              className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-zinc-700"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                        <div className="flex gap-2 text-xs text-gray-500 px-2">
+                          <span className="flex-1">Formation</span>
+                          <span className="w-16 text-center">Run</span>
+                          <span className="w-16 text-center">Pass</span>
+                          <span className="w-16 text-center">%</span>
+                          <span className="w-8"></span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Situation Splits */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-semibold text-gray-300">Situation Splits</h4>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={addSituation}
+                        className="border-zinc-700 text-white hover:bg-zinc-800"
+                        data-testid="button-add-situation"
+                      >
+                        <Plus className="w-3 h-3 mr-1" /> Add
+                      </Button>
+                    </div>
+                    {pageData.situations.length === 0 ? (
+                      <p className="text-sm text-gray-500 italic">No situations added</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {pageData.situations.map((situation) => (
+                          <div key={situation.id} className="flex items-center gap-2 bg-zinc-800 rounded-md p-2">
+                            <Input
+                              value={situation.situation}
+                              onChange={(e) => updateSituation(situation.id, 'situation', e.target.value)}
+                              placeholder="Situation (e.g., 3rd & Long)"
+                              className="flex-1 bg-zinc-700 border-zinc-600 text-white h-8"
+                            />
+                            <Input
+                              type="number"
+                              value={situation.runPlays}
+                              onChange={(e) => updateSituation(situation.id, 'runPlays', parseInt(e.target.value) || 0)}
+                              placeholder="Run"
+                              className="w-16 bg-zinc-700 border-zinc-600 text-white h-8 text-center"
+                            />
+                            <Input
+                              type="number"
+                              value={situation.passPlays}
+                              onChange={(e) => updateSituation(situation.id, 'passPlays', parseInt(e.target.value) || 0)}
+                              placeholder="Pass"
+                              className="w-16 bg-zinc-700 border-zinc-600 text-white h-8 text-center"
+                            />
+                            <Input
+                              type="number"
+                              value={situation.totalPlays}
+                              onChange={(e) => updateSituation(situation.id, 'totalPlays', parseInt(e.target.value) || 0)}
+                              placeholder="Total"
+                              className="w-16 bg-zinc-700 border-zinc-600 text-white h-8 text-center"
+                            />
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => removeSituation(situation.id)}
+                              className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-zinc-700"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                        <div className="flex gap-2 text-xs text-gray-500 px-2">
+                          <span className="flex-1">Situation</span>
+                          <span className="w-16 text-center">Run</span>
+                          <span className="w-16 text-center">Pass</span>
+                          <span className="w-16 text-center">Total</span>
+                          <span className="w-8"></span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Custom Data */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-semibold text-gray-300">Custom Data</h4>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={addCustom}
+                        className="border-zinc-700 text-white hover:bg-zinc-800"
+                        data-testid="button-add-custom"
+                      >
+                        <Plus className="w-3 h-3 mr-1" /> Add
+                      </Button>
+                    </div>
+                    {pageData.custom.length === 0 ? (
+                      <p className="text-sm text-gray-500 italic">No custom data added</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {pageData.custom.map((item) => (
+                          <div key={item.id} className="flex items-center gap-2 bg-zinc-800 rounded-md p-2">
+                            <Input
+                              value={item.label}
+                              onChange={(e) => updateCustom(item.id, 'label', e.target.value)}
+                              placeholder="Label"
+                              className="w-1/3 bg-zinc-700 border-zinc-600 text-white h-8"
+                            />
+                            <Input
+                              value={item.value}
+                              onChange={(e) => updateCustom(item.id, 'value', e.target.value)}
+                              placeholder="Value"
+                              className="flex-1 bg-zinc-700 border-zinc-600 text-white h-8"
+                            />
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => removeCustom(item.id)}
+                              className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-zinc-700"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -1670,18 +1827,20 @@ function SplitsEditorModal({
             variant="outline"
             onClick={() => onOpenChange(false)}
             className="border-zinc-700 text-white hover:bg-zinc-800"
-            data-testid="button-cancel-splits"
+            data-testid="button-close-splits"
           >
-            Cancel
+            Close
           </Button>
-          <Button
-            onClick={() => onSave(title.trim() || splitsPage.title, pageData)}
-            disabled={isPending}
-            className="bg-green-600 hover:bg-green-700 text-white"
-            data-testid="button-save-splits"
-          >
-            {isPending ? "Saving..." : "Save Splits"}
-          </Button>
+          {hasAdvancedData && (
+            <Button
+              onClick={() => onSave(title.trim() || splitsPage.title, pageData)}
+              disabled={isPending}
+              className="bg-green-600 hover:bg-green-700 text-white"
+              data-testid="button-save-splits"
+            >
+              {isPending ? "Saving..." : "Save Advanced Splits"}
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>
