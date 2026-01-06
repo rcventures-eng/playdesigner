@@ -111,6 +111,7 @@ export default function TeamPlaybooks() {
   // Splits editor modal state
   const [showSplitsEditor, setShowSplitsEditor] = useState(false);
   const [editingSplitsPage, setEditingSplitsPage] = useState<TeamBlankPage | null>(null);
+  const pendingSplitsOpenRef = useRef(false);
 
   // Auto-select team from URL query param (e.g., when returning from view-only mode)
   useEffect(() => {
@@ -153,12 +154,26 @@ export default function TeamPlaybooks() {
   const { data: teamPlaysData, isLoading: playsLoading } = useQuery<{
     team: { id: number; name: string; year: string; coverImageUrl?: string };
     plays: TeamPlayData[];
+    blankPages: TeamBlankPage[];
   }>({
     queryKey: ["/api/teams", selectedTeamId, "plays-for-export"],
     enabled: !!selectedTeamId,
   });
 
   const teamPlays = teamPlaysData?.plays || [];
+  const blankPages = teamPlaysData?.blankPages || [];
+
+  // Auto-open splits editor when a new splits page is created from CTA
+  useEffect(() => {
+    if (pendingSplitsOpenRef.current && blankPages.length > 0) {
+      const splitsPage = blankPages.find(p => p.pageType === 'splits');
+      if (splitsPage) {
+        pendingSplitsOpenRef.current = false;
+        setEditingSplitsPage(splitsPage);
+        setShowSplitsEditor(true);
+      }
+    }
+  }, [blankPages]);
 
   // Fetch players for roster preview
   const { data: teamPlayers = [] } = useQuery<TeamPlayer[]>({
@@ -296,13 +311,17 @@ export default function TeamPlaybooks() {
   });
 
   const createPageMutation = useMutation({
-    mutationFn: async ({ teamId, pageType }: { teamId: number; pageType: 'blank' | 'roster' | 'splits' }) => {
+    mutationFn: async ({ teamId, pageType, autoOpen }: { teamId: number; pageType: 'blank' | 'roster' | 'splits'; autoOpen?: boolean }) => {
       return apiRequest("POST", `/api/teams/${teamId}/blank-pages`, { pageType });
     },
     onSuccess: (_, variables) => {
       if (selectedTeamId) {
         queryClient.invalidateQueries({ queryKey: ["/api/teams", selectedTeamId, "plays-for-export"] });
         queryClient.invalidateQueries({ queryKey: ["/api/teams", selectedTeamId, "blank-pages"] });
+      }
+      // If this was a splits page created from CTA, mark for auto-open
+      if (variables.pageType === 'splits' && variables.autoOpen) {
+        pendingSplitsOpenRef.current = true;
       }
       const pageTypeLabels = {
         blank: "Blank divider page",
@@ -777,8 +796,8 @@ export default function TeamPlaybooks() {
                         setEditingSplitsPage(existingSplitsPage);
                         setShowSplitsEditor(true);
                       } else {
-                        // Create a new splits page
-                        createPageMutation.mutate({ teamId: selectedTeam.id, pageType: 'splits' });
+                        // Create a new splits page with autoOpen flag
+                        createPageMutation.mutate({ teamId: selectedTeam.id, pageType: 'splits', autoOpen: true });
                       }
                     }}
                   />

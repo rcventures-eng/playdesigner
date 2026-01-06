@@ -68,11 +68,20 @@ Users can connect their personal Google Drive accounts via OAuth 2.0 to export t
 **Playbook Page Types**: The `teamBlankPages` table supports three page types via `pageType` field:
 - **Blank Page (pageType='blank')**: Section dividers with title and optional notes. Double-click opens text editor modal.
 - **Roster Page (pageType='roster')**: Displays team players and coaching staff from existing data. Double-click opens read-only preview modal showing players/coaches sorted alphabetically by last name with positions and color tags.
-- **Splits Page (pageType='splits')**: Manual entry form for team statistics. Double-click opens editor modal with three sections:
-  - Formation Splits: Name, Run plays, Pass plays, Percentage
-  - Situation Splits: Situation name, Run plays, Pass plays, Total plays
-  - Custom Data: Label/value pairs for additional statistics
-  - Data stored in `pageData` JSON column with type `SplitsPageData`
+- **Splits Page (pageType='splits')**: Displays Squad 1/Squad 2 player assignments as primary content. Double-click opens preview modal showing:
+  - Squad 1 and Squad 2 player lists (pulled from `teamSplits` table)
+  - Player names, positions, and color indicators
+  - Collapsible "Advanced Splits" section for optional statistics:
+    - Formation Splits: Name, Run plays, Pass plays, Percentage
+    - Situation Splits: Situation name, Run plays, Pass plays, Total plays
+    - Custom Data: Label/value pairs for additional statistics
+  - Advanced splits data stored in `pageData` JSON column with type `SplitsPageData`
+  - Save button only appears when advanced splits data exists
+
+**Team Roster Card "Advanced Splits" CTA:**
+- Located below the "Splits" header in TeamRosterCard component
+- Opens existing splits page in preview modal, or creates new splits page if none exists
+- Provides quick access to view squad assignments and add optional advanced statistics
 
 The dropdown menu offers "Add Blank Page", "Add Roster Page", and "Add Splits Page" options with color-coded icons (FileText gray, Users blue, BarChart3 green).
 
