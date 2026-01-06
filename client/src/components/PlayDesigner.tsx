@@ -104,6 +104,7 @@ interface Football {
   x: number;
   y: number;
   hasPlayAction?: boolean;
+  hasRPO?: boolean;
 }
 
 interface PlayNote {
@@ -842,12 +843,13 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [selectedPlayer, selectedRoute, selectedShape, selectedFootball, selectedNote, editingPlayer, selectedElements, players, routes, shapes, footballs, notes, metadata, isDrawingRoute]);
 
-  // Sync Play-Action checkbox with selected football's hasPlayAction state
+  // Sync Play-Action and RPO checkboxes with selected football's state
   useEffect(() => {
     if (selectedFootball) {
       const football = footballs.find(f => f.id === selectedFootball);
       if (football) {
         setIsPlayAction(football.hasPlayAction ?? false);
+        setIsRPO(football.hasRPO ?? false);
       }
     }
   }, [selectedFootball, footballs]);
@@ -3804,33 +3806,76 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                 )}
               </div>
 
-              {/* Contextual Play-Action toggle when football is selected */}
+              {/* Contextual Play-Action and RPO toggles when football is selected */}
               {selectedFootball && (
-                <div className="flex items-center gap-2 p-2 bg-amber-900/30 border border-amber-600/30 rounded-md">
-                  <input
-                    type="checkbox"
-                    id="play-action-selected"
-                    checked={footballs.find(f => f.id === selectedFootball)?.hasPlayAction || false}
-                    onChange={(e) => {
-                      const newValue = e.target.checked;
-                      setHistory(prev => [...prev, {
-                        players: JSON.parse(JSON.stringify(players)),
-                        routes: JSON.parse(JSON.stringify(routes)),
-                        shapes: JSON.parse(JSON.stringify(shapes)),
-                        footballs: JSON.parse(JSON.stringify(footballs)),
-                        notes: JSON.parse(JSON.stringify(notes)),
-                        metadata: JSON.parse(JSON.stringify(metadata))
-                      }]);
-                      setFootballs(prev => prev.map(f => 
-                        f.id === selectedFootball 
-                          ? { ...f, hasPlayAction: newValue }
-                          : f
-                      ));
-                    }}
-                    className="rounded"
-                    data-testid="checkbox-play-action-selected"
-                  />
-                  <Label htmlFor="play-action-selected" className="text-xs text-amber-200">Play-Action?</Label>
+                <div className="flex items-center gap-3 p-2 bg-amber-900/30 border border-amber-600/30 rounded-md">
+                  {/* RPO Checkbox - Hot Pink */}
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="checkbox"
+                      id="rpo-selected"
+                      checked={footballs.find(f => f.id === selectedFootball)?.hasRPO || false}
+                      onChange={(e) => {
+                        const newValue = e.target.checked;
+                        setHistory(prev => [...prev, {
+                          players: JSON.parse(JSON.stringify(players)),
+                          routes: JSON.parse(JSON.stringify(routes)),
+                          shapes: JSON.parse(JSON.stringify(shapes)),
+                          footballs: JSON.parse(JSON.stringify(footballs)),
+                          notes: JSON.parse(JSON.stringify(notes)),
+                          metadata: JSON.parse(JSON.stringify(metadata))
+                        }]);
+                        // Sync global state and enforce mutual exclusivity
+                        setIsRPO(newValue);
+                        if (newValue) {
+                          setIsPlayAction(false);
+                        }
+                        // Update football object with mutual exclusivity
+                        setFootballs(prev => prev.map(f => 
+                          f.id === selectedFootball 
+                            ? { ...f, hasRPO: newValue, hasPlayAction: newValue ? false : f.hasPlayAction }
+                            : f
+                        ));
+                      }}
+                      className="rounded accent-pink-500"
+                      data-testid="checkbox-rpo-selected"
+                    />
+                    <Label htmlFor="rpo-selected" className="text-xs text-pink-400 font-medium">RPO?</Label>
+                  </div>
+                  
+                  {/* Play-Action Checkbox - Orange/Amber */}
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="checkbox"
+                      id="play-action-selected"
+                      checked={footballs.find(f => f.id === selectedFootball)?.hasPlayAction || false}
+                      onChange={(e) => {
+                        const newValue = e.target.checked;
+                        setHistory(prev => [...prev, {
+                          players: JSON.parse(JSON.stringify(players)),
+                          routes: JSON.parse(JSON.stringify(routes)),
+                          shapes: JSON.parse(JSON.stringify(shapes)),
+                          footballs: JSON.parse(JSON.stringify(footballs)),
+                          notes: JSON.parse(JSON.stringify(notes)),
+                          metadata: JSON.parse(JSON.stringify(metadata))
+                        }]);
+                        // Sync global state and enforce mutual exclusivity
+                        setIsPlayAction(newValue);
+                        if (newValue) {
+                          setIsRPO(false);
+                        }
+                        // Update football object with mutual exclusivity
+                        setFootballs(prev => prev.map(f => 
+                          f.id === selectedFootball 
+                            ? { ...f, hasPlayAction: newValue, hasRPO: newValue ? false : f.hasRPO }
+                            : f
+                        ));
+                      }}
+                      className="rounded accent-orange-500"
+                      data-testid="checkbox-play-action-selected"
+                    />
+                    <Label htmlFor="play-action-selected" className="text-xs text-amber-200">PA?</Label>
+                  </div>
                 </div>
               )}
 
@@ -5129,6 +5174,25 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                     >
                       <circle cx="10" cy="10" r="10" fill="black" stroke="#000" strokeWidth="2" />
                       <text x="10" y="14" fill="white" fontSize="12" fontWeight="bold" textAnchor="middle">PA</text>
+                    </svg>
+                  )}
+                  {football.hasRPO && (
+                    <svg 
+                      width="18" 
+                      height="18" 
+                      viewBox="-1 -1 20 20"
+                      style={{ 
+                        position: 'absolute', 
+                        left: -1, 
+                        top: 9,
+                        pointerEvents: 'none',
+                        transform: `scale(${1 / scale})`,
+                        transformOrigin: 'center center'
+                      }}
+                      data-testid={`rpo-marker-${football.id}`}
+                    >
+                      <circle cx="9" cy="9" r="9" fill="black" stroke="#000" strokeWidth="2" />
+                      <text x="9" y="12.5" fill="#FF1493" fontSize="9" fontWeight="bold" textAnchor="middle">RPO</text>
                     </svg>
                   )}
                 </div>
