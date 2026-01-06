@@ -5178,9 +5178,9 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                   )}
                   {football.hasRPO && (
                     <svg 
-                      width="18" 
-                      height="18" 
-                      viewBox="-1 -1 20 20"
+                      width="22" 
+                      height="22" 
+                      viewBox="-1 -1 22 22"
                       style={{ 
                         position: 'absolute', 
                         left: -1, 
@@ -5191,8 +5191,8 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                       }}
                       data-testid={`rpo-marker-${football.id}`}
                     >
-                      <circle cx="9" cy="9" r="9" fill="white" stroke="#000" strokeWidth="1.5" />
-                      <text x="9" y="12.5" fill="black" fontSize="9" fontWeight="bold" textAnchor="middle">RPO</text>
+                      <circle cx="10" cy="10" r="10" fill="white" stroke="#000" strokeWidth="1.5" />
+                      <text x="10" y="10" fill="black" fontSize="9" fontWeight="bold" textAnchor="middle" dominantBaseline="middle">RPO</text>
                     </svg>
                   )}
                 </div>
