@@ -1,0 +1,529 @@
+Feature Additions - Notes, RPO Toggle & Playbook Management
+Overview
+Implement the following features on BOTH desktop and mobile versions of the RC Football app:
+
+Add Play Notes button to mobile
+Fix backspace behavior in Notes feature
+Add RPO checkbox alongside Play-Action
+Add selection and delete functionality to Team Playbook list
+
+
+Feature A: Add Play Notes Button to Mobile Web
+Problem: The Play Notes feature exists on desktop but is not accessible on mobile web.
+Fix Required:
+Add a "Play Notes" button to the mobile header bar, positioned to the RIGHT of the AI button.
+Button Design (Apple Notes style):
+
+Icon: Notepad/document icon (similar to Apple Notes app icon)
+Background: Subtle yellow/cream gradient or solid (#FDEB71 → #F8D800 or similar)
+Border radius: 8px
+Size: Same height as AI button
+Text: "Notes" (optional, can be icon-only if space is tight)
+
+Mobile Header Layout:
+[RC Football] [OFF|DEF] [5v5 ▼] [✨ AI] [📝 Notes]    [Hey Coach Ray ▼]
+Implementation:
+tsx// In mobile header component
+<button 
+  className="notes-button"
+  onClick={() => setShowNotesMode(true)}
+>
+  <NotesIcon className="notes-icon" />
+  <span>Notes</span>
+</button>
+Styling:
+css.notes-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #FDEB71 0%, #F8D800 100%);
+  border: none;
+  border-radius: 8px;
+  color: #333;
+  font-weight: 600;
+  font-size: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.notes-button:active {
+  transform: scale(0.98);
+}
+
+.notes-icon {
+  width: 16px;
+  height: 16px;
+}
+Functionality:
+
+When tapped, activate the same Notes mode as desktop
+User can tap on the canvas to place a note
+Note text input appears (same as desktop)
+Note can be moved, edited, or deleted (same as desktop)
+
+
+Feature B: Fix Backspace Behavior in Notes
+Problem: When typing in a note with the cursor active, pressing backspace deletes the ENTIRE note instead of just the last character. This makes editing notes impossible.
+Root Cause: The backspace key event is being captured at the canvas/app level and triggering "delete selected object" instead of being handled by the text input.
+Fix Required:
+Implement proper state management for note editing:
+StateSingle ClickDouble ClickBackspace BehaviorNote not selectedSelects note (shows handles)Activates edit mode (cursor)Does nothingNote selected (no cursor)Already selectedActivates edit modeDeletes entire noteNote in edit mode (cursor visible)N/AN/ADeletes last character (normal typing)
+Implementation:
+typescript// Track note states
+type NoteState = 'unselected' | 'selected' | 'editing';
+
+const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
+const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+
+// Handle note click
+const handleNoteClick = (noteId: string, e: React.MouseEvent) => {
+  e.stopPropagation();
+  
+  if (editingNoteId === noteId) {
+    // Already editing, do nothing (let text input handle clicks)
+    return;
+  }
+  
+  // Single click - select the note (for moving/deleting)
+  setSelectedNoteId(noteId);
+  setEditingNoteId(null); // Exit edit mode if was editing another note
+};
+
+// Handle note double-click
+const handleNoteDoubleClick = (noteId: string, e: React.MouseEvent) => {
+  e.stopPropagation();
+  
+  // Double click - enter edit mode (show cursor)
+  setSelectedNoteId(noteId);
+  setEditingNoteId(noteId);
+  
+  // Focus the text input
+  setTimeout(() => {
+    const input = document.querySelector(`#note-input-${noteId}`) as HTMLInputElement;
+    input?.focus();
+  }, 0);
+};
+
+// Handle keydown at app/canvas level
+const handleKeyDown = (e: KeyboardEvent) => {
+  if (e.key === 'Backspace') {
+    // If we're editing a note, let the input handle backspace normally
+    if (editingNoteId) {
+      // DO NOT prevent default - let the input delete characters
+      return;
+    }
+    
+    // If a note is selected (but not editing), delete the entire note
+    if (selectedNoteId) {
+      e.preventDefault();
+      deleteNote(selectedNoteId);
+      setSelectedNoteId(null);
+    }
+  }
+  
+  // Escape exits edit mode
+  if (e.key === 'Escape') {
+    setEditingNoteId(null);
+  }
+};
+
+// Click outside note to deselect
+const handleCanvasClick = (e: React.MouseEvent) => {
+  // Only if clicking on canvas, not on a note
+  if ((e.target as HTMLElement).classList.contains('canvas')) {
+    setSelectedNoteId(null);
+    setEditingNoteId(null);
+  }
+};
+Note Component:
+tsxconst PlayNote = ({ note, isSelected, isEditing, onClick, onDoubleClick, onChange }) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+  
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      // Place cursor at end of text
+      inputRef.current.setSelectionRange(note.text.length, note.text.length);
+    }
+  }, [isEditing]);
+  
+  return (
+    <div
+      className={`play-note ${isSelected ? 'selected' : ''} ${isEditing ? 'editing' : ''}`}
+      onClick={(e) => onClick(note.id, e)}
+      onDoubleClick={(e) => onDoubleClick(note.id, e)}
+      style={{ left: note.x, top: note.y }}
+    >
+      {isEditing ? (
+        <input
+          ref={inputRef}
+          id={`note-input-${note.id}`}
+          type="text"
+          value={note.text}
+          onChange={(e) => onChange(note.id, e.target.value)}
+          onKeyDown={(e) => {
+            // Stop propagation so canvas doesn't capture backspace
+            e.stopPropagation();
+          }}
+          className="note-text-input"
+        />
+      ) : (
+        <span className="note-text">{note.text}</span>
+      )}
+      
+      {isSelected && !isEditing && (
+        <div className="note-handles">
+          {/* Resize/move handles */}
+        </div>
+      )}
+    </div>
+  );
+};
+Styling:
+css.play-note {
+  position: absolute;
+  padding: 8px 12px;
+  background: #FFFACD;
+  border: 1px solid #E6DB74;
+  border-radius: 4px;
+  cursor: move;
+  min-width: 60px;
+}
+
+.play-note.selected {
+  border-color: #f97316;
+  box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.3);
+}
+
+.play-note.editing {
+  cursor: text;
+}
+
+.note-text-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: inherit;
+  font-family: inherit;
+  width: 100%;
+  color: #333;
+}
+```
+
+**Key Points:**
+- `e.stopPropagation()` on the input's keydown prevents canvas from capturing backspace
+- Double-click enters edit mode, single-click selects for moving/deleting
+- Clicking outside deselects the note
+- Only delete note on backspace when selected but NOT editing
+
+---
+
+## Feature C: Add RPO Checkbox
+
+**Problem:** There's a Play-Action (PA) checkbox, but no RPO option.
+
+**Fix Required:**
+
+Add an "RPO" checkbox to the LEFT of the existing Play-Action checkbox. Same design language but with bright pink color.
+
+**Visual Design:**
+```
+[ ] RPO    [ ] PA
+ ↑          ↑
+bright     existing
+pink       orange
+Desktop Placement: In the play details/options area, next to PA checkbox
+Mobile Placement: Same area, ensure both fit on screen
+Implementation:
+tsx// State
+const [isRPO, setIsRPO] = useState(false);
+const [isPlayAction, setIsPlayAction] = useState(false);
+
+// UI
+<div className="play-options-row">
+  <label className={`play-option-checkbox rpo ${isRPO ? 'checked' : ''}`}>
+    <input
+      type="checkbox"
+      checked={isRPO}
+      onChange={(e) => setIsRPO(e.target.checked)}
+    />
+    <span className="checkbox-label">RPO</span>
+  </label>
+  
+  <label className={`play-option-checkbox pa ${isPlayAction ? 'checked' : ''}`}>
+    <input
+      type="checkbox"
+      checked={isPlayAction}
+      onChange={(e) => setIsPlayAction(e.target.checked)}
+    />
+    <span className="checkbox-label">PA</span>
+  </label>
+</div>
+Styling:
+css.play-option-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.play-option-checkbox input[type="checkbox"] {
+  display: none;
+}
+
+/* RPO - Bright Pink */
+.play-option-checkbox.rpo {
+  background: rgba(236, 72, 153, 0.1);
+  border-color: #ec4899;
+}
+
+.play-option-checkbox.rpo .checkbox-label {
+  color: #ec4899;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.play-option-checkbox.rpo.checked {
+  background: #ec4899;
+}
+
+.play-option-checkbox.rpo.checked .checkbox-label {
+  color: white;
+}
+
+/* PA - Orange (existing style, adjust if needed) */
+.play-option-checkbox.pa {
+  background: rgba(249, 115, 22, 0.1);
+  border-color: #f97316;
+}
+
+.play-option-checkbox.pa .checkbox-label {
+  color: #f97316;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.play-option-checkbox.pa.checked {
+  background: #f97316;
+}
+
+.play-option-checkbox.pa.checked .checkbox-label {
+  color: white;
+}
+Data Model:
+Ensure the play schema includes RPO flag:
+typescriptinterface Play {
+  id: string;
+  name: string;
+  // ... existing fields
+  isPlayAction: boolean;
+  isRPO: boolean;  // ADD THIS
+}
+Save/Load:
+
+RPO checkbox state should be saved with the play
+When loading a play, restore the RPO checkbox state
+
+
+Feature D: Team Playbook List Selection & Delete
+Problem: Cannot select or delete plays from the Team Playbook list view. Need selection highlighting and delete functionality with proper cascade logic.
+Fix Required:
+Part 1: Selection & Highlighting
+When a play is single-clicked in the Team Playbook list:
+
+Apply subtle orange highlight to the row/card
+Show a trash can icon below the play number
+
+tsxconst [selectedPlaybookItem, setSelectedPlaybookItem] = useState<string | null>(null);
+
+const PlaybookListItem = ({ play, isSelected, onSelect, onDelete }) => {
+  return (
+    <div 
+      className={`playbook-item ${isSelected ? 'selected' : ''}`}
+      onClick={() => onSelect(play.id)}
+    >
+      <div className="play-number">{play.number}</div>
+      <div className="play-preview">
+        {/* Mini play preview */}
+      </div>
+      <div className="play-name">{play.name}</div>
+      
+      {isSelected && (
+        <button 
+          className="delete-from-playbook"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(play.id);
+          }}
+        >
+          <TrashIcon />
+        </button>
+      )}
+    </div>
+  );
+};
+Styling:
+css.playbook-item {
+  position: relative;
+  padding: 12px;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.playbook-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.playbook-item.selected {
+  border-color: #f97316;
+  background: rgba(249, 115, 22, 0.1);
+}
+
+.delete-from-playbook {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ef4444;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+}
+
+.delete-from-playbook:hover {
+  background: #dc2626;
+}
+Part 2: Delete Logic (Cascade Rules)
+Two delete scenarios with different behaviors:
+Delete FromWhat HappensPlay LibraryDeletes from Library AND automatically removes from ALL Team PlaybooksTeam PlaybookRemoves from that playbook ONLY, Play Library copy remains
+Implementation:
+typescript// Delete from Play Library (MASTER delete)
+const deleteFromLibrary = async (playId: string) => {
+  // This deletes the play entirely
+  await fetch(`/api/plays/${playId}`, { method: 'DELETE' });
+  
+  // The backend should cascade delete from all playbook references
+  // OR do it client-side:
+  await fetch(`/api/playbook-entries?playId=${playId}`, { method: 'DELETE' });
+  
+  // Refresh both library and playbooks
+  queryClient.invalidateQueries(['plays']);
+  queryClient.invalidateQueries(['playbooks']);
+};
+
+// Delete from Team Playbook (remove reference only)
+const deleteFromPlaybook = async (playbookId: string, playId: string) => {
+  // This only removes the play from THIS playbook
+  // The play still exists in the library
+  await fetch(`/api/playbooks/${playbookId}/plays/${playId}`, { method: 'DELETE' });
+  
+  // Refresh playbook
+  queryClient.invalidateQueries(['playbook', playbookId]);
+};
+Backend (if not already implemented):
+typescript// DELETE /api/plays/:id - Master delete
+app.delete('/api/plays/:id', async (req, res) => {
+  const { id } = req.params;
+  
+  // Delete from all playbook entries first (cascade)
+  await db.delete(playbookEntries).where(eq(playbookEntries.playId, id));
+  
+  // Then delete the play itself
+  await db.delete(plays).where(eq(plays.id, id));
+  
+  res.json({ success: true });
+});
+
+// DELETE /api/playbooks/:playbookId/plays/:playId - Remove from playbook only
+app.delete('/api/playbooks/:playbookId/plays/:playId', async (req, res) => {
+  const { playbookId, playId } = req.params;
+  
+  // Only delete the playbook entry, not the play itself
+  await db.delete(playbookEntries)
+    .where(
+      and(
+        eq(playbookEntries.playbookId, playbookId),
+        eq(playbookEntries.playId, playId)
+      )
+    );
+  
+  res.json({ success: true });
+});
+Confirmation Dialog:
+tsxconst handleDeleteFromPlaybook = (playId: string) => {
+  // Optional: show confirmation
+  if (confirm('Remove this play from the playbook? (The play will remain in your Play Library)')) {
+    deleteFromPlaybook(currentPlaybookId, playId);
+    setSelectedPlaybookItem(null);
+  }
+};
+
+Summary
+FeatureDesktopMobilePriorityA. Play Notes buttonAlready existsAdd to headerHighB. Notes backspace fixFixFixHighC. RPO checkboxAdd next to PAAdd next to PAMediumD. Playbook selection/deleteAddAddMedium
+Files to Modify
+Feature A (Mobile Notes):
+
+client/src/components/mobile/MobileHeader.tsx or equivalent
+
+Feature B (Notes Backspace):
+
+client/src/components/PlayDesigner.tsx
+client/src/components/mobile/MobileCanvas.tsx
+Any shared Notes component
+
+Feature C (RPO Checkbox):
+
+client/src/components/PlayDesigner.tsx
+client/src/components/mobile/PlayDetailsForm.tsx
+shared/schema.ts (add isRPO field if not exists)
+
+Feature D (Playbook Delete):
+
+client/src/components/TeamPlaybook.tsx (or equivalent)
+server/routes.ts (add/verify delete endpoints)
+
+Testing Checklist
+Feature A:
+
+ Notes button appears on mobile header
+ Notes button has Apple Notes styling (yellow/cream)
+ Tapping Notes activates note placement mode
+ Can place, edit, move notes on mobile
+
+Feature B:
+
+ Double-click note enters edit mode (cursor visible)
+ Backspace while editing deletes characters, NOT entire note
+ Single-click selects note (no cursor)
+ Backspace while selected (no cursor) deletes entire note
+ Click outside deselects note
+ Works on BOTH desktop and mobile
+
+Feature C:
+
+ RPO checkbox appears to LEFT of PA checkbox
+ RPO is bright pink (#ec4899)
+ Checking RPO fills background pink
+ RPO state saves with play
+ RPO state loads when play is opened
+ Works on BOTH desktop and mobile
+
+Feature D:
+
+ Single-click play in playbook highlights it orange
+ Trash icon appears when play is selected
+ Delete from playbook removes play from that playbook only
+ Delete from Play Library removes play from library AND all playbooks
+ Works on BOTH desktop and mobile
