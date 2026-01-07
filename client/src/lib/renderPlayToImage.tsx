@@ -39,6 +39,7 @@ interface Football {
   x: number;
   y: number;
   hasPlayAction?: boolean;
+  hasRPO?: boolean;
 }
 
 interface PlayNote {
@@ -58,6 +59,7 @@ interface PlayData {
   footballs?: Football[];
   playAction?: { x: number; y: number };
   isPlayAction?: boolean;
+  isRPO?: boolean;
   overlayPlayers?: Player[];
   overlayRoutes?: Route[];
   notes?: PlayNote[];
@@ -134,10 +136,12 @@ function PlaySVGForExport({
   const legacyFootball = playData?.football;
   const legacyPlayAction = playData?.playAction;
   const legacyIsPlayAction = playData?.isPlayAction;
+  const legacyIsRPO = playData?.isRPO;
   
   const footballs = rawFootballs.map((fb) => ({
     ...fb,
-    hasPlayAction: fb.hasPlayAction ?? legacyIsPlayAction ?? false
+    hasPlayAction: fb.hasPlayAction ?? legacyIsPlayAction ?? false,
+    hasRPO: fb.hasRPO ?? legacyIsRPO ?? false
   }));
   
   const fieldStartY = FIELD.getFieldStartY(playType);
@@ -364,6 +368,12 @@ function PlaySVGForExport({
                 <text x={fb.x} y={fb.y + 16} textAnchor="middle" fill="white" fontSize={10} fontWeight="bold">PA</text>
               </g>
             )}
+            {fb.hasRPO && (
+              <g>
+                <circle cx={fb.x + (fb.hasPlayAction ? 20 : 0)} cy={fb.y + 12} r={9} fill="white" stroke="black" strokeWidth={1.5} />
+                <text x={fb.x + (fb.hasPlayAction ? 20 : 0)} y={fb.y + 12} textAnchor="middle" dominantBaseline="middle" fill="black" fontSize={8} fontWeight="bold">RPO</text>
+              </g>
+            )}
           </g>
         ))}
         
@@ -382,6 +392,12 @@ function PlaySVGForExport({
               <g>
                 <circle cx={legacyPlayAction?.x || legacyFootball.x} cy={legacyPlayAction?.y || legacyFootball.y + 12} r={8} fill="black" />
                 <text x={legacyPlayAction?.x || legacyFootball.x} y={(legacyPlayAction?.y || legacyFootball.y + 12) + 4} textAnchor="middle" fill="white" fontSize={10} fontWeight="bold">PA</text>
+              </g>
+            )}
+            {legacyIsRPO && (
+              <g>
+                <circle cx={legacyFootball.x + ((legacyPlayAction || legacyIsPlayAction) ? 20 : 0)} cy={legacyFootball.y + 12} r={9} fill="white" stroke="black" strokeWidth={1.5} />
+                <text x={legacyFootball.x + ((legacyPlayAction || legacyIsPlayAction) ? 20 : 0)} y={legacyFootball.y + 12} textAnchor="middle" dominantBaseline="middle" fill="black" fontSize={8} fontWeight="bold">RPO</text>
               </g>
             )}
           </g>
