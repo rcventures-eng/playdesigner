@@ -57,6 +57,13 @@ The system supports comprehensive team management including:
 
 Users can connect their personal Google Drive accounts via OAuth 2.0 to export team playbooks. Exports support Google Docs (handout format) and Google Slides (one play per slide).
 
+**Export Architecture:**
+-   **Play images**: Use `renderPlayToImage.tsx` - captures play canvas plus any visual notes (yellow text boxes) as a single image
+-   **Roster/Splits pages**: Use `renderPageToImage.tsx` - renders Roster and Splits pages as full-page Base64 images for export
+-   **Full-page handling**: Roster and Splits pages are marked with `fullPage: true` flag and rendered as single-page images (not grid layout)
+-   **Image uploads**: Separate maps track play images (`imageUrlMap`) and roster/splits images (`blankPageImageUrlMap`)
+-   **Page continuity**: `insertFullPageImage` helper adds page breaks after full-page images to maintain proper grid layout for subsequent plays
+
 ### Play Management Features
 
 Plays can be archived (`isArchived` flag) with dedicated views. A global template system allows admins to share public starter plays, tracking origins via `clonedFromId`.
