@@ -761,26 +761,6 @@ export default function GoogleDriveExportModal({
                     </Select>
                   </div>
                 </div>
-                
-                {/* Less Color Option */}
-                <div className="flex items-center gap-3 p-3 bg-zinc-800 rounded-lg mt-3">
-                  <Checkbox
-                    checked={isLessColor}
-                    onCheckedChange={(checked) => setIsLessColor(!!checked)}
-                    data-testid="checkbox-less-color"
-                  />
-                  <label className="flex items-center gap-2 cursor-pointer text-white font-medium">
-                    Less Color (Printer Friendly)
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <HelpCircle className="w-4 h-4 text-gray-400 hover:text-white cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="bg-zinc-700 text-white border-zinc-600">
-                        <p>Green field on export will now render white</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </label>
-                </div>
               </div>
 
               {/* Item Selection (Plays + Blank Pages) */}
@@ -874,39 +854,62 @@ export default function GoogleDriveExportModal({
           )}
 
           {/* Actions */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-zinc-700">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              className="border-zinc-700 text-white hover:bg-zinc-800"
-              data-testid="button-cancel-export"
-            >
-              {exportResult ? "Close" : "Cancel"}
-            </Button>
-            {isConnected && !exportResult && (
+          <div className="flex justify-between items-center w-full pt-4 border-t border-zinc-700">
+            {/* Left Side - Less Color Checkbox */}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="less-color"
+                checked={isLessColor}
+                onCheckedChange={(checked) => setIsLessColor(!!checked)}
+                data-testid="checkbox-less-color"
+              />
+              <Label htmlFor="less-color" className="text-white cursor-pointer">
+                Less Color
+              </Label>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <HelpCircle className="w-4 h-4 text-gray-400 hover:text-white cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent side="top" className="bg-zinc-700 text-white border-zinc-600">
+                  <p>Green field on export will now render white</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            {/* Right Side - Buttons */}
+            <div className="flex space-x-2">
               <Button
-                onClick={handleExport}
-                disabled={isExporting || exportMutation.isPending || orderedItems.length === 0 || !documentName.trim()}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-                data-testid="button-generate-files"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="border-zinc-700 text-white hover:bg-zinc-800"
+                data-testid="button-cancel-export"
               >
-                {isExporting || exportMutation.isPending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    {renderingProgress ? (
-                      <>
-                        <Image className="w-4 h-4 mr-1" />
-                        Rendering play {renderingProgress.current} of {renderingProgress.total}...
-                      </>
-                    ) : (
-                      "Generating files..."
-                    )}
-                  </>
-                ) : (
-                  "Generate Files"
-                )}
+                {exportResult ? "Close" : "Cancel"}
               </Button>
-            )}
+              {isConnected && !exportResult && (
+                <Button
+                  onClick={handleExport}
+                  disabled={isExporting || exportMutation.isPending || orderedItems.length === 0 || !documentName.trim()}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  data-testid="button-generate-files"
+                >
+                  {isExporting || exportMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      {renderingProgress ? (
+                        <>
+                          <Image className="w-4 h-4 mr-1" />
+                          Rendering play {renderingProgress.current} of {renderingProgress.total}...
+                        </>
+                      ) : (
+                        "Generating files..."
+                      )}
+                    </>
+                  ) : (
+                    "Generate Files"
+                  )}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </DialogContent>
