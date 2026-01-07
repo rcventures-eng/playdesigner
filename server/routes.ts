@@ -1429,19 +1429,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Play not found" });
       }
 
+      // Check authorization: owner, team owner (for review mode), or admin
+      const [currentUser] = await db.select({ isAdmin: users.isAdmin })
+        .from(users)
+        .where(eq(users.id, req.session.userId!))
+        .limit(1);
+      
+      const isOwner = existingPlay.userId === req.session.userId;
+      const isAdmin = currentUser?.isAdmin === true;
+      
+      // Check if user is the team owner for plays associated with a team
+      let isTeamOwner = false;
+      if (existingPlay.teamId) {
+        const [team] = await db.select({ ownerId: teams.ownerId })
+          .from(teams)
+          .where(eq(teams.id, existingPlay.teamId))
+          .limit(1);
+        isTeamOwner = team?.ownerId === req.session.userId;
+      }
+      
       // Security check for public plays - only admins can edit
       if (existingPlay.isPublic) {
-        const [currentUser] = await db.select({ isAdmin: users.isAdmin })
-          .from(users)
-          .where(eq(users.id, req.session.userId!))
-          .limit(1);
-        
-        if (!currentUser?.isAdmin) {
+        if (!isAdmin) {
           return res.status(403).json({ error: "Public plays can only be edited by admins. Clone this play to your library first." });
         }
       } else {
-        // For non-public plays, verify ownership
-        if (existingPlay.userId !== req.session.userId) {
+        // For non-public plays, verify ownership, team ownership, or admin status
+        if (!isOwner && !isTeamOwner && !isAdmin) {
           return res.status(403).json({ error: "Access denied" });
         }
       }
@@ -1449,44 +1463,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Build update object with only provided fields
       const updateData: Partial<{ isFavorite: boolean; tags: string[]; isPublic: boolean; concept: string; situation: string | null; data: unknown }> = {};
       
+      // Team owners (who are not the play owner) can ONLY update the data field (notes editing in review mode)
+      // This prevents privilege escalation where team owners could modify play metadata
+      const isTeamOwnerOnly = isTeamOwner && !isOwner && !isAdmin;
+      
       // Allow updating play data (for coach review mode - notes editing)
+      // All authorized users (owner, team owner, admin) can update data
       if (req.body.data !== undefined) {
         updateData.data = req.body.data;
       }
-      if (typeof req.body.isFavorite === "boolean") {
-        updateData.isFavorite = req.body.isFavorite;
-      }
-      if (Array.isArray(req.body.tags)) {
-        updateData.tags = req.body.tags;
-      }
-      // Allow updating the play concept/category
-      if (typeof req.body.concept === "string") {
-        const validConcepts = ["run", "pass", "play-action", "rpo", "trick"];
-        if (validConcepts.includes(req.body.concept)) {
-          updateData.concept = req.body.concept;
+      
+      // Metadata fields: Only play owners and admins can update these
+      if (!isTeamOwnerOnly) {
+        if (typeof req.body.isFavorite === "boolean") {
+          updateData.isFavorite = req.body.isFavorite;
         }
-      }
-      // Allow updating the play situation
-      if (req.body.situation !== undefined) {
-        // Validate against allowed situational tags (all possible values across formats)
-        const validSituations = [
-          'Open Field', 'Red Zone', 'Goal Line', '2pt Conversion',
-          'High Red Zone', 'Low Red Zone',
-          'Backed Up', 'Coming Out', 'Midfield', 'Plus Territory'
-        ];
-        if (req.body.situation === null || validSituations.includes(req.body.situation)) {
-          updateData.situation = req.body.situation;
+        if (Array.isArray(req.body.tags)) {
+          updateData.tags = req.body.tags;
         }
-      }
-      // Allow admins to toggle isPublic
-      if (typeof req.body.isPublic === "boolean") {
-        // Double-check admin status for isPublic changes
-        const [currentUser] = await db.select({ isAdmin: users.isAdmin })
-          .from(users)
-          .where(eq(users.id, req.session.userId!))
-          .limit(1);
-        
-        if (currentUser?.isAdmin) {
+        // Allow updating the play concept/category
+        if (typeof req.body.concept === "string") {
+          const validConcepts = ["run", "pass", "play-action", "rpo", "trick"];
+          if (validConcepts.includes(req.body.concept)) {
+            updateData.concept = req.body.concept;
+          }
+        }
+        // Allow updating the play situation
+        if (req.body.situation !== undefined) {
+          // Validate against allowed situational tags (all possible values across formats)
+          const validSituations = [
+            'Open Field', 'Red Zone', 'Goal Line', '2pt Conversion',
+            'High Red Zone', 'Low Red Zone',
+            'Backed Up', 'Coming Out', 'Midfield', 'Plus Territory'
+          ];
+          if (req.body.situation === null || validSituations.includes(req.body.situation)) {
+            updateData.situation = req.body.situation;
+          }
+        }
+        // Allow admins to toggle isPublic
+        if (typeof req.body.isPublic === "boolean" && isAdmin) {
           updateData.isPublic = req.body.isPublic;
         }
       }

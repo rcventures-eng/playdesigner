@@ -367,6 +367,14 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   const isReviewMode = designerMode === 'review';
   const isLocked = designerMode !== 'edit'; // players/routes locked in both review and readonly modes
   
+  // Auto-enable Notes tool when entering review mode
+  useEffect(() => {
+    if (isReviewMode) {
+      setNotesEnabled(true);
+      setTool("note");
+    }
+  }, [isReviewMode]);
+  
   // Load play from URL parameter on mount
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
