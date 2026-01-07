@@ -1,0 +1,49 @@
+"I need to refine the UX when a user opens a play specifically from the Team Playbook context.
+
+The Goal: Currently, these plays open in strict 'Read-Only' mode. I need to convert this into a 'Coach Review Mode'.
+
+Assets (Players/Routes): Remain LOCKED (cannot move players, delete routes, or change formation).
+
+Annotations (Notes): Become UNLOCKED. The user must be able to add, edit, move, and delete 'Play Notes' (the yellow text boxes) using the Notes tool.
+
+Saving: Clicking the 'Save' icon must update the existing play record directly (PATCH) rather than creating a new copy. This ensures the play keeps its exact position in the Team Playbook order.
+
+1. Frontend State Logic (PlayDesigner.tsx)
+
+Introduce a new prop or state: mode: 'edit' | 'read-only' | 'review'.
+
+When entering 'review' mode:
+
+Canvas Logic: Disable drag-and-drop handlers for Player and Route objects.
+
+Tools: Visually disable/gray out the 'Select', 'Snap', and 'Route' tools. Keep the 'Notes' tool active and clickable.
+
+Notes Logic: Ensure handleNoteDrag and handleNoteEdit functions remain active even if isReadOnly was previously blocking them.
+
+2. The Save Logic Refactor
+
+Update the handleSave function.
+
+Current Behavior: It likely defaults to creating a new play if the user didn't originally create it, or if it's considered a 'template'.
+
+New Behavior (Review Mode):
+
+If mode === 'review', bypass the 'Save As' modal.
+
+Trigger a PATCH /api/plays/:id request with the updated data (containing the new notes).
+
+Crucial: Do not modify the playTeams relationship. Since we are updating the existing ID, the play's order in the playbook remains untouched.
+
+3. Navigation Context (TeamPlaybooks.tsx)
+
+When clicking a play card in the Team Playbook list, ensure we pass the correct state to the designer route.
+
+Update the navigation call: Maps('/designer', { state: { playId: play.id, mode: 'review' } }).
+
+4. Backend Permission Check (server/routes.ts)
+
+Verify the PATCH /api/plays/:id route allows this update.
+
+Logic: If the user is a 'Coach' of the team that owns this play, they should be allowed to update the data field (for notes) even if they weren't the original 'author' of the play (depending on your ownership model).
+
+Please output the updated handleSave logic, the Canvas tool locking logic, and the navigation snippet from the Team Playbook."
