@@ -871,7 +871,7 @@ export default function TeamPlaybooks() {
                       <TeamPlaysList 
                         teamId={selectedTeam.id} 
                         plays={teamPlays}
-                        onPlayDoubleClick={(playId) => navigate(`/?loadPlay=${playId}&viewOnly=true&fromPlaybook=${selectedTeam.id}`)}
+                        onPlayDoubleClick={(playId) => navigate(`/?loadPlay=${playId}&mode=review&fromPlaybook=${selectedTeam.id}`)}
                         onBlankPageDoubleClick={handleBlankPageDoubleClick}
                       />
                     )}
