@@ -351,7 +351,10 @@ export default function GoogleDriveExportModal({
       
       if (!response.ok) {
         console.error("Export API error:", data);
-        throw new Error(data.error || `Export failed with status ${response.status}`);
+        // Create error with code attached for session expiry detection
+        const error = new Error(data.error || `Export failed with status ${response.status}`) as Error & { code?: string };
+        error.code = data.code;
+        throw error;
       }
       
       console.log("Export API success:", data);
@@ -382,11 +385,29 @@ export default function GoogleDriveExportModal({
     onError: (error: any) => {
       setIsExporting(false);
       console.error("Export mutation error:", error);
-      toast({
-        title: "Export Failed",
-        description: error.message || "Failed to export to Google Drive. Please try again.",
-        variant: "destructive",
-      });
+      
+      // Check if session expired (invalid_grant error)
+      // Check both the error code and message text for reliability
+      const isSessionExpired = 
+        error.code === "SESSION_EXPIRED" ||
+        error.message?.includes("session has expired") ||
+        error.message?.includes("Please disconnect and reconnect");
+      
+      if (isSessionExpired) {
+        // Invalidate the status cache to show disconnected state
+        queryClient.invalidateQueries({ queryKey: ["/api/google-drive/status"] });
+        toast({
+          title: "Session Expired",
+          description: "Your Google Drive session has expired. Please reconnect your account.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Export Failed",
+          description: error.message || "Failed to export to Google Drive. Please try again.",
+          variant: "destructive",
+        });
+      }
     },
   });
 

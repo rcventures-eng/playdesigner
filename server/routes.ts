@@ -2410,6 +2410,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error("Export to Google Drive error:", error);
+      
+      // Check for invalid_grant error (expired/revoked refresh token)
+      // Google APIs surface this in multiple formats
+      const isInvalidGrant = 
+        error?.response?.data?.error === 'invalid_grant' ||
+        error?.response?.data?.error_description?.includes?.('invalid_grant') ||
+        error?.errors?.[0]?.reason === 'invalid_grant' ||
+        error?.errors?.[0]?.message?.includes?.('invalid_grant') ||
+        error?.message?.includes('invalid_grant') ||
+        error?.message?.includes('Token has been expired or revoked') ||
+        error?.code === 'invalid_grant';
+      
+      if (isInvalidGrant && req.session.userId) {
+        // Clear the user's tokens - they need to reconnect
+        await db.update(users)
+          .set({ googleDriveTokens: null })
+          .where(eq(users.id, req.session.userId));
+        
+        return res.status(401).json({ 
+          error: "Your Google Drive session has expired. Please disconnect and reconnect your account.",
+          code: "SESSION_EXPIRED"
+        });
+      }
+      
       res.status(500).json({ error: error.message || "Failed to export to Google Drive" });
     }
   });
@@ -3402,6 +3426,30 @@ Return ONLY the JSON object, no markdown formatting or explanation.`;
       });
     } catch (error: any) {
       console.error("Export single play to Drive error:", error);
+      
+      // Check for invalid_grant error (expired/revoked refresh token)
+      // Google APIs surface this in multiple formats
+      const isInvalidGrant = 
+        error?.response?.data?.error === 'invalid_grant' ||
+        error?.response?.data?.error_description?.includes?.('invalid_grant') ||
+        error?.errors?.[0]?.reason === 'invalid_grant' ||
+        error?.errors?.[0]?.message?.includes?.('invalid_grant') ||
+        error?.message?.includes('invalid_grant') ||
+        error?.message?.includes('Token has been expired or revoked') ||
+        error?.code === 'invalid_grant';
+      
+      if (isInvalidGrant && req.session.userId) {
+        // Clear the user's tokens - they need to reconnect
+        await db.update(users)
+          .set({ googleDriveTokens: null })
+          .where(eq(users.id, req.session.userId));
+        
+        return res.status(401).json({ 
+          error: "Your Google Drive session has expired. Please disconnect and reconnect your account.",
+          code: "SESSION_EXPIRED"
+        });
+      }
+      
       res.status(500).json({ error: error.message || "Failed to export play to Google Drive" });
     }
   });
