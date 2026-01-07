@@ -118,12 +118,14 @@ function PlaySVGForExport({
   playData, 
   playType, 
   playName,
-  metadata
+  metadata,
+  isLessColor = false
 }: { 
   playData: PlayData | null; 
   playType: "offense" | "defense" | "special"; 
   playName?: string;
   metadata?: PlayMetadata;
+  isLessColor?: boolean;
 }) {
   const players = playData?.players || [];
   const routes = playData?.routes || [];
@@ -155,10 +157,12 @@ function PlaySVGForExport({
       style={{ 
         width: FIELD.WIDTH,
         height: FIELD.HEIGHT,
-        background: 'linear-gradient(to bottom, #16a34a, #15803d)',
+        background: isLessColor ? '#FFFFFF' : 'linear-gradient(to bottom, #16a34a, #15803d)',
         borderRadius: 4,
         overflow: 'hidden',
         position: 'relative',
+        border: isLessColor ? '3px solid #16a34a' : 'none',
+        boxSizing: 'border-box',
       }}
     >
       <svg 
@@ -210,7 +214,12 @@ function PlaySVGForExport({
           
           const boxes: JSX.Element[] = [];
           
-          // Play name box (orange)
+          // High-contrast box styling for Less Color mode
+          const boxFill = isLessColor ? "#FFFFFF" : undefined;
+          const boxStroke = isLessColor ? "#000000" : undefined;
+          const boxTextFill = isLessColor ? "#000000" : "white";
+          
+          // Play name box (orange, or white with black border in less color mode)
           if (displayName) {
             boxes.push(
               <g key="name">
@@ -220,14 +229,16 @@ function PlaySVGForExport({
                   width={nameWidth}
                   height={boxHeight}
                   rx={boxRadius}
-                  fill="#ea580c"
+                  fill={boxFill || "#ea580c"}
+                  stroke={boxStroke}
+                  strokeWidth={boxStroke ? 1 : 0}
                 />
                 <text
                   x={currentX + nameWidth / 2}
                   y={boxY + boxHeight / 2}
                   textAnchor="middle"
                   dominantBaseline="middle"
-                  fill="white"
+                  fill={boxTextFill}
                   fontSize={fontSize}
                   fontWeight="bold"
                 >
@@ -238,7 +249,7 @@ function PlaySVGForExport({
             currentX += nameWidth + gap;
           }
           
-          // Formation box (dark gray)
+          // Formation box (dark gray, or white with black border in less color mode)
           if (formation) {
             boxes.push(
               <g key="formation">
@@ -248,14 +259,16 @@ function PlaySVGForExport({
                   width={formationWidth}
                   height={boxHeight}
                   rx={boxRadius}
-                  fill="#374151"
+                  fill={boxFill || "#374151"}
+                  stroke={boxStroke}
+                  strokeWidth={boxStroke ? 1 : 0}
                 />
                 <text
                   x={currentX + formationWidth / 2}
                   y={boxY + boxHeight / 2}
                   textAnchor="middle"
                   dominantBaseline="middle"
-                  fill="white"
+                  fill={boxTextFill}
                   fontSize={fontSize}
                   fontWeight="500"
                 >
@@ -266,7 +279,7 @@ function PlaySVGForExport({
             currentX += formationWidth + gap;
           }
           
-          // Concept box (dark gray)
+          // Concept box (dark gray, or white with black border in less color mode)
           if (concept) {
             boxes.push(
               <g key="concept">
@@ -276,14 +289,16 @@ function PlaySVGForExport({
                   width={conceptWidth}
                   height={boxHeight}
                   rx={boxRadius}
-                  fill="#374151"
+                  fill={boxFill || "#374151"}
+                  stroke={boxStroke}
+                  strokeWidth={boxStroke ? 1 : 0}
                 />
                 <text
                   x={currentX + conceptWidth / 2}
                   y={boxY + boxHeight / 2}
                   textAnchor="middle"
                   dominantBaseline="middle"
-                  fill="white"
+                  fill={boxTextFill}
                   fontSize={fontSize}
                   fontWeight="500"
                 >
@@ -294,7 +309,7 @@ function PlaySVGForExport({
             currentX += conceptWidth + gap;
           }
           
-          // Situation box (dark gray)
+          // Situation box (dark gray, or white with black border in less color mode)
           if (situation) {
             boxes.push(
               <g key="situation">
@@ -304,14 +319,16 @@ function PlaySVGForExport({
                   width={situationWidth}
                   height={boxHeight}
                   rx={boxRadius}
-                  fill="#374151"
+                  fill={boxFill || "#374151"}
+                  stroke={boxStroke}
+                  strokeWidth={boxStroke ? 1 : 0}
                 />
                 <text
                   x={currentX + situationWidth / 2}
                   y={boxY + boxHeight / 2}
                   textAnchor="middle"
                   dominantBaseline="middle"
-                  fill="white"
+                  fill={boxTextFill}
                   fontSize={fontSize}
                   fontWeight="500"
                 >
@@ -334,9 +351,9 @@ function PlaySVGForExport({
               y1={y}
               x2={FIELD.FIELD_RIGHT}
               y2={y}
-              stroke="white"
+              stroke={isLessColor ? "#16a34a" : "white"}
               strokeWidth={2}
-              opacity={0.3}
+              opacity={isLessColor ? 0.6 : 0.3}
             />
           );
         })}
@@ -555,7 +572,8 @@ export async function renderPlayToBase64(
   playType: "offense" | "defense" | "special",
   playName?: string,
   metadata?: PlayMetadata,
-  pixelRatio: number = 2
+  pixelRatio: number = 2,
+  isLessColor: boolean = false
 ): Promise<RenderedPlayImage> {
   return new Promise((resolve, reject) => {
     const container = document.createElement("div");
@@ -572,6 +590,7 @@ export async function renderPlayToBase64(
         playType={playType}
         playName={playName}
         metadata={metadata}
+        isLessColor={isLessColor}
       />
     );
 
@@ -585,7 +604,7 @@ export async function renderPlayToBase64(
         const dataUrl = await toPng(element, {
           quality: 1.0,
           pixelRatio: pixelRatio,
-          backgroundColor: '#16a34a',
+          backgroundColor: isLessColor ? '#FFFFFF' : '#16a34a',
         });
 
         const base64 = dataUrl.replace(/^data:image\/png;base64,/, '');
@@ -624,7 +643,8 @@ export async function renderPlaysToImages(
     situation?: string;
   }>,
   onProgress?: (current: number, total: number) => void,
-  pixelRatio: number = 2
+  pixelRatio: number = 2,
+  isLessColor: boolean = false
 ): Promise<Record<number, PlayImageData>> {
   const images: Record<number, PlayImageData> = {};
   
@@ -647,7 +667,7 @@ export async function renderPlaysToImages(
         situation: play.situation,
       };
       
-      const result = await renderPlayToBase64(playData, playType, play.name, metadata, pixelRatio);
+      const result = await renderPlayToBase64(playData, playType, play.name, metadata, pixelRatio, isLessColor);
       images[play.id] = result;
     } catch (error) {
       console.error(`Failed to render play ${play.id} (${play.name}):`, error);

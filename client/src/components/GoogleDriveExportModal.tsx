@@ -27,7 +27,13 @@ import {
   Unlink,
   Edit3,
   Image,
+  HelpCircle,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Select,
   SelectContent,
@@ -134,6 +140,7 @@ export default function GoogleDriveExportModal({
   const queryClient = useQueryClient();
   const [generateDoc, setGenerateDoc] = useState(true);
   const [generateSlides, setGenerateSlides] = useState(true);
+  const [isLessColor, setIsLessColor] = useState(false);
   const [docsPlaysPerPage, setDocsPlaysPerPage] = useState<number>(2);
   const [slidesPlaysPerPage, setSlidesPlaysPerPage] = useState<number>(1);
   const [selectedItems, setSelectedItems] = useState<string[]>([]); // Format: "play-{id}" or "blankPage-{id}"
@@ -382,7 +389,8 @@ export default function GoogleDriveExportModal({
             (current, total) => {
               setRenderingProgress({ current, total });
             },
-            pixelRatio
+            pixelRatio,
+            isLessColor
           );
           console.log(`Rendered ${Object.keys(playImages).length} play images`);
         } catch (error) {
@@ -752,6 +760,26 @@ export default function GoogleDriveExportModal({
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+                
+                {/* Less Color Option */}
+                <div className="flex items-center gap-3 p-3 bg-zinc-800 rounded-lg mt-3">
+                  <Checkbox
+                    checked={isLessColor}
+                    onCheckedChange={(checked) => setIsLessColor(!!checked)}
+                    data-testid="checkbox-less-color"
+                  />
+                  <label className="flex items-center gap-2 cursor-pointer text-white font-medium">
+                    Less Color (Printer Friendly)
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="w-4 h-4 text-gray-400 hover:text-white cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="bg-zinc-700 text-white border-zinc-600">
+                        <p>Green field on export will now render white</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </label>
                 </div>
               </div>
 
