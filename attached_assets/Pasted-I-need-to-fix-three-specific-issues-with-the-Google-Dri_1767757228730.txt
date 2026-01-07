@@ -1,0 +1,33 @@
+I need to fix three specific issues with the Google Drive Export feature to ensure all visual elements are captured correctly.
+
+1. Fix Missing Notes (renderPlayToImage.tsx)
+
+The Issue: Currently, exported play images do not include the 'Play Notes' (yellow text boxes). This is likely because the image generation targets the <canvas> element directly, ignoring the absolute-positioned HTML overlays.
+
+The Fix: Update the renderPlayToImage function to target the Parent Wrapper Ref (the div containing both the <canvas> and the note elements) instead of the canvas itself. Use html-to-image on this container to capture the full composition.
+
+2. Fix Empty Roster & Splits Pages (GoogleDriveExportModal.tsx)
+
+The Issue: The 'Team Roster' and 'Splits' pages render the title but no content in the Google Doc. This is because they are HTML components, not pre-generated canvas images like the plays.
+
+The Fix: We need to 'rasterize' these views into images before sending them to the backend.
+
+Create a hidden, off-screen container in the Export Modal or parent component.
+
+Render the <TeamRosterCard /> and <TeamSplits /> components inside this hidden container with a fixed width (e.g., 1000px) to ensure consistent formatting.
+
+When the user clicks 'Export', use html-to-image to convert these specific hidden components into Base64 image strings.
+
+Pass these generated images in the plays array payload to the backend, treating them exactly like standard play images (e.g., { name: 'Team Roster', image: 'data:image/png...', ... }).
+
+3. Backend Handling (server/google-drive.ts)
+
+Ensure the generateTeamDoc function blindly accepts these new inputs. It should simply take the provided image string and place it on the page, regardless of whether it came from a canvas play or a rasterized roster table.
+
+Summary of Requirements:
+
+Play Notes must appear in the final export exactly where they are placed on the field.
+
+Team Roster and Splits must appear as full visual tables (colors, text, formatting) in the Google Doc, matching their UI appearance.
+
+Please output the updated renderPlayToImage logic and the logic for rasterizing the Roster/Splits components in the export flow.

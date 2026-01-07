@@ -2272,7 +2272,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid team ID" });
       }
 
-      const { generateDoc = true, generateSlides = true, orderedItems = [], playImages = {}, documentName, playsPerPage = 2, slidesPlaysPerPage = 1 } = req.body;
+      const { generateDoc = true, generateSlides = true, orderedItems = [], playImages = {}, blankPageImages = {}, documentName, playsPerPage = 2, slidesPlaysPerPage = 1 } = req.body;
 
       // Validate at least one format is selected
       if (!generateDoc && !generateSlides) {
@@ -2311,6 +2311,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         imageBase64?: string;
         imageWidth?: number;
         imageHeight?: number;
+        // For roster/splits pages
+        pageType?: 'blank' | 'roster' | 'splits';
+        fullPage?: boolean;
       }
 
       const itemsForExport: ExportItem[] = [];
@@ -2351,11 +2354,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         } else if (item.type === 'blankPage') {
           // Blank page - include title and notes from the frontend
+          // For roster/splits pages, attach the rendered image
+          const pageType = item.pageType || 'blank';
+          const isFullPage = item.fullPage === true;
+          
+          let imageBase64: string | undefined;
+          let imageWidth: number | undefined;
+          let imageHeight: number | undefined;
+          
+          // Get rendered image for roster/splits pages
+          if (isFullPage && blankPageImages[item.id]) {
+            const imageData = blankPageImages[item.id];
+            if (typeof imageData === 'object' && imageData.base64) {
+              imageBase64 = imageData.base64;
+              imageWidth = imageData.width;
+              imageHeight = imageData.height;
+            }
+          }
+          
           itemsForExport.push({
             itemType: 'blankPage',
             id: item.id,
             name: item.title || 'Section Divider',
-            notes: item.notes
+            notes: item.notes,
+            pageType,
+            fullPage: isFullPage,
+            imageBase64,
+            imageWidth,
+            imageHeight
           });
           blankPageCount++;
         }

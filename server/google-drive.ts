@@ -183,6 +183,9 @@ interface PlayInfo {
   imageBase64?: string;
   imageWidth?: number;
   imageHeight?: number;
+  // For roster/splits pages
+  pageType?: 'blank' | 'roster' | 'splits';
+  fullPage?: boolean;  // If true, render as full-page image instead of section divider
 }
 
 interface ExportResult {
@@ -447,10 +450,45 @@ export async function generateTeamDoc(
   currentIndex += 1;
 
   // Upload all play images to Drive first (batch upload for efficiency)
-  // Skip blank pages - they don't have images
+  // Also upload fullPage blank page images (roster/splits pages)
   const uploadedImages: { playId: number; imageUrl: string }[] = [];
+  const uploadedBlankPageImages: { pageId: number; imageUrl: string }[] = [];
+  
   for (const play of plays) {
-    if (play.itemType === 'blankPage') continue; // Skip blank pages
+    if (play.itemType === 'blankPage') {
+      // Handle fullPage blank pages (roster/splits) with images
+      if (play.fullPage && play.imageBase64) {
+        const imageBuffer = Buffer.from(play.imageBase64, 'base64');
+        const imageFile = await drive.files.create({
+          requestBody: {
+            name: `page_${play.id}_${play.pageType || 'page'}_image.png`,
+            mimeType: 'image/png'
+          },
+          media: {
+            mimeType: 'image/png',
+            body: Readable.from(imageBuffer)
+          },
+          fields: 'id'
+        });
+
+        // Make the image publicly accessible
+        await drive.permissions.create({
+          fileId: imageFile.data.id!,
+          requestBody: {
+            role: 'reader',
+            type: 'anyone'
+          }
+        });
+
+        uploadedBlankPageImages.push({
+          pageId: play.id,
+          imageUrl: `https://drive.google.com/uc?id=${imageFile.data.id}`
+        });
+      }
+      continue;
+    }
+    
+    // Regular play images
     if (play.imageBase64) {
       const imageBuffer = Buffer.from(play.imageBase64, 'base64');
       const imageFile = await drive.files.create({
@@ -481,8 +519,9 @@ export async function generateTeamDoc(
     }
   }
 
-  // Create a map for quick lookup
+  // Create maps for quick lookup
   const imageUrlMap = new Map(uploadedImages.map(img => [img.playId, img.imageUrl]));
+  const blankPageImageUrlMap = new Map(uploadedBlankPageImages.map(img => [img.pageId, img.imageUrl]));
 
   // Calculate image dimensions based on playsPerPage
   // Field aspect ratio is 694:392 ≈ 1.77:1
@@ -653,6 +692,122 @@ export async function generateTeamDoc(
       currentIndex = (lastElement?.endIndex || 2) - 1;
     };
     
+    // Helper to insert a full-page image (for roster/splits pages)
+    const insertFullPageImage = async (imageUrl: string, title: string) => {
+      requests.push({
+        insertPageBreak: {
+          location: { index: currentIndex }
+        }
+      });
+      currentIndex += 1;
+      
+      // Add title at top
+      const pageTitle = `${title}\n`;
+      requests.push({
+        insertText: {
+          location: { index: currentIndex },
+          text: pageTitle
+        }
+      });
+      
+      const titleEnd = currentIndex + pageTitle.length - 1;
+      
+      requests.push({
+        updateParagraphStyle: {
+          range: { startIndex: currentIndex, endIndex: currentIndex + pageTitle.length },
+          paragraphStyle: {
+            alignment: 'CENTER',
+            spaceAbove: { magnitude: 18, unit: 'PT' }
+          },
+          fields: 'alignment,spaceAbove'
+        }
+      });
+      
+      requests.push({
+        updateTextStyle: {
+          range: { startIndex: currentIndex, endIndex: titleEnd },
+          textStyle: {
+            fontSize: { magnitude: 24, unit: 'PT' },
+            bold: true
+          },
+          fields: 'fontSize,bold'
+        }
+      });
+      currentIndex += pageTitle.length;
+      
+      // Execute title requests
+      if (requests.length > 0) {
+        await docs.documents.batchUpdate({
+          documentId: docId,
+          requestBody: { requests }
+        });
+        requests.length = 0;
+      }
+      
+      // Insert the full-page image
+      // US Letter: 612 x 792 PT, with 1" margins = 540 x 648 usable
+      // Leave room for title, use most of the page width
+      const imageWidth = 468; // ~6.5 inches to fit within margins
+      
+      requests.push({
+        insertInlineImage: {
+          location: { index: currentIndex },
+          uri: imageUrl,
+          objectSize: {
+            width: { magnitude: imageWidth, unit: 'PT' }
+          }
+        }
+      });
+      currentIndex += 1;
+      
+      // Center the image
+      requests.push({
+        updateParagraphStyle: {
+          range: { startIndex: currentIndex - 1, endIndex: currentIndex },
+          paragraphStyle: {
+            alignment: 'CENTER'
+          },
+          fields: 'alignment'
+        }
+      });
+      
+      // Execute image insertion
+      if (requests.length > 0) {
+        await docs.documents.batchUpdate({
+          documentId: docId,
+          requestBody: { requests }
+        });
+        requests.length = 0;
+      }
+      
+      // Add page break after full-page image (like section dividers do)
+      requests.push({
+        insertText: {
+          location: { index: currentIndex },
+          text: '\n'
+        }
+      });
+      requests.push({
+        insertPageBreak: {
+          location: { index: currentIndex + 1 }
+        }
+      });
+      
+      if (requests.length > 0) {
+        await docs.documents.batchUpdate({
+          documentId: docId,
+          requestBody: { requests }
+        });
+        requests.length = 0;
+      }
+      
+      // Update currentIndex
+      const docAfterImage = await docs.documents.get({ documentId: docId });
+      const bodyAfterImage = docAfterImage.data.body?.content || [];
+      const lastElement = bodyAfterImage[bodyAfterImage.length - 1];
+      currentIndex = (lastElement?.endIndex || 2) - 1;
+    };
+    
     // Helper to insert a section divider
     const insertSectionDivider = async (title: string, notes?: string | null) => {
       requests.push({
@@ -767,8 +922,15 @@ export async function generateTeamDoc(
           currentPlaysBuffer = [];
         }
         
-        // Insert section divider
-        await insertSectionDivider(item.name, item.notes);
+        // Check if this is a fullPage item with an image (roster/splits)
+        const blankPageImageUrl = blankPageImageUrlMap.get(item.id);
+        if (item.fullPage && blankPageImageUrl) {
+          // Insert as full-page image
+          await insertFullPageImage(blankPageImageUrl, item.name);
+        } else {
+          // Insert as section divider (text-only)
+          await insertSectionDivider(item.name, item.notes);
+        }
       } else {
         // Add to buffer
         currentPlaysBuffer.push(item);
@@ -821,7 +983,7 @@ export async function generateTeamDoc(
     for (let i = 0; i < plays.length; i++) {
       const play = plays[i];
       
-      // Handle blank pages (section dividers)
+      // Handle blank pages (section dividers or fullPage images)
       if (play.itemType === 'blankPage') {
         // If there's content on the current page, add a page break first
         if (playsOnCurrentPage > 0 || i > 0) {
@@ -833,73 +995,135 @@ export async function generateTeamDoc(
           currentIndex += 1;
         }
         
-        // Add section divider title (centered, large, bold)
-        const dividerTitle = `${play.name}\n`;
-        requests.push({
-          insertText: {
-            location: { index: currentIndex },
-            text: dividerTitle
-          }
-        });
-        
-        const titleEnd = currentIndex + dividerTitle.length - 1;
-        
-        // Center and style the title
-        requests.push({
-          updateParagraphStyle: {
-            range: { startIndex: currentIndex, endIndex: currentIndex + dividerTitle.length },
-            paragraphStyle: {
-              alignment: 'CENTER',
-              spaceAbove: { magnitude: 180, unit: 'PT' } // Push down to center vertically
-            },
-            fields: 'alignment,spaceAbove'
-          }
-        });
-        
-        requests.push({
-          updateTextStyle: {
-            range: { startIndex: currentIndex, endIndex: titleEnd },
-            textStyle: {
-              fontSize: { magnitude: 36, unit: 'PT' },
-              bold: true
-            },
-            fields: 'fontSize,bold'
-          }
-        });
-        currentIndex += dividerTitle.length;
-        
-        // Add notes if present
-        if (play.notes) {
-          const notesText = `${play.notes}\n`;
+        // Check if this is a fullPage item with an image (roster/splits)
+        const blankPageImageUrl = blankPageImageUrlMap.get(play.id);
+        if (play.fullPage && blankPageImageUrl) {
+          // Insert title for fullPage image
+          const pageTitle = `${play.name}\n`;
           requests.push({
             insertText: {
               location: { index: currentIndex },
-              text: notesText
+              text: pageTitle
             }
           });
           
-          const notesEnd = currentIndex + notesText.length - 1;
+          const titleEnd = currentIndex + pageTitle.length - 1;
           
           requests.push({
             updateParagraphStyle: {
-              range: { startIndex: currentIndex, endIndex: currentIndex + notesText.length },
+              range: { startIndex: currentIndex, endIndex: currentIndex + pageTitle.length },
+              paragraphStyle: {
+                alignment: 'CENTER',
+                spaceAbove: { magnitude: 18, unit: 'PT' }
+              },
+              fields: 'alignment,spaceAbove'
+            }
+          });
+          
+          requests.push({
+            updateTextStyle: {
+              range: { startIndex: currentIndex, endIndex: titleEnd },
+              textStyle: {
+                fontSize: { magnitude: 24, unit: 'PT' },
+                bold: true
+              },
+              fields: 'fontSize,bold'
+            }
+          });
+          currentIndex += pageTitle.length;
+          
+          // Insert the full-page image
+          const fullPageImageWidth = 468; // Full usable width
+          requests.push({
+            insertInlineImage: {
+              location: { index: currentIndex },
+              uri: blankPageImageUrl,
+              objectSize: {
+                width: { magnitude: fullPageImageWidth, unit: 'PT' }
+              }
+            }
+          });
+          currentIndex += 1;
+          
+          // Center the image
+          requests.push({
+            updateParagraphStyle: {
+              range: { startIndex: currentIndex - 1, endIndex: currentIndex },
               paragraphStyle: {
                 alignment: 'CENTER'
               },
               fields: 'alignment'
             }
           });
+        } else {
+          // Regular section divider (text-only)
+          const dividerTitle = `${play.name}\n`;
+          requests.push({
+            insertText: {
+              location: { index: currentIndex },
+              text: dividerTitle
+            }
+          });
+          
+          const titleEnd = currentIndex + dividerTitle.length - 1;
+          
+          // Center and style the title
+          requests.push({
+            updateParagraphStyle: {
+              range: { startIndex: currentIndex, endIndex: currentIndex + dividerTitle.length },
+              paragraphStyle: {
+                alignment: 'CENTER',
+                spaceAbove: { magnitude: 180, unit: 'PT' } // Push down to center vertically
+              },
+              fields: 'alignment,spaceAbove'
+            }
+          });
           
           requests.push({
             updateTextStyle: {
-              range: { startIndex: currentIndex, endIndex: notesEnd },
+              range: { startIndex: currentIndex, endIndex: titleEnd },
               textStyle: {
-                fontSize: { magnitude: 18, unit: 'PT' }
+                fontSize: { magnitude: 36, unit: 'PT' },
+                bold: true
               },
-              fields: 'fontSize'
+              fields: 'fontSize,bold'
             }
           });
-          currentIndex += notesText.length;
+          currentIndex += dividerTitle.length;
+          
+          // Add notes if present
+          if (play.notes) {
+            const notesText = `${play.notes}\n`;
+            requests.push({
+              insertText: {
+                location: { index: currentIndex },
+                text: notesText
+              }
+            });
+            
+            const notesEnd = currentIndex + notesText.length - 1;
+            
+            requests.push({
+              updateParagraphStyle: {
+                range: { startIndex: currentIndex, endIndex: currentIndex + notesText.length },
+                paragraphStyle: {
+                  alignment: 'CENTER'
+                },
+                fields: 'alignment'
+              }
+            });
+            
+            requests.push({
+              updateTextStyle: {
+                range: { startIndex: currentIndex, endIndex: notesEnd },
+                textStyle: {
+                  fontSize: { magnitude: 18, unit: 'PT' }
+                },
+                fields: 'fontSize'
+              }
+            });
+            currentIndex += notesText.length;
+          }
         }
         
         // Reset plays counter for new section
@@ -1053,10 +1277,42 @@ export async function generateTeamSlides(
   const layout = layoutConfig[playsPerSlide as 1 | 2 | 4] || layoutConfig[1];
 
   // Upload all images first to avoid interleaving API calls
-  // Skip blank pages - they don't have images
+  // Also upload fullPage blank page images (roster/splits)
   const imageUrls: Record<number, string> = {};
+  const blankPageImageUrls: Record<number, string> = {};
+  
   for (const play of plays) {
-    if (play.itemType === 'blankPage') continue; // Skip blank pages
+    if (play.itemType === 'blankPage') {
+      // Handle fullPage blank pages with images
+      if (play.fullPage && play.imageBase64) {
+        console.log(`Uploading image for ${play.pageType || 'blank'} page ${play.id}: ${play.name}`);
+        const imageBuffer = Buffer.from(play.imageBase64, 'base64');
+        const imageFile = await drive.files.create({
+          requestBody: {
+            name: `slide_page_${play.id}_${play.pageType || 'page'}_image.png`,
+            mimeType: 'image/png'
+          },
+          media: {
+            mimeType: 'image/png',
+            body: Readable.from(imageBuffer)
+          },
+          fields: 'id'
+        });
+
+        await drive.permissions.create({
+          fileId: imageFile.data.id!,
+          requestBody: {
+            role: 'reader',
+            type: 'anyone'
+          }
+        });
+
+        blankPageImageUrls[play.id] = `https://drive.google.com/uc?id=${imageFile.data.id}`;
+      }
+      continue;
+    }
+    
+    // Regular play images
     if (play.imageBase64) {
       console.log(`Uploading image for play ${play.id}: ${play.name}`);
       const imageBuffer = Buffer.from(play.imageBase64, 'base64');
@@ -1131,79 +1387,30 @@ export async function generateTeamSlides(
     // Handle section divider slides
     if (slideItem.type === 'divider' && slideItem.divider) {
       const divider = slideItem.divider;
-      const titleShapeId = `divider_title_${slideIndex}`;
       
-      // Add centered section title
-      requests.push({
-        createShape: {
-          objectId: titleShapeId,
-          shapeType: 'TEXT_BOX',
-          elementProperties: {
-            pageObjectId: slideId,
-            size: {
-              width: { magnitude: slideWidth - margin * 2, unit: 'PT' },
-              height: { magnitude: 60, unit: 'PT' }
-            },
-            transform: {
-              scaleX: 1,
-              scaleY: 1,
-              translateX: margin,
-              translateY: slideHeight / 2 - 50,
-              unit: 'PT'
-            }
-          }
-        }
-      });
-      
-      requests.push({
-        insertText: {
-          objectId: titleShapeId,
-          text: divider.name
-        }
-      });
-      
-      requests.push({
-        updateTextStyle: {
-          objectId: titleShapeId,
-          textRange: { type: 'ALL' },
-          style: {
-            fontSize: { magnitude: 48, unit: 'PT' },
-            bold: true
-          },
-          fields: 'fontSize,bold'
-        }
-      });
-      
-      requests.push({
-        updateParagraphStyle: {
-          objectId: titleShapeId,
-          textRange: { type: 'ALL' },
-          style: {
-            alignment: 'CENTER'
-          },
-          fields: 'alignment'
-        }
-      });
-      
-      // Add notes if present
-      if (divider.notes) {
-        const notesShapeId = `divider_notes_${slideIndex}`;
+      // Check if this is a fullPage item with an image (roster/splits)
+      const fullPageImageUrl = blankPageImageUrls[divider.id];
+      if (divider.fullPage && fullPageImageUrl) {
+        // Insert as image slide with title
+        const titleShapeId = `divider_title_${slideIndex}`;
+        const imageShapeId = `divider_image_${slideIndex}`;
         
+        // Add title at top
         requests.push({
           createShape: {
-            objectId: notesShapeId,
+            objectId: titleShapeId,
             shapeType: 'TEXT_BOX',
             elementProperties: {
               pageObjectId: slideId,
               size: {
                 width: { magnitude: slideWidth - margin * 2, unit: 'PT' },
-                height: { magnitude: 40, unit: 'PT' }
+                height: { magnitude: 30, unit: 'PT' }
               },
               transform: {
                 scaleX: 1,
                 scaleY: 1,
                 translateX: margin,
-                translateY: slideHeight / 2 + 20,
+                translateY: 5,
                 unit: 'PT'
               }
             }
@@ -1212,25 +1419,26 @@ export async function generateTeamSlides(
         
         requests.push({
           insertText: {
-            objectId: notesShapeId,
-            text: divider.notes
+            objectId: titleShapeId,
+            text: divider.name
           }
         });
         
         requests.push({
           updateTextStyle: {
-            objectId: notesShapeId,
+            objectId: titleShapeId,
             textRange: { type: 'ALL' },
             style: {
-              fontSize: { magnitude: 24, unit: 'PT' }
+              fontSize: { magnitude: 20, unit: 'PT' },
+              bold: true
             },
-            fields: 'fontSize'
+            fields: 'fontSize,bold'
           }
         });
         
         requests.push({
           updateParagraphStyle: {
-            objectId: notesShapeId,
+            objectId: titleShapeId,
             textRange: { type: 'ALL' },
             style: {
               alignment: 'CENTER'
@@ -1238,6 +1446,143 @@ export async function generateTeamSlides(
             fields: 'alignment'
           }
         });
+        
+        // Add full-page image
+        // Calculate image size to fit the slide (below title)
+        const imageTop = 40; // Below title
+        const imageMaxWidth = slideWidth - margin * 2;
+        const imageMaxHeight = slideHeight - imageTop - margin;
+        
+        requests.push({
+          createImage: {
+            objectId: imageShapeId,
+            url: fullPageImageUrl,
+            elementProperties: {
+              pageObjectId: slideId,
+              size: {
+                width: { magnitude: imageMaxWidth, unit: 'PT' },
+                height: { magnitude: imageMaxHeight, unit: 'PT' }
+              },
+              transform: {
+                scaleX: 1,
+                scaleY: 1,
+                translateX: margin,
+                translateY: imageTop,
+                unit: 'PT'
+              }
+            }
+          }
+        });
+      } else {
+        // Regular section divider (text only)
+        const titleShapeId = `divider_title_${slideIndex}`;
+        
+        // Add centered section title
+        requests.push({
+          createShape: {
+            objectId: titleShapeId,
+            shapeType: 'TEXT_BOX',
+            elementProperties: {
+              pageObjectId: slideId,
+              size: {
+                width: { magnitude: slideWidth - margin * 2, unit: 'PT' },
+                height: { magnitude: 60, unit: 'PT' }
+              },
+              transform: {
+                scaleX: 1,
+                scaleY: 1,
+                translateX: margin,
+                translateY: slideHeight / 2 - 50,
+                unit: 'PT'
+              }
+            }
+          }
+        });
+        
+        requests.push({
+          insertText: {
+            objectId: titleShapeId,
+            text: divider.name
+          }
+        });
+        
+        requests.push({
+          updateTextStyle: {
+            objectId: titleShapeId,
+            textRange: { type: 'ALL' },
+            style: {
+              fontSize: { magnitude: 48, unit: 'PT' },
+              bold: true
+            },
+            fields: 'fontSize,bold'
+          }
+        });
+        
+        requests.push({
+          updateParagraphStyle: {
+            objectId: titleShapeId,
+            textRange: { type: 'ALL' },
+            style: {
+              alignment: 'CENTER'
+            },
+            fields: 'alignment'
+          }
+        });
+        
+        // Add notes if present
+        if (divider.notes) {
+          const notesShapeId = `divider_notes_${slideIndex}`;
+          
+          requests.push({
+            createShape: {
+              objectId: notesShapeId,
+              shapeType: 'TEXT_BOX',
+              elementProperties: {
+                pageObjectId: slideId,
+                size: {
+                  width: { magnitude: slideWidth - margin * 2, unit: 'PT' },
+                  height: { magnitude: 40, unit: 'PT' }
+                },
+                transform: {
+                  scaleX: 1,
+                  scaleY: 1,
+                  translateX: margin,
+                  translateY: slideHeight / 2 + 20,
+                  unit: 'PT'
+                }
+              }
+            }
+          });
+          
+          requests.push({
+            insertText: {
+              objectId: notesShapeId,
+              text: divider.notes
+            }
+          });
+          
+          requests.push({
+            updateTextStyle: {
+              objectId: notesShapeId,
+              textRange: { type: 'ALL' },
+              style: {
+                fontSize: { magnitude: 24, unit: 'PT' }
+              },
+              fields: 'fontSize'
+            }
+          });
+          
+          requests.push({
+            updateParagraphStyle: {
+              objectId: notesShapeId,
+              textRange: { type: 'ALL' },
+              style: {
+                alignment: 'CENTER'
+              },
+              fields: 'alignment'
+            }
+          });
+        }
       }
       
       continue;

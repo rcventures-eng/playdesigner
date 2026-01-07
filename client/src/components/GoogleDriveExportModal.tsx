@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { renderPlaysToImages, type PlayImageData } from "@/lib/renderPlayToImage";
+import { renderRosterPageToBase64, renderSplitsPageToBase64, type RenderedPageImage } from "@/lib/renderPageToImage";
 import {
   FileText,
   Presentation,
@@ -52,6 +53,39 @@ interface BlankPage {
   title: string;
   notes?: string | null;
   displayOrder: number;
+  pageType?: string; // 'blank' | 'roster' | 'splits'
+}
+
+interface Coach {
+  id: number;
+  firstName: string;
+  lastName: string;
+  role: string;
+}
+
+interface Player {
+  id: number;
+  firstName: string;
+  lastName: string;
+  position1?: string | null;
+  position2?: string | null;
+  defPosition1?: string | null;
+  mainColor?: string | null;
+}
+
+interface SplitWithPlayer {
+  id: number;
+  playerId: number;
+  squadName: string;
+  player: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    position1?: string | null;
+    position2?: string | null;
+    defPosition1?: string | null;
+    mainColor?: string | null;
+  };
 }
 
 // Unified item type for merged plays and blank pages
@@ -69,6 +103,7 @@ interface ExportItem {
   // Blank page fields
   title?: string;
   notes?: string | null;
+  pageType?: string; // 'blank' | 'roster' | 'splits'
 }
 
 interface TeamExportData {
@@ -126,6 +161,22 @@ export default function GoogleDriveExportModal({
     enabled: open && teamId > 0,
   });
 
+  // Fetch roster data for roster/splits page rendering
+  const { data: coaches = [] } = useQuery<Coach[]>({
+    queryKey: ["/api/teams", teamId, "coaches"],
+    enabled: open && teamId > 0,
+  });
+
+  const { data: players = [] } = useQuery<Player[]>({
+    queryKey: ["/api/teams", teamId, "players"],
+    enabled: open && teamId > 0,
+  });
+
+  const { data: splits = [] } = useQuery<SplitWithPlayer[]>({
+    queryKey: ["/api/teams", teamId, "splits"],
+    enabled: open && teamId > 0,
+  });
+
   // Initialize ordered items and selected items when data loads
   useEffect(() => {
     if (exportData) {
@@ -148,6 +199,7 @@ export default function GoogleDriveExportModal({
         displayOrder: bp.displayOrder,
         title: bp.title,
         notes: bp.notes,
+        pageType: bp.pageType || 'blank',
       }));
       
       // Merge and sort by displayOrder
@@ -296,7 +348,13 @@ export default function GoogleDriveExportModal({
         type: item.itemType,
         id: item.id,
         // Include blank page details for export
-        ...(item.itemType === 'blankPage' ? { title: item.title, notes: item.notes } : {})
+        ...(item.itemType === 'blankPage' ? { 
+          title: item.title, 
+          notes: item.notes,
+          pageType: item.pageType,
+          // Mark roster/splits as full-page items
+          fullPage: item.pageType === 'roster' || item.pageType === 'splits',
+        } : {})
       }));
       
       // Render plays to images for both Docs and Slides
@@ -332,6 +390,37 @@ export default function GoogleDriveExportModal({
         }
       }
       
+      // Render roster and splits pages to images
+      let blankPageImages: Record<number, RenderedPageImage> = {};
+      const rosterPages = selectedBlankPages.filter(bp => bp.pageType === 'roster');
+      const splitsPages = selectedBlankPages.filter(bp => bp.pageType === 'splits');
+      
+      if ((generateSlides || generateDoc) && (rosterPages.length > 0 || splitsPages.length > 0)) {
+        console.log("Rendering roster/splits pages to images...");
+        
+        // Render roster pages
+        for (const rosterPage of rosterPages) {
+          try {
+            const rendered = await renderRosterPageToBase64(teamName, coaches, players, 2);
+            blankPageImages[rosterPage.id] = rendered;
+            console.log(`Rendered roster page ${rosterPage.id}`);
+          } catch (error) {
+            console.error(`Error rendering roster page ${rosterPage.id}:`, error);
+          }
+        }
+        
+        // Render splits pages
+        for (const splitsPage of splitsPages) {
+          try {
+            const rendered = await renderSplitsPageToBase64(teamName, splits, 2);
+            blankPageImages[splitsPage.id] = rendered;
+            console.log(`Rendered splits page ${splitsPage.id}`);
+          } catch (error) {
+            console.error(`Error rendering splits page ${splitsPage.id}:`, error);
+          }
+        }
+      }
+      
       setRenderingProgress(null);
       
       const response = await apiRequest("POST", `/api/teams/${teamId}/export-to-drive`, {
@@ -339,6 +428,7 @@ export default function GoogleDriveExportModal({
         generateSlides,
         orderedItems: orderedExportItems,  // New: ordered list of plays and blank pages
         playImages,  // Includes { base64, width, height } per play
+        blankPageImages,  // Includes { base64, width, height } per roster/splits page
         documentName: documentName.trim() || `${teamName} Playbook`,
         playsPerPage: docsPlaysPerPage,
         slidesPlaysPerPage: slidesPlaysPerPage,

@@ -41,6 +41,15 @@ interface Football {
   hasPlayAction?: boolean;
 }
 
+interface PlayNote {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  text: string;
+}
+
 interface PlayData {
   players?: Player[];
   routes?: Route[];
@@ -51,6 +60,7 @@ interface PlayData {
   isPlayAction?: boolean;
   overlayPlayers?: Player[];
   overlayRoutes?: Route[];
+  notes?: PlayNote[];
 }
 
 const FIELD = {
@@ -118,6 +128,7 @@ function PlaySVGForExport({
   const shapes = playData?.shapes || [];
   const overlayPlayers = playData?.overlayPlayers || [];
   const overlayRoutes = playData?.overlayRoutes || [];
+  const notes = playData?.notes || [];
   
   const rawFootballs = playData?.footballs || [];
   const legacyFootball = playData?.football;
@@ -486,6 +497,33 @@ function PlaySVGForExport({
           );
         })}
       </svg>
+      
+      {/* Play Notes - rendered as HTML overlays for export */}
+      {notes.map((note) => (
+        <div
+          key={note.id}
+          style={{
+            position: 'absolute',
+            left: note.x,
+            top: note.y,
+            width: note.width,
+            minHeight: note.height,
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            border: '1px solid rgba(0, 0, 0, 0.2)',
+            borderRadius: 4,
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            padding: '4px 6px',
+            fontSize: 11,
+            lineHeight: 1.3,
+            color: '#000000',
+            overflow: 'hidden',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+          }}
+        >
+          {note.text}
+        </div>
+      ))}
     </div>
   );
 }
