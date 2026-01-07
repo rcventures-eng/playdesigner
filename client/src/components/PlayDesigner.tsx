@@ -358,9 +358,14 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   const [loadedPlayId, setLoadedPlayId] = useState<number | null>(null);
   const [isLoadingPlay, setIsLoadingPlay] = useState(false);
   
-  // View-only mode state (for plays accessed from Team Playbook)
-  const [isViewOnly, setIsViewOnly] = useState(false);
+  // Mode state: 'edit' (default), 'review' (notes only), 'readonly' (no editing)
+  const [designerMode, setDesignerMode] = useState<'edit' | 'review' | 'readonly'>('edit');
   const [fromPlaybookId, setFromPlaybookId] = useState<number | null>(null);
+  
+  // Derived flags for backwards compatibility and convenience
+  const isViewOnly = designerMode === 'readonly';
+  const isReviewMode = designerMode === 'review';
+  const isLocked = designerMode !== 'edit'; // players/routes locked in both review and readonly modes
   
   // Load play from URL parameter on mount
   useEffect(() => {
@@ -368,14 +373,17 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     // Support both playId and loadPlay params for backwards compatibility
     const playIdParam = urlParams.get('playId') || urlParams.get('loadPlay');
     
-    // Handle view-only mode params
-    const viewOnlyParam = urlParams.get('viewOnly');
+    // Handle mode params - support both legacy viewOnly and new mode param
+    const modeParam = urlParams.get('mode');
+    const viewOnlyParam = urlParams.get('viewOnly'); // legacy support
     const fromPlaybookParam = urlParams.get('fromPlaybook');
     
-    if (viewOnlyParam === 'true') {
-      setIsViewOnly(true);
+    if (modeParam === 'review') {
+      setDesignerMode('review');
+    } else if (modeParam === 'readonly' || viewOnlyParam === 'true') {
+      setDesignerMode('readonly');
     } else {
-      setIsViewOnly(false);  // Reset if not present
+      setDesignerMode('edit');
     }
     if (fromPlaybookParam) {
       const playbookId = parseInt(fromPlaybookParam);
@@ -563,7 +571,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   });
   const isLoggedIn = !!user;
   
-  // Save play mutation
+  // Save play mutation (creates new play)
   const savePlayMutation = useMutation({
     mutationFn: async (playData: { name: string; type: string; concept?: string; formation?: string; personnel?: string; situation?: string; data: unknown; isFavorite: boolean; isPublic?: boolean; clonedFromId?: number }) => {
       const response = await apiRequest("POST", "/api/plays", playData);
@@ -582,6 +590,31 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
       toast({ 
         title: "Save Failed", 
         description: error.message || "Could not save play. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+  
+  // Update play mutation (PATCH existing play - used in review mode)
+  const updatePlayMutation = useMutation({
+    mutationFn: async ({ playId, data }: { playId: number; data: unknown }) => {
+      const response = await apiRequest("PATCH", `/api/plays/${playId}`, { data });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/plays"] });
+      if (fromPlaybookId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/teams", fromPlaybookId, "plays-for-export"] });
+      }
+      toast({ 
+        title: "Notes Saved!", 
+        description: "Your play notes have been updated." 
+      });
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: "Save Failed", 
+        description: error.message || "Could not save notes. Please try again.",
         variant: "destructive"
       });
     }
@@ -1540,6 +1573,19 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   };
 
   const handlePlayerPointerDown = (e: React.PointerEvent, playerId: string) => {
+    // Block all player interactions in review mode (except for visual selection)
+    if (isLocked) {
+      e.stopPropagation();
+      // In review mode, allow selection for visual feedback but no dragging/route drawing
+      if (isReviewMode) {
+        setSelectedPlayer(playerId);
+        setSelectedRoute(null);
+        setSelectedShape(null);
+        setSelectedElements({ players: [], routes: [] });
+      }
+      return;
+    }
+    
     // Check if clicking on starting player to finish straight route
     if (isDrawingRoute && routeStyle === "straight" && selectedPlayer === playerId && currentRoutePointsRef.current.length >= 2) {
       e.stopPropagation();
@@ -3329,12 +3375,21 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     <div className="h-screen w-screen flex flex-col overflow-hidden">
       <TopNav isAdmin={isAdmin} setIsAdmin={setIsAdmin} showSignUp={showSignUp} setShowSignUp={handleShowSignUpChange} signUpMessage={signUpMessage} />
       
-      {/* View-only mode banner */}
-      {isViewOnly && fromPlaybookId && (
-        <div className="bg-amber-500/90 text-black px-4 py-2 flex items-center justify-between">
+      {/* Mode banner - Review mode or Read-only mode */}
+      {(isReviewMode || isViewOnly) && fromPlaybookId && (
+        <div className={`${isReviewMode ? 'bg-blue-500/90' : 'bg-amber-500/90'} text-white px-4 py-2 flex items-center justify-between`}>
           <span className="font-medium flex items-center gap-2">
-            <Eye className="w-4 h-4" />
-            Viewing play (read-only mode)
+            {isReviewMode ? (
+              <>
+                <StickyNote className="w-4 h-4" />
+                Coach Review Mode - Notes only
+              </>
+            ) : (
+              <>
+                <Eye className="w-4 h-4" />
+                Viewing play (read-only mode)
+              </>
+            )}
           </span>
           <Button
             size="sm"
@@ -3389,9 +3444,9 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
       )}
 
       <div className="flex flex-row flex-1 gap-4 overflow-hidden">
-        <div className={`w-96 min-w-72 flex-shrink rounded-2xl border border-white/10 shadow-2xl overflow-hidden bg-slate-900/95 flex flex-col h-full overflow-y-auto relative ${isViewOnly ? 'opacity-50 pointer-events-none' : ''}`}>
-          {/* View-only overlay for sidebar */}
-          {isViewOnly && (
+        <div className={`w-96 min-w-72 flex-shrink rounded-2xl border border-white/10 shadow-2xl overflow-hidden bg-slate-900/95 flex flex-col h-full overflow-y-auto relative ${isViewOnly ? 'opacity-50 pointer-events-none' : ''} ${isReviewMode ? 'review-mode' : ''}`}>
+          {/* View-only overlay for sidebar - only in strict readonly mode */}
+          {isViewOnly && !isReviewMode && (
             <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 rounded-2xl">
               <span className="text-white/80 font-medium text-sm">View Only Mode</span>
             </div>
@@ -3785,16 +3840,21 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
 
             <Card className="p-3 space-y-2">
               <h3 className="font-semibold text-sm text-foreground">Tools</h3>
+              {isReviewMode && (
+                <div className="text-xs text-blue-400 mb-1">Review mode: Only Notes tool is active</div>
+              )}
               <div className="grid grid-cols-3 gap-1.5">
                 <Button
                   size="sm"
                   variant={tool === "select" ? "default" : "secondary"}
                   onClick={() => {
+                    if (isReviewMode) return;
                     setTool("select");
                     setNotesEnabled(false);
                   }}
                   data-testid="button-tool-select"
-                  className="flex justify-center items-center gap-1"
+                  className={`flex justify-center items-center gap-1 ${isReviewMode ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  disabled={isReviewMode}
                 >
                   <MoveHorizontal className="h-4 w-4" />
                   Select
@@ -3803,9 +3863,9 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                   size="sm"
                   variant="destructive"
                   onClick={undo}
-                  disabled={history.length === 0}
+                  disabled={history.length === 0 || isReviewMode}
                   data-testid="button-tool-undo"
-                  className="flex justify-center items-center gap-1"
+                  className={`flex justify-center items-center gap-1 ${isReviewMode ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <RotateCcw className="h-4 w-4" />
                   Undo
@@ -3815,17 +3875,22 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                   variant="outline"
                   onClick={clearAll}
                   data-testid="button-clear-all"
-                  className="flex justify-center items-center gap-1 bg-white text-black border-gray-300"
+                  className={`flex justify-center items-center gap-1 bg-white text-black border-gray-300 ${isReviewMode ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  disabled={isReviewMode}
                 >
                   Clear All
                 </Button>
                 <Button
                   size="sm"
                   variant={snapEnabled ? "default" : "secondary"}
-                  onClick={() => setSnapEnabled(!snapEnabled)}
+                  onClick={() => {
+                    if (isReviewMode) return;
+                    setSnapEnabled(!snapEnabled);
+                  }}
                   data-testid="button-snap-toggle"
                   aria-pressed={snapEnabled}
-                  className="flex justify-center items-center gap-1"
+                  className={`flex justify-center items-center gap-1 ${isReviewMode ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  disabled={isReviewMode}
                 >
                   <Magnet className="h-4 w-4" />
                   Snap
@@ -3858,9 +3923,10 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                   variant="secondary"
                   onClick={addFootball}
                   data-testid="button-add-football-tools"
-                  className="flex justify-center items-center gap-0.5 text-[8px] font-medium px-1"
+                  className={`flex justify-center items-center gap-0.5 text-[8px] font-medium px-1 ${isReviewMode ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  disabled={isReviewMode}
                   style={{
-                    background: 'linear-gradient(145deg, #8B4513 0%, #654321 100%)',
+                    background: isReviewMode ? '#666' : 'linear-gradient(145deg, #8B4513 0%, #654321 100%)',
                     color: 'white',
                     border: '1px solid #5D3A1A',
                     boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
@@ -4420,10 +4486,33 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
               </div>
               <div className="flex gap-3">
                 <Save 
-                  className={`w-5 h-5 cursor-pointer transition-colors ${savePlayMutation.isPending ? 'text-orange-400 animate-pulse' : 'text-slate-400 hover:text-white'}`}
+                  className={`w-5 h-5 cursor-pointer transition-colors ${(savePlayMutation.isPending || updatePlayMutation.isPending) ? 'text-orange-400 animate-pulse' : isReviewMode ? 'text-blue-400 hover:text-blue-300' : 'text-slate-400 hover:text-white'}`}
                   data-testid="button-quick-save"
                   onClick={(e) => {
                     e.stopPropagation();
+                    
+                    // In review mode, use PATCH to update existing play
+                    if (isReviewMode && loadedPlayId) {
+                      if (updatePlayMutation.isPending) return;
+                      
+                      const canvasData = {
+                        players,
+                        routes,
+                        shapes,
+                        footballs,
+                        notes,
+                        isPlayAction,
+                        isRPO
+                      };
+                      
+                      updatePlayMutation.mutate({
+                        playId: loadedPlayId,
+                        data: canvasData
+                      });
+                      return;
+                    }
+                    
+                    // Normal save mode - create new play
                     if (!isLoggedIn) {
                       setSignUpMessage("Want to Save a Play to your Playbook?");
                       handleShowSignUpChange(true);

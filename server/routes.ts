@@ -1447,8 +1447,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Build update object with only provided fields
-      const updateData: Partial<{ isFavorite: boolean; tags: string[]; isPublic: boolean; concept: string; situation: string | null }> = {};
+      const updateData: Partial<{ isFavorite: boolean; tags: string[]; isPublic: boolean; concept: string; situation: string | null; data: unknown }> = {};
       
+      // Allow updating play data (for coach review mode - notes editing)
+      if (req.body.data !== undefined) {
+        updateData.data = req.body.data;
+      }
       if (typeof req.body.isFavorite === "boolean") {
         updateData.isFavorite = req.body.isFavorite;
       }
