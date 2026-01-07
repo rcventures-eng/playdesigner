@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { GripVertical, Trash2, FileText, Users, BarChart3 } from "lucide-react";
+import { GripVertical, Trash2, FileText, Users, BarChart3, StickyNote } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { PlayThumbnail } from "@/components/PlayThumbnail";
@@ -58,6 +58,12 @@ interface TeamPlaysListProps {
 function hasStructuredPlayData(data: any): boolean {
   if (!data) return false;
   return Array.isArray(data.players) && data.players.length > 0;
+}
+
+// Count the number of notes attached to a play
+function getNotesCount(data: any): number {
+  if (!data || !Array.isArray(data.notes)) return 0;
+  return data.notes.length;
 }
 
 const DOUBLE_CLICK_THRESHOLD = 300; // ms
@@ -386,8 +392,31 @@ export default function TeamPlaysList({ teamId, plays, onPlayClick, onPlayDouble
 
             {/* Play metadata */}
             <div className="flex-1 min-w-0">
-              <div className="font-medium text-gray-900 truncate" data-testid={`play-name-${play.id}`}>
-                {play.name}
+              <div className="flex items-center gap-1.5 min-w-0">
+                <div className="font-medium text-gray-900 truncate min-w-0 flex-1" data-testid={`play-name-${play.id}`}>
+                  {play.name}
+                </div>
+                {/* Sticky note icons for each note attached to this play */}
+                {(() => {
+                  const notesCount = getNotesCount(play.data);
+                  if (notesCount === 0) return null;
+                  return (
+                    <div className="flex items-center gap-0.5 flex-shrink-0" data-testid={`notes-indicator-${play.id}`}>
+                      {Array.from({ length: Math.min(notesCount, 5) }).map((_, i) => (
+                        <StickyNote 
+                          key={i} 
+                          className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" 
+                          style={{ marginLeft: i > 0 ? '-2px' : '0' }}
+                        />
+                      ))}
+                      {notesCount > 5 && (
+                        <span className="text-xs text-amber-600 dark:text-amber-400 font-medium ml-0.5">
+                          +{notesCount - 5}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
               <div className="text-sm text-gray-500 truncate">
                 {[play.formation, formatConceptLabel(play.concept), play.situation].filter(Boolean).join(" • ") || play.type}
