@@ -130,6 +130,15 @@ interface GoogleDriveExportModalProps {
   teamName: string;
 }
 
+// Easter egg loading cadences for the generating phase
+const CADENCES = [
+  "Ready... Set...",
+  "Blue 42...",
+  "Omaha...",
+  "Kill, Kill...",
+  "We're Good, We're Good..."
+];
+
 export default function GoogleDriveExportModal({
   open,
   onOpenChange,
@@ -155,6 +164,8 @@ export default function GoogleDriveExportModal({
   const [orderedItems, setOrderedItems] = useState<ExportItem[]>([]);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const draggedIndexRef = useRef<number | null>(null);
+  const [loadingText, setLoadingText] = useState<string>("Generating Files...");
+  const [isGeneratingPhase, setIsGeneratingPhase] = useState(false);
 
   // Check Google Drive connection status
   const { data: driveStatus, isLoading: statusLoading, refetch: refetchStatus } = useQuery<{ connected: boolean; error?: string }>({
@@ -223,12 +234,33 @@ export default function GoogleDriveExportModal({
     if (open) {
       setExportResult(null);
       setIsExporting(false);
+      setIsGeneratingPhase(false);
+      setLoadingText("Generating Files...");
       // Set default document name based on team name and current year
       const year = new Date().getFullYear();
       setDocumentName(`${teamName} Playbook - ${year}`);
       refetchStatus();
     }
   }, [open, refetchStatus, teamName]);
+
+  // Easter egg: Cycle through football cadences during the generating phase
+  useEffect(() => {
+    if (!isGeneratingPhase) {
+      setLoadingText("Generating Files...");
+      return;
+    }
+
+    // Start with default text, then cycle after 20 seconds
+    let cadenceIndex = -1; // -1 means still showing "Generating Files..."
+    setLoadingText("Generating Files...");
+
+    const interval = setInterval(() => {
+      cadenceIndex = (cadenceIndex + 1) % CADENCES.length;
+      setLoadingText(CADENCES[cadenceIndex]);
+    }, 20000);
+
+    return () => clearInterval(interval);
+  }, [isGeneratingPhase]);
 
   const toggleItemSelection = useCallback((itemKey: string) => {
     setSelectedItems((prev) =>
@@ -430,6 +462,7 @@ export default function GoogleDriveExportModal({
       }
       
       setRenderingProgress(null);
+      setIsGeneratingPhase(true);
       
       const response = await apiRequest("POST", `/api/teams/${teamId}/export-to-drive`, {
         generateDoc,
@@ -458,8 +491,13 @@ export default function GoogleDriveExportModal({
       console.log("Export API success:", data);
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
+      // Grand finale: show "HIKE!" before completing
+      setLoadingText("HIKE!");
+      await new Promise(r => setTimeout(r, 1000));
+      
       setIsExporting(false);
+      setIsGeneratingPhase(false);
       setExportResult({
         docUrl: data.docUrl,
         slidesUrl: data.slidesUrl,
@@ -482,6 +520,7 @@ export default function GoogleDriveExportModal({
     },
     onError: (error: any) => {
       setIsExporting(false);
+      setIsGeneratingPhase(false);
       console.error("Export mutation error:", error);
       
       // Check if session expired (invalid_grant error)
@@ -901,7 +940,7 @@ export default function GoogleDriveExportModal({
                           Rendering play {renderingProgress.current} of {renderingProgress.total}...
                         </>
                       ) : (
-                        "Generating files..."
+                        loadingText
                       )}
                     </>
                   ) : (
