@@ -717,6 +717,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("Failed to send welcome email:", emailError);
       });
 
+      // Trigger n8n personalized outreach (fires 24hr later via n8n delay)
+      fetch("https://raycarroll.app.n8n.cloud/webhook/rc-football-signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName: firstName || "",
+          email,
+          favoriteNflTeam: favoriteNFLTeam || "",
+        }),
+      }).catch((webhookError) => {
+        console.error("n8n welcome outreach webhook failed:", webhookError);
+      });
+
       res.status(201).json({ 
         success: true, 
         user: { 
