@@ -3416,6 +3416,14 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
       )}
       
       <div className={`flex-1 bg-slate-950 px-10 pb-10 pt-3 flex flex-col gap-4 overflow-hidden ${isLongPressHolding || longPressMenuOpen ? "select-none" : ""}`}>
+        <div className="text-center px-4" data-testid="hero-section">
+          <h1 className="text-base sm:text-lg font-semibold text-white/90 leading-snug" data-testid="hero-title">
+            Free Football Playbook Maker & Diagram Designer
+          </h1>
+          <p className="mt-1 text-xs text-slate-400 leading-relaxed max-w-2xl mx-auto" data-testid="hero-description">
+            RC Football is a free football playbook maker that helps youth and 11v11 coaches design printable football plays in seconds. Use our drag and drop football diagram designer to create offensive, defensive, and special teams plays, then download them for your playbook or practice plan. Built for youth flag football and full 11v11 tackle coaches.
+          </p>
+        </div>
         {(metadata.name || metadata.formation || metadata.concept || metadata.defenseConcept || metadata.personnel || metadata.situation) && (
         <div className="bg-gradient-to-r from-[#1a2332] to-[#2a3342] rounded-2xl border border-white/10 px-6 py-3 flex items-center gap-3 flex-wrap">
           {metadata.name && (
