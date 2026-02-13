@@ -3416,14 +3416,6 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
       )}
       
       <div className={`flex-1 bg-slate-950 px-10 pb-10 pt-3 flex flex-col gap-4 overflow-hidden ${isLongPressHolding || longPressMenuOpen ? "select-none" : ""}`}>
-        <div className="text-center px-4" data-testid="hero-section">
-          <h1 className="text-base sm:text-lg font-semibold text-white/90 leading-snug" data-testid="hero-title">
-            Free Football Playbook Maker & Diagram Designer
-          </h1>
-          <p className="mt-1 text-xs text-slate-400 leading-relaxed max-w-2xl mx-auto" data-testid="hero-description">
-            RC Football is a free football playbook maker that helps youth and 11v11 coaches design printable football plays in seconds. Use our drag and drop football diagram designer to create offensive, defensive, and special teams plays, then download them for your playbook or practice plan. Built for youth flag football and full 11v11 tackle coaches.
-          </p>
-        </div>
         {(metadata.name || metadata.formation || metadata.concept || metadata.defenseConcept || metadata.personnel || metadata.situation) && (
         <div className="bg-gradient-to-r from-[#1a2332] to-[#2a3342] rounded-2xl border border-white/10 px-6 py-3 flex items-center gap-3 flex-wrap">
           {metadata.name && (
@@ -4624,7 +4616,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                   zIndex: 25 
                 }}
               >
-                {(metadata.name || metadata.formation || metadata.concept || metadata.defenseConcept || metadata.personnel || metadata.situation) && (
+                {(metadata.name || metadata.formation || metadata.concept || metadata.defenseConcept || metadata.personnel || metadata.situation) ? (
                   <div className="flex flex-wrap items-center justify-center gap-2 px-4">
                     {metadata.name && (
                       <div
@@ -4680,6 +4672,15 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                         Personnel: {metadata.personnel}
                       </div>
                     )}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center px-6 text-center" data-testid="hero-section">
+                    <h1 className="text-sm font-semibold text-slate-700 leading-snug" data-testid="hero-title">
+                      Free Football Playbook Maker & Diagram Designer
+                    </h1>
+                    <p className="mt-1 text-[10px] text-slate-400 leading-relaxed max-w-lg" data-testid="hero-description">
+                      RC Football helps youth and 11v11 coaches design printable football plays in seconds. Create offensive, defensive, and special teams plays, then download them for your playbook or practice plan.
+                    </p>
                   </div>
                 )}
               </div>
