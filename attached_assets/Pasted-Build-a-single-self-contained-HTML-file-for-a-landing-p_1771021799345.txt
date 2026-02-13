@@ -1,0 +1,361 @@
+Build a single, self-contained HTML file for a landing page. One file. Inline CSS in a <style> tag. No JavaScript frameworks, no React, no external CSS files. Semantic HTML5. Fully responsive (mobile-first). The file should be named football-play-designer.html.
+Do NOT improvise design decisions. Use only the brand tokens and layout rules I provide below. Do not add animations, gradients, parallax, or visual effects I have not specified. Keep it clean, minimal, and fast-loading.
+
+BRAND DESIGN TOKENS
+Use these exact values. Do not substitute or approximate.
+Font:
+
+Font family: 'Inter', sans-serif
+Import from Google Fonts: https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap
+
+Colors (Light Mode only -- do not build dark mode):
+
+Primary (orange): #F97316
+Primary hover: #EA580C
+Page background: #F1F3F8
+Card/section background (white): #FFFFFF
+Foreground text: #1F2737
+Muted/secondary text: #6D7585
+Borders: #D4D8E1
+Focus ring: #F97316
+
+Typography scale:
+
+H1: 30px, font-weight 700, letter-spacing: -0.025em (tight)
+H2: 24px, font-weight 700
+H3: 16px, font-weight 600
+Body text: 14px, font-weight 400, line-height 1.6
+Small/caption text: 12px, font-weight 400, color #6D7585
+CTA large text: 24px, font-weight 800, color white
+
+Spacing:
+
+Base unit: 4px (multiply for all spacing: 8px, 12px, 16px, 24px, 32px, 48px, 64px)
+Max content width: 720px (centered)
+Card grid max width: 1080px (for 3-column example cards)
+Section vertical padding: 48px top and bottom (Hero gets 64px top, 48px bottom)
+Paragraph bottom margin: 16px
+H2 bottom margin: 16px
+Between list items: 8px
+
+Borders and radius:
+
+Card border: 1px solid #D4D8E1
+Card border-radius: 8px
+Button border-radius: 6px
+No box-shadows on cards. Use border contrast only.
+
+Buttons:
+
+Primary CTA: background #F97316, color white, font-weight 700, padding 12px 32px, border-radius 6px, font-size 16px. On hover: background #EA580C.
+Inverted CTA (on orange background): background white, color #EA580C, font-weight 700, same padding and radius. On hover: background #f0f0f0.
+Secondary link: color #F97316, underline, font-size 14px, font-weight 500.
+
+
+PAGE LAYOUT STRUCTURE
+The page has 7 sections in this exact order. Alternate section backgrounds between white (#FFFFFF) and light gray (#F1F3F8) as specified.
+Top Navigation Bar
+
+Full width, height 48px, background #F97316
+Left side: bold white text "RC Football" (18px, font-weight 700, letter-spacing tight)
+Right side: white text link "Login" and a pill-shaped "Sign Up" button (background white, color #EA580C, border-radius 9999px, padding 4px 16px, font-size 12px, font-weight 700)
+Horizontal padding: 24px
+
+Section 1: Hero (background: #FFFFFF)
+
+Centered text, max-width 720px
+H1, intro paragraph, primary CTA button, secondary anchor link
+64px top padding, 48px bottom padding
+
+Section 2: What It Is (background: #FFFFFF)
+
+Left-aligned text, max-width 720px, centered on page
+H2, body paragraph, H3, unordered list
+48px vertical padding
+
+Section 3: How It Works (background: #F1F3F8)
+
+Left-aligned, max-width 720px, centered
+H2, then 5 numbered steps each with H3, short paragraph, and an image placeholder
+32px gap between steps
+48px vertical padding
+
+Section 4: Real Examples (background: #FFFFFF)
+
+H2 and intro sentence centered, max-width 720px
+Card grid: 1 column on mobile, 2 on tablet (min-width 640px), 3 on desktop (min-width 1024px)
+Card grid max-width: 1080px, centered, gap 24px
+Each card: white background, 1px border #D4D8E1, border-radius 8px, padding 16px
+48px vertical padding
+
+Section 5: Who It's For (background: #F1F3F8)
+
+Left-aligned, max-width 720px, centered
+H2, unordered list
+48px vertical padding
+
+Section 6: FAQ (background: #FFFFFF)
+
+Left-aligned, max-width 720px, centered
+H2, then FAQ items: each has an H3 (question) and a paragraph (answer)
+20px gap between FAQ items
+48px vertical padding
+
+Section 7: Final CTA (background: #F97316, full-width)
+
+Centered text, max-width 600px
+H2 (white, 24px, weight 800), subtext paragraph (white, 14px), inverted CTA button
+64px vertical padding
+
+Footer
+
+Simple text footer, centered, 12px font, color #6D7585, padding 24px
+Text: "© 2025 RC Football. All rights reserved."
+Below that: "Follow Us: @RC_Football_" as plain text
+
+
+IMAGE PLACEHOLDERS
+Wherever I indicate an image, render a placeholder <div> with:
+
+Background: #E2E5EC
+Border: 1px dashed #D4D8E1
+Border-radius: 8px
+Centered text in #6D7585 saying the alt text description
+Correct aspect ratio for the specified dimensions
+
+Dimensions:
+
+How It Works screenshots: 800x500 (16:10 aspect ratio, use padding-bottom trick or aspect-ratio CSS)
+Example card images: full width of card, 4:3 aspect ratio
+Make placeholders responsive (100% width, maintain aspect ratio)
+
+
+PAGE CONTENT
+Here is the exact copy. Use it verbatim. Do not rewrite, summarize, or rearrange.
+Section 1: Hero
+H1: Free Football Play Designer for Coaches
+Intro paragraph: RC Football's football play designer lets you build plays from scratch with drag-and-drop simplicity. Choose a formation, draw routes, assign responsibilities, and save everything to your playbook. It's free, runs in your browser, and works for flag football through varsity.
+Primary CTA button: Open RC Football Play Designer (link to: /play-designer)
+Secondary link: See example plays (link to: #examples)
+
+Section 2: What It Is
+H2: The Football Play Designer Built for Real Coaches
+Body paragraph: RC Football's play designer is a browser-based tool that lets you diagram offensive and defensive plays on a realistic football field canvas. No downloads. No subscriptions. No steep learning curve.
+You start with a formation template or a blank field. Players snap to position. Routes, blocks, and motion paths are drawn by clicking and dragging. Every element is movable, editable, and labeled. When the play looks right, you save it to your playbook, print it for practice, or share it with your staff.
+This is not a whiteboard app repurposed for football. It was built specifically for coaches who need to get plays out of their head and onto paper quickly. The interface uses real football concepts -- you think in terms of formations, alignments, and route trees, and the tool follows that logic.
+H3: Key Capabilities
+List:
+
+Drag and drop players into any position on the field
+Draw routes, blocks, and motion paths with click-to-plot precision
+Start from 20+ preloaded formations or build your own from scratch
+Save plays to your personal playbook and access them from any device
+Print play sheets formatted for practice handouts or wristband cards
+Label players, routes, and assignments with custom text overlays
+Export and share plays with assistant coaches or coordinators
+
+
+Section 3: How It Works
+H2: How the Football Play Designer Works
+Step 1 -- H3: Pick a Formation
+Text: Open the play designer and choose from preloaded offensive or defensive formations. Shotgun, I-Form, Trips, 3-4, 4-3 -- the common sets are there. Or start with a blank field and place players manually.
+Image placeholder alt text: Selecting a shotgun formation in the RC Football play designer
+Step 2 -- H3: Position Your Players
+Text: Drag players to their alignment. Each player snaps to the field grid so your diagrams stay clean. Adjust splits, depth, and spacing until the formation matches what you want to run.
+Image placeholder alt text: Dragging offensive linemen into position on the football field canvas
+Step 3 -- H3: Draw Routes and Assignments
+Text: Click a player, then click to plot route points. Draw out routes for receivers, running lanes for backs, and blocking assignments for linemen. Motion paths work the same way -- click the start, click the destination.
+Image placeholder alt text: Drawing a slant route for the slot receiver in the play designer
+Step 4 -- H3: Label and Customize
+Text: Add text labels to players, routes, or zones. Change player colors to distinguish offense from defense. Add coaching notes directly on the diagram so your staff sees exactly what you intend.
+Image placeholder alt text: Play diagram with labeled receiver routes and a coaching note
+Step 5 -- H3: Save, Print, or Share
+Text: Save the play to your playbook with one click. Print it as a clean diagram for practice. Share it with your coaching staff so everyone is working from the same sheet.
+Image placeholder alt text: Saving a completed play to the RC Football playbook
+
+Section 4: Real Examples
+Section ID: examples (for the anchor link from the hero)
+H2: Real Play Examples Built in the Designer
+Intro sentence: These plays were diagrammed entirely inside RC Football's play designer. Each one took under two minutes to build.
+Card 1:
+
+Image alt: Shotgun Trips Right -- Mesh Concept play diagram
+H3: Mesh Concept -- Trips Right
+Situation: 2nd and 7, shotgun formation, trips to the boundary
+Explanation: Two receivers run shallow crossing routes at different depths to create a natural rub. The outside receiver runs a corner route to clear out the flat defender. If the crossers are covered, the back checks down as a safety valve. This is a staple for youth and high school offenses because the reads are simple and the mesh creates separation without needing elite speed.
+
+Card 2:
+
+Image alt: I-Form Power Right play diagram
+H3: Power Right -- I-Formation
+Situation: 3rd and 1, heavy personnel, goal line or short yardage
+Explanation: The backside guard pulls and kicks out the end man on the line of scrimmage. The fullback leads through the hole and picks up the first linebacker. The tailback follows the pulling guard and cuts upfield. This play works at every level because it's physical, the assignments are clear, and it punishes defenses that over-pursue.
+
+Card 3:
+
+Image alt: Spread Four Verticals play diagram
+H3: Four Verticals -- Spread
+Situation: 1st and 10, spread formation, looking to push the ball downfield
+Explanation: All four receivers run vertical routes, stretching the secondary sideline to sideline and deep. The quarterback reads the safeties -- if they split, throw the seam. If they stay middle, throw the outside vertical. The running back leaks to the flat as a check-down. It's aggressive but simple to teach, and it forces the defense to respect the deep ball on every snap.
+
+Card 4:
+
+Image alt: Cover 3 Zone Defense play diagram
+H3: Cover 3 Zone -- 4-3 Defense
+Situation: Base defensive call, 1st and 10, balanced offensive set
+Explanation: Three deep defenders split the field into thirds. The four underneath zone defenders cover the curls, flats, and hook areas. The front four rushes. This is one of the first defensive schemes most coaches install because it covers the deep ball, it's sound against the run, and players can learn their zones in a single practice.
+
+Card 5:
+
+Image alt: Jet Sweep from Shotgun play diagram
+H3: Jet Sweep -- Shotgun
+Situation: 1st and 10, shotgun trips, attacking the edge against a heavy box
+Explanation: The Z receiver motions across the formation pre-snap and takes a direct handoff on the sweep path. The offensive line zone blocks away from the motion. The outside receiver cracks the force player. If the defense over-commits to stop the sweep, the quarterback keeps on a read and hits the backside. It's a constraint play that creates horizontal stress and makes the defense defend the full width of the field.
+
+
+Section 5: Who It's For
+H2: Who Uses This Play Designer
+List:
+
+Youth flag football coaches building a playbook for the first time and need something visual to hand kids at practice
+Pop Warner and rec league coordinators who want organized play sheets without paying for software
+High school offensive coordinators diagramming their weekly game plan and printing scouting cards
+High school defensive coordinators installing fronts, coverages, and blitz packages for their staff
+Varsity position coaches creating individual route trees and technique sheets for their players
+Coaching students and aspiring coaches studying play design and building a portfolio of concepts
+Football dads and volunteer coaches who got handed a clipboard and need to look like they know what they're doing
+7-on-7 tournament coaches designing quick-tempo passing concepts for summer competition
+
+
+Section 6: FAQ
+H2: Frequently Asked Questions About the Play Designer
+Q1: Is the football play designer free?
+A1: Yes. RC Football's play designer is completely free to use. You can create an account, design plays, save them to your playbook, and print them without paying anything. There are no hidden trials or feature gates.
+Q2: Do I need to download any software?
+A2: No. The play designer runs entirely in your browser. It works on Chrome, Safari, Firefox, and Edge. You can use it on a laptop, desktop, tablet, or phone -- no installation required.
+Q3: Can I save plays and come back to them later?
+A3: Yes. Create a free account, and every play you save goes to your personal playbook. Your plays are stored in the cloud so you can access them from any device. Log in at home, pull them up on your phone at the field.
+Q4: Can I print my play diagrams?
+A4: Yes. Every play can be printed as a clean, labeled diagram. The print layout is designed for practice handouts -- it formats the play on a standard sheet with the play name, formation, and all route labels included.
+Q5: What formations are available?
+A5: The designer includes 20+ preloaded formations covering common offensive and defensive sets: Shotgun, Pistol, I-Form, Singleback, Trips, Spread, Empty, 4-3, 3-4, Nickel, Dime, and more. You can also start with a blank field and build any custom formation from scratch.
+Q6: Can I design both offensive and defensive plays?
+A6: Yes. The tool supports offense, defense, and special teams. You can diagram routes, blocking assignments, blitz paths, zone drops, and coverage responsibilities. Everything uses the same drag-and-drop interface.
+Q7: Is this good enough for high school football?
+A7: Absolutely. The play designer was built with real coaches in mind, from youth all the way through varsity. The diagrams are clear, the labeling system is flexible, and the formations reflect what actual programs run. Several high school coaches use RC Football to diagram their weekly game plans.
+Q8: Can I share plays with my coaching staff?
+A8: Yes. You can share plays from your playbook with assistant coaches and coordinators. You can also post plays to the global library for the coaching community to use and learn from.
+Q9: How is this different from drawing plays on a whiteboard?
+A9: A whiteboard gets erased. Plays designed in RC Football are saved permanently, can be edited any time, printed for every player, and organized into a structured playbook. You also get precise alignment, consistent labeling, and the ability to access your plays from any device. It is the difference between scribbling on a napkin and having a real system.
+
+Section 7: Final CTA
+H2: Start Building Your Playbook
+Subtext: Open the play designer, drag your first player onto the field, and see how fast this goes.
+CTA button: Open RC Football Play Designer (link to: /play-designer)
+
+JSON-LD STRUCTURED DATA
+Place this <script> tag in the <head> of the page:
+html<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Is the football play designer free?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. RC Football's play designer is completely free to use. You can create an account, design plays, save them to your playbook, and print them without paying anything. There are no hidden trials or feature gates."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do I need to download any software?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. The play designer runs entirely in your browser. It works on Chrome, Safari, Firefox, and Edge. You can use it on a laptop, desktop, tablet, or phone -- no installation required."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I save plays and come back to them later?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Create a free account, and every play you save goes to your personal playbook. Your plays are stored in the cloud so you can access them from any device."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I print my play diagrams?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Every play can be printed as a clean, labeled diagram. The print layout is designed for practice handouts -- it formats the play on a standard sheet with the play name, formation, and all route labels included."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What formations are available?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The designer includes 20+ preloaded formations covering common offensive and defensive sets: Shotgun, Pistol, I-Form, Singleback, Trips, Spread, Empty, 4-3, 3-4, Nickel, Dime, and more. You can also start with a blank field and build any custom formation from scratch."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I design both offensive and defensive plays?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. The tool supports offense, defense, and special teams. You can diagram routes, blocking assignments, blitz paths, zone drops, and coverage responsibilities."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is this good enough for high school football?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Absolutely. The play designer was built with real coaches in mind, from youth all the way through varsity. The diagrams are clear, the labeling system is flexible, and the formations reflect what actual programs run."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I share plays with my coaching staff?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. You can share plays from your playbook with assistant coaches and coordinators. You can also post plays to the global library for the coaching community to use and learn from."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How is this different from drawing plays on a whiteboard?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "A whiteboard gets erased. Plays designed in RC Football are saved permanently, can be edited any time, printed for every player, and organized into a structured playbook. You also get precise alignment, consistent labeling, and the ability to access your plays from any device."
+      }
+    }
+  ]
+}
+</script>
+
+META TAGS
+Include these in the <head>:
+html<title>Football Play Designer -- Free Online Tool | RC Football</title>
+<meta name="description" content="Design football plays with a free drag-and-drop play designer. Build formations, draw routes, save your playbook, and print. Built for coaches at every level.">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="canonical" href="https://rcfootball.com/football-play-designer">
+<meta property="og:title" content="Football Play Designer -- Free Online Tool | RC Football">
+<meta property="og:description" content="Design football plays with a free drag-and-drop play designer. Build formations, draw routes, save your playbook, and print. Built for coaches at every level.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://rcfootball.com/football-play-designer">
+
+RULES
+
+Output exactly ONE HTML file with all CSS inline in a <style> tag
+Do not add JavaScript unless absolutely required for responsive menu toggle
+Do not use any CSS framework (no Tailwind, no Bootstrap)
+Do not add animations, transitions, or hover effects beyond button hover color changes
+Do not add decorative elements, icons, or illustrations I have not specified
+Do not change the copy. Use it word for word as provided above
+Make it mobile-responsive using media queries
+Use semantic HTML: <header>, <nav>, <main>, <section>, <footer>, <h1>-<h3>, <p>, <ul>, <ol>
+Every section must have the ID specified in the layout structure
+Test that the #examples anchor link from the hero scrolls to Section 4

@@ -1,0 +1,19 @@
+Before you build the football play designer landing page, I need to resolve something about SEO and rendering.
+This page exists to rank in Google. That's its entire purpose. The H1, meta tags, FAQ content, JSON-LD structured data, and all body copy need to be present in the initial HTML response from the server -- not injected client-side via useEffect or any other JavaScript execution.
+If the page is client-rendered (JavaScript has to execute before any content appears in the DOM), Google's crawler will see an empty shell on first pass. It may render the JavaScript eventually, but that's a two-phase process with unpredictable delay. For a new landing page competing for search rankings, that's a real disadvantage.
+Here's what I need you to answer before we proceed:
+
+Does my current Vite/React setup support server-side rendering (SSR) or static pre-rendering for specific routes?
+If not, can we add pre-rendering for just this one route (/football-play-designer) without converting the entire app? For example, using vite-plugin-ssr, vite-ssg, or a similar tool that generates static HTML at build time for specific pages.
+If neither SSR nor pre-rendering is feasible with my current setup, what is the minimum change required to ensure that when Google's crawler requests /football-play-designer, it gets fully-formed HTML containing all of the following in the initial response:
+
+The <title> tag and meta description
+The JSON-LD FAQ schema in a <script> tag
+The Open Graph meta tags
+All heading tags (H1, H2, H3) with their text content
+All body copy, FAQ questions and answers, and list items
+
+
+
+Give me your assessment of the current setup and your recommended approach before writing any code. I want to make the right architectural decision here, not patch around it later.
+Also confirm: is / the correct URL for the actual play designer tool? The CTA buttons on this landing page will link there, so I need to make sure a user clicking "Open RC Football Play Designer" lands directly in the tool workspace, not a homepage or another marketing page.
