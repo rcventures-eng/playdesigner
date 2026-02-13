@@ -4462,15 +4462,17 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
               </div>
             </div>
           )}
-          {/* Header Zone: Marketing text vertically centered in empty space above field */}
-          <div className="w-full flex-1 flex flex-col justify-center items-center min-h-[200px]" data-testid="hero-section">
-            <h1 className="text-2xl font-bold text-white" data-testid="hero-title">
-              Free Football Playbook Maker & Diagram Designer
-            </h1>
-            <p className="text-sm text-slate-400 mt-1 max-w-2xl mx-auto text-center" data-testid="hero-description">
-              RC Football helps youth and 11v11 coaches design printable football plays in seconds. Create offensive, defensive, and special teams plays, then download them for your playbook or practice plan.
-            </p>
-          </div>
+          {/* Marketing header - offense tab only */}
+          {playType === "offense" && (
+            <div className="w-full text-center py-8 flex flex-col items-center justify-center mb-4" data-testid="hero-section">
+              <h1 className="text-3xl font-bold text-white mb-2 tracking-tight" data-testid="hero-title">
+                Free Football Playbook Maker & Diagram Designer
+              </h1>
+              <p className="text-slate-400 text-sm max-w-2xl mx-auto leading-relaxed" data-testid="hero-description">
+                RC Football helps youth and 11v11 coaches design printable football plays in seconds. Create offensive, defensive, and special teams plays, then download them for your playbook or practice plan.
+              </p>
+            </div>
+          )}
           {/* Layer A: Field Wrapper with Strip - SCALES to fit available space */}
           <div 
             className="flex flex-col"
