@@ -4307,7 +4307,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
 
         <div 
           ref={fieldContainerRef}
-          className="flex-1 h-full relative rounded-2xl bg-slate-900/50 border border-white/5 overflow-hidden flex flex-col items-center"
+          className="flex-1 h-full relative rounded-2xl bg-slate-900/50 border border-white/5 overflow-hidden flex flex-col items-center justify-center"
           onClick={handleBackgroundClick}
         >
           {/* Layer B: AI Play Creator Interface - Fixed size, centered over field (DOES NOT SCALE) */}
@@ -4462,13 +4462,13 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
               </div>
             </div>
           )}
-          {/* Marketing header - offense tab only */}
+          {/* Marketing header - offense tab only, absolutely positioned so it doesn't shift the field */}
           {playType === "offense" && (
-            <div className="w-full text-center py-8 flex flex-col items-center justify-center mb-4" data-testid="hero-section">
+            <div className="absolute top-4 left-0 right-0 z-10 flex flex-col items-center pointer-events-none" data-testid="hero-section">
               <h1 className="text-3xl font-bold text-white mb-2 tracking-tight" data-testid="hero-title">
                 Free Football Playbook Maker & Diagram Designer
               </h1>
-              <p className="text-slate-400 text-sm max-w-2xl mx-auto leading-relaxed" data-testid="hero-description">
+              <p className="text-slate-400 text-sm max-w-2xl mx-auto leading-relaxed text-center" data-testid="hero-description">
                 RC Football helps youth and 11v11 coaches design printable football plays in seconds. Create offensive, defensive, and special teams plays, then download them for your playbook or practice plan.
               </p>
             </div>
