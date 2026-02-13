@@ -1,5 +1,6 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
+import path from "path";
 import { storage } from "./storage";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { FOOTBALL_CONFIG, FORMATIONS, resolveColorKey } from "../shared/football-config";
@@ -448,6 +449,11 @@ Use these as references for the quality and structure expected:\n\n`;
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  app.get("/football-play-designer", (_req, res) => {
+    const htmlPath = path.resolve(process.cwd(), "client", "public", "football-play-designer.html");
+    res.sendFile(htmlPath);
+  });
+
   app.post("/api/generate-play", async (req, res) => {
     try {
       const { prompt, image, situation } = req.body;
