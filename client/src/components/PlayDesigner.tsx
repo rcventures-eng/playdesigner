@@ -333,7 +333,9 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   
   const canvasRef = useRef<HTMLDivElement>(null);
   const fieldContainerRef = useRef<HTMLDivElement>(null);
+  const fieldWrapperRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+  const [heroZoneHeight, setHeroZoneHeight] = useState(0);
   const currentRoutePointsRef = useRef<{ x: number; y: number }[]>([]);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const longPressStartPos = useRef<{ x: number; y: number } | null>(null);
@@ -837,6 +839,23 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
       window.removeEventListener("resize", calculateScale);
     };
   }, []);
+
+  useEffect(() => {
+    const measureHeroZone = () => {
+      if (!fieldContainerRef.current || !fieldWrapperRef.current) return;
+      const containerRect = fieldContainerRef.current.getBoundingClientRect();
+      const wrapperRect = fieldWrapperRef.current.getBoundingClientRect();
+      const topGap = wrapperRect.top - containerRect.top;
+      setHeroZoneHeight(topGap);
+    };
+    measureHeroZone();
+    window.addEventListener("resize", measureHeroZone);
+    const timer = setTimeout(measureHeroZone, 100);
+    return () => {
+      window.removeEventListener("resize", measureHeroZone);
+      clearTimeout(timer);
+    };
+  }, [scale, playType]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -4464,7 +4483,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
           )}
           {/* Marketing header - offense tab only, absolutely positioned so it doesn't shift the field */}
           {playType === "offense" && (
-            <div className="absolute top-4 left-0 right-0 z-10 flex flex-col items-center pointer-events-none" data-testid="hero-section">
+            <div className="absolute top-0 left-0 right-0 z-10 flex flex-col items-center justify-center pointer-events-none" style={{ height: heroZoneHeight > 0 ? `${heroZoneHeight}px` : undefined }} data-testid="hero-section">
               <h1 className="text-3xl font-bold text-white mb-2 tracking-tight" data-testid="hero-title">
                 Free Football Playbook Maker & Diagram Designer
               </h1>
@@ -4475,6 +4494,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
           )}
           {/* Layer A: Field Wrapper with Strip - SCALES to fit available space */}
           <div 
+            ref={fieldWrapperRef}
             className="flex flex-col"
             style={{
               transform: `scale(${scale})`,
