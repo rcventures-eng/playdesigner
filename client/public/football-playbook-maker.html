@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Football Playbook Maker -- Free Online Tool | RC Football</title>
+<meta name="description" content="Build and organize your football playbook for free. Import rosters, assign positions, order your gameplan, and export to Google Drive. Works for youth through varsity.">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="canonical" href="https://rc-football.com/football-playbook-maker">
+<meta property="og:title" content="Football Playbook Maker -- Free Online Tool | RC Football">
+<meta property="og:description" content="Build and organize your football playbook for free. Import rosters, assign positions, order your gameplan, and export to Google Drive. Works for youth through varsity.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://rc-football.com/football-playbook-maker">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Is the football playbook maker free?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Creating playbooks, importing rosters, adding plays, and organizing your gameplan are all free. Google Drive export is also included at no cost."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I import my roster from a spreadsheet?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. You can paste player names directly from a spreadsheet like Excel or Google Sheets. The import takes two clicks. You can also type names in manually if you prefer."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What are the color schemas for players under 12?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The color schemas are simplified visual systems that replace complex terminology with color-coded assignments. Players under 12 can identify their role on a play by color rather than reading route names or blocking calls. It makes practice faster and cuts down on confusion."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I export my playbook to Google Drive?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. You can export to Google Docs (text-forward format) or Google Slides (one play per slide, visual layout). The export goes directly to your Google Drive so your coaching staff can access it right away."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I manage playbooks for more than one team?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. You can create and manage separate playbooks for multiple teams from a single account. Each playbook has its own roster, play order, and export options. There is no limit on the number of playbooks you can create."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do my plays from the play designer carry over into the playbook?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Any play you design and save in the RC Football play designer is available to add to any of your playbooks. The two tools are connected -- design in one, organize in the other."
+      }
+    }
+  ]
+}
+</script>
+<style>
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.6;
+  color: #1F2737;
+  background-color: #F1F3F8;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+ul, ol {
+  list-style-position: inside;
+}
+
+h1 {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: #1F2737;
+}
+
+h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1F2737;
+  margin-bottom: 16px;
+}
+
+h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1F2737;
+}
+
+p {
+  margin-bottom: 16px;
+}
+
+.nav-bar {
+  width: 100%;
+  height: 48px;
+  background-color: #F97316;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+}
+
+.nav-logo {
+  font-size: 18px;
+  font-weight: 700;
+  color: #FFFFFF;
+  letter-spacing: -0.025em;
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.nav-login {
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.nav-signup {
+  background-color: #FFFFFF;
+  color: #EA580C;
+  border-radius: 9999px;
+  padding: 4px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  display: inline-block;
+}
+
+.content-wrapper {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.section-white {
+  background-color: #FFFFFF;
+  padding: 48px 0;
+}
+
+.section-gray {
+  background-color: #F1F3F8;
+  padding: 48px 0;
+}
+
+#hero {
+  background-color: #FFFFFF;
+  padding: 64px 0 48px 0;
+  text-align: center;
+}
+
+#hero h1 {
+  margin-bottom: 16px;
+}
+
+#hero p {
+  color: #1F2737;
+}
+
+.cta-primary {
+  display: inline-block;
+  background-color: #F97316;
+  color: #FFFFFF;
+  font-weight: 700;
+  padding: 12px 32px;
+  border-radius: 6px;
+  font-size: 16px;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  margin-bottom: 16px;
+}
+
+.cta-primary:hover {
+  background-color: #EA580C;
+}
+
+.cta-secondary {
+  display: block;
+  color: #F97316;
+  text-decoration: underline;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.inline-link {
+  color: #F97316;
+  text-decoration: underline;
+}
+
+.capabilities-list {
+  list-style: disc;
+  padding-left: 20px;
+  margin-top: 8px;
+}
+
+.capabilities-list li {
+  margin-bottom: 8px;
+}
+
+.steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  margin-top: 16px;
+}
+
+.step-item h3 {
+  margin-bottom: 8px;
+}
+
+.step-item p {
+  margin-bottom: 12px;
+}
+
+.img-placeholder {
+  background-color: #E2E5EC;
+  border: 1px dashed #D4D8E1;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #6D7585;
+  font-size: 12px;
+  padding: 16px;
+  width: 100%;
+}
+
+.img-placeholder-step {
+  aspect-ratio: 16 / 10;
+}
+
+.img-placeholder-card {
+  aspect-ratio: 4 / 3;
+}
+
+.features-header {
+  text-align: center;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.card-grid {
+  max-width: 1080px;
+  margin: 24px auto 0 auto;
+  padding: 0 24px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+.card {
+  background-color: #FFFFFF;
+  border: 1px solid #D4D8E1;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.card h3 {
+  margin-top: 12px;
+  margin-bottom: 8px;
+}
+
+.card p {
+  margin-bottom: 0;
+}
+
+.features-footer {
+  max-width: 1080px;
+  margin: 24px auto 0 auto;
+  padding: 0 24px;
+}
+
+.who-list {
+  list-style: disc;
+  padding-left: 20px;
+}
+
+.who-list li {
+  margin-bottom: 8px;
+}
+
+.faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.faq-item h3 {
+  margin-bottom: 8px;
+}
+
+.faq-item p {
+  margin-bottom: 0;
+}
+
+#final-cta {
+  background-color: #F97316;
+  padding: 64px 0;
+  text-align: center;
+}
+
+#final-cta .cta-inner {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+#final-cta h2 {
+  color: #FFFFFF;
+  font-size: 24px;
+  font-weight: 800;
+  margin-bottom: 16px;
+}
+
+#final-cta p {
+  color: #FFFFFF;
+  font-size: 14px;
+  margin-bottom: 24px;
+}
+
+.cta-inverted {
+  display: inline-block;
+  background-color: #FFFFFF;
+  color: #EA580C;
+  font-weight: 700;
+  padding: 12px 32px;
+  border-radius: 6px;
+  font-size: 16px;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.cta-inverted:hover {
+  background-color: #f0f0f0;
+}
+
+footer {
+  text-align: center;
+  font-size: 12px;
+  color: #6D7585;
+  padding: 24px;
+  background-color: #F1F3F8;
+}
+
+footer p {
+  margin-bottom: 4px;
+}
+
+@media (min-width: 640px) {
+  .card-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  h1 {
+    font-size: 36px;
+  }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav-bar">
+  <span class="nav-logo">RC Football</span>
+  <div class="nav-right">
+    <a href="/" class="nav-login">Login</a>
+    <a href="/" class="nav-signup">Sign Up</a>
+  </div>
+</nav>
+
+<main>
+
+<section id="hero">
+  <div class="content-wrapper">
+    <h1>Free Football Playbook Maker for Every Level</h1>
+    <p>RC Football's football playbook maker lets you organize plays, manage rosters, and build a structured gameplan your whole staff can follow. Import your roster, assign positions, order your plays, and export the finished playbook to Google Drive -- all from your browser.</p>
+    <a href="/playbooks" class="cta-primary">Open RC Football Playbook Maker</a>
+    <a href="#features" class="cta-secondary">See what's inside</a>
+  </div>
+</section>
+
+<section id="what-it-is" class="section-white">
+  <div class="content-wrapper">
+    <h2>The Football Playbook Maker That Runs Like Your Program Should</h2>
+    <p>Most coaches have plays scattered across notebooks, whiteboards, and text threads. RC Football's playbook maker puts everything in one place.</p>
+    <p>You create a playbook, import your roster, and start adding plays. Each play you designed in the play designer slots directly into your playbook. From there, you order plays however your gameplan demands -- openers first, red zone at the back, two-minute drill in between. Assign every player a position on offense and defense so your staff knows who lines up where. When game week hits, export the whole thing to Google Docs or Slides and hand it out.</p>
+    <p>This is not a folder of screenshots. It is a real playbook system that connects your plays, your players, and your gameplan in one tool.</p>
+    <p><a href="/football-play-designer" class="inline-link">Need to design plays first? Open the football play designer to start building.</a></p>
+    <h3>Key Capabilities</h3>
+    <ul class="capabilities-list">
+      <li>Import your roster with two clicks -- paste from a spreadsheet or type names in</li>
+      <li>Assign suggested positions to every player on offense and defense</li>
+      <li>Use color schemas designed for players under 12 so young athletes can follow along</li>
+      <li>Export your playbook to Google Drive as a Doc or Slides presentation</li>
+      <li>Order plays in whatever sequence fits your gameplan</li>
+      <li>Manage playbooks for multiple teams from a single account</li>
+    </ul>
+  </div>
+</section>
+
+<section id="how-it-works" class="section-gray">
+  <div class="content-wrapper">
+    <h2>How the Playbook Maker Works</h2>
+    <ol class="steps-list">
+      <li class="step-item">
+        <h3>Create a Playbook</h3>
+        <p>Hit "New Playbook" and give it a name -- "Varsity Offense Week 3" or "Flag U10 Season Playbook." Each playbook is its own container. You can have as many as you need.</p>
+      </li>
+      <li class="step-item">
+        <h3>Import Your Roster</h3>
+        <p>Paste your player list from a spreadsheet or type names manually. Two clicks and your roster is loaded. The tool suggests offensive and defensive positions based on common alignments so you're not starting from zero.</p>
+        <div class="img-placeholder img-placeholder-step" role="img" aria-label="Importing a team roster into the RC Football playbook maker with suggested position assignments">Importing a team roster into the RC Football playbook maker with suggested position assignments</div>
+      </li>
+      <li class="step-item">
+        <h3>Add and Order Your Plays</h3>
+        <p>Pull plays from your play library into the playbook. Drag them into the order that matches your gameplan. Openers at the top, situational plays grouped together, red zone at the end -- whatever makes sense for how you call games.</p>
+        <div class="img-placeholder img-placeholder-step" role="img" aria-label="Ordering plays in a football playbook with drag-and-drop gameplan sequencing">Ordering plays in a football playbook with drag-and-drop gameplan sequencing</div>
+      </li>
+      <li class="step-item">
+        <h3>Export and Share</h3>
+        <p>Export the finished playbook to Google Docs or Google Slides with one click. Hand it to your assistants, print copies for the press box, or pull it up on your tablet during the game.</p>
+        <div class="img-placeholder img-placeholder-step" role="img" aria-label="Exporting a completed football playbook to Google Docs or Google Slides">Exporting a completed football playbook to Google Docs or Google Slides</div>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<section id="features" class="section-white">
+  <div class="features-header">
+    <h2>Built for Real Coaching Workflows</h2>
+  </div>
+  <div class="card-grid">
+    <div class="card">
+      <div class="img-placeholder img-placeholder-card" role="img" aria-label="Player roster with offensive and defensive position assignments in the playbook maker">Player roster with offensive and defensive position assignments in the playbook maker</div>
+      <h3>Roster Import and Position Assignment</h3>
+      <p>Import your full roster in two clicks. Paste from a spreadsheet or enter names directly. Once loaded, the tool suggests positions for each player on offense and defense based on common formations. Adjust as needed. When you add new players mid-season, they slot right in without rebuilding anything.</p>
+    </div>
+    <div class="card">
+      <div class="img-placeholder img-placeholder-card" role="img" aria-label="Youth football playbook with color-coded player assignments for players under 12">Youth football playbook with color-coded player assignments for players under 12</div>
+      <h3>Color Schemas for Youth Coaches</h3>
+      <p>Coaching players under 12 means keeping things visual. The playbook maker includes color schemas built specifically for young athletes. Instead of reading complex route names, kids see color-coded assignments that match their position group. It cuts explanation time at practice and helps players find themselves on the diagram fast.</p>
+    </div>
+    <div class="card">
+      <div class="img-placeholder img-placeholder-card" role="img" aria-label="Google Drive export options showing Docs and Slides formats for the football playbook">Google Drive export options showing Docs and Slides formats for the football playbook</div>
+      <h3>Google Drive Export</h3>
+      <p>When your playbook is ready, export it directly to Google Docs or Google Slides. Docs gives you a clean, text-forward format your coaches can reference on any device. Slides gives you a visual, one-play-per-slide layout that works in the press box or on a projector during film review. Either way, it lands in your Drive and your staff can access it immediately.</p>
+    </div>
+    <div class="card">
+      <h3 style="margin-top: 0;">Multi-Team Playbook Management</h3>
+      <p>If you coach more than one team -- varsity and JV, fall and spring, your kid's flag team and your high school program -- you manage all of it from one account. Each team gets its own playbook with its own roster, its own play order, and its own export. Switch between them without logging out or juggling accounts.</p>
+    </div>
+  </div>
+  <div class="features-footer">
+    <p><a href="/football-play-designer" class="inline-link">Design the plays that go into your playbooks using the free football play designer.</a></p>
+  </div>
+</section>
+
+<section id="who-its-for" class="section-gray">
+  <div class="content-wrapper">
+    <h2>Who Uses This Playbook Maker</h2>
+    <ul class="who-list">
+      <li>Youth flag football coaches who need a simple, visual playbook they can hand to 8-year-olds at practice</li>
+      <li>Pop Warner and rec league head coaches managing a roster, a gameplan, and volunteer assistants who need clear instructions</li>
+      <li>High school offensive coordinators building a weekly gameplan and exporting it for the coaching staff</li>
+      <li>High school head coaches running both sides of the ball and managing JV and varsity playbooks from one place</li>
+      <li>Coaches who run multiple programs and need separate playbooks, rosters, and gameplans without separate accounts</li>
+      <li>First-year coaches who want a structured system instead of a pile of handwritten play sheets</li>
+    </ul>
+  </div>
+</section>
+
+<section id="faq" class="section-white">
+  <div class="content-wrapper">
+    <h2>Frequently Asked Questions About the Playbook Maker</h2>
+    <div class="faq-list">
+      <div class="faq-item">
+        <h3>Is the football playbook maker free?</h3>
+        <p>Yes. Creating playbooks, importing rosters, adding plays, and organizing your gameplan are all free. Google Drive export is also included at no cost.</p>
+      </div>
+      <div class="faq-item">
+        <h3>Can I import my roster from a spreadsheet?</h3>
+        <p>Yes. You can paste player names directly from a spreadsheet like Excel or Google Sheets. The import takes two clicks. You can also type names in manually if you prefer.</p>
+      </div>
+      <div class="faq-item">
+        <h3>What are the color schemas for players under 12?</h3>
+        <p>The color schemas are simplified visual systems that replace complex terminology with color-coded assignments. Players under 12 can identify their role on a play by color rather than reading route names or blocking calls. It makes practice faster and cuts down on confusion.</p>
+      </div>
+      <div class="faq-item">
+        <h3>Can I export my playbook to Google Drive?</h3>
+        <p>Yes. You can export to Google Docs (text-forward format) or Google Slides (one play per slide, visual layout). The export goes directly to your Google Drive so your coaching staff can access it right away.</p>
+      </div>
+      <div class="faq-item">
+        <h3>Can I manage playbooks for more than one team?</h3>
+        <p>Yes. You can create and manage separate playbooks for multiple teams from a single account. Each playbook has its own roster, play order, and export options. There is no limit on the number of playbooks you can create.</p>
+      </div>
+      <div class="faq-item">
+        <h3>Do my plays from the play designer carry over into the playbook?</h3>
+        <p>Yes. Any play you design and save in the RC Football play designer is available to add to any of your playbooks. The two tools are connected -- design in one, organize in the other.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="final-cta">
+  <div class="cta-inner">
+    <h2>Get Your Playbook Organized</h2>
+    <p>Import your roster, add your plays, and hand your staff a real gameplan.</p>
+    <a href="/playbooks" class="cta-inverted">Open RC Football Playbook Maker</a>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <p>&copy; 2025 RC Football. All rights reserved.</p>
+  <p>Follow Us: @RC_Football_</p>
+</footer>
+
+</body>
+</html>

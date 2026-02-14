@@ -4336,11 +4336,11 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                   Football Play Designer Overview
                 </a>
                 <a
-                  href="#"
-                  className="flex items-center gap-2 text-xs text-muted-foreground"
-                  data-testid="link-resource-placeholder-2"
+                  href="/football-playbook-maker"
+                  className="flex items-center gap-2 text-xs text-orange-400 underline"
+                  data-testid="link-resource-playbook-maker"
                 >
-                  Resource 2 Placeholder
+                  Playbook Designer 101
                 </a>
                 <a
                   href="#"

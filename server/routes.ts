@@ -454,6 +454,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.sendFile(htmlPath);
   });
 
+  app.get("/football-playbook-maker", (_req, res) => {
+    const htmlPath = path.resolve(process.cwd(), "client", "public", "football-playbook-maker.html");
+    res.sendFile(htmlPath);
+  });
+
   app.post("/api/generate-play", async (req, res) => {
     try {
       const { prompt, image, situation } = req.body;
