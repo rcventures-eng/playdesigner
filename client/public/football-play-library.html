@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Football Play Library -- Save, Tag & Share Plays | RC Football</title>
+<meta name="description" content="Save football plays to your personal library. Tag by situation and concept, clone winning plays, and share with coaches and players. Free for all coaches.">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="canonical" href="https://rc-football.com/football-play-library">
+<meta property="og:title" content="Football Play Library -- Save, Tag & Share Plays | RC Football">
+<meta property="og:description" content="Save football plays to your personal library. Tag by situation and concept, clone winning plays, and share with coaches and players. Free for all coaches.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://rc-football.com/football-play-library">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Is the football play library free?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Saving plays, tagging, cloning, and sharing are all free. The global library of pre-made community plays is available to premium users."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do my saved plays carry over between seasons?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Your play library is permanent. Plays you saved last season, last year, or three years ago are still in your library. Nothing gets deleted unless you remove it."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What's the difference between the play library and a playbook?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The play library is your full collection of every play you've ever saved -- think of it as your filing cabinet. A playbook is a curated, ordered set of plays for a specific team or gameplan. You pull plays from your library into a playbook when you're building a gameplan."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the global library?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The global library is a shared collection of plays created by coaches in the RC Football community. Premium users can browse it by formation, concept, or situation and copy any play into their personal library."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I share plays with players, not just coaches?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Shared plays can be viewed by anyone you send them to. Players can open them on their phone or laptop for pre-game review. They see the diagram, the route labels, and any notes you've added."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How does cloning work?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Cloning duplicates a play into a new, independent copy. You can change anything on the clone -- routes, positions, labels, formation -- without affecting the original. Coaches use this to create variations of a base play without starting from scratch each time."
+      }
+    }
+  ]
+}
+</script>
+<style>
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.6;
+  color: #1F2737;
+  background-color: #F1F3F8;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+ul, ol {
+  list-style-position: inside;
+}
+
+h1 {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: #1F2737;
+}
+
+h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1F2737;
+  margin-bottom: 16px;
+}
+
+h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1F2737;
+}
+
+p {
+  margin-bottom: 16px;
+}
+
+.nav-bar {
+  width: 100%;
+  height: 48px;
+  background-color: #F97316;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+}
+
+.nav-logo {
+  font-size: 18px;
+  font-weight: 700;
+  color: #FFFFFF;
+  letter-spacing: -0.025em;
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.nav-login {
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.nav-signup {
+  background-color: #FFFFFF;
+  color: #EA580C;
+  border-radius: 9999px;
+  padding: 4px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  display: inline-block;
+}
+
+.content-wrapper {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.section-white {
+  background-color: #FFFFFF;
+  padding: 48px 0;
+}
+
+.section-gray {
+  background-color: #F1F3F8;
+  padding: 48px 0;
+}
+
+#hero {
+  background-color: #FFFFFF;
+  padding: 64px 0 48px 0;
+  text-align: center;
+}
+
+#hero h1 {
+  margin-bottom: 16px;
+}
+
+#hero p {
+  color: #1F2737;
+}
+
+.cta-primary {
+  display: inline-block;
+  background-color: #F97316;
+  color: #FFFFFF;
+  font-weight: 700;
+  padding: 12px 32px;
+  border-radius: 6px;
+  font-size: 16px;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  margin-bottom: 16px;
+}
+
+.cta-primary:hover {
+  background-color: #EA580C;
+}
+
+.cta-secondary {
+  display: block;
+  color: #F97316;
+  text-decoration: underline;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.inline-link {
+  color: #F97316;
+  text-decoration: underline;
+}
+
+.capabilities-list {
+  list-style: disc;
+  padding-left: 20px;
+  margin-top: 8px;
+}
+
+.capabilities-list li {
+  margin-bottom: 8px;
+}
+
+.steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  margin-top: 16px;
+}
+
+.step-item h3 {
+  margin-bottom: 8px;
+}
+
+.step-item p {
+  margin-bottom: 12px;
+}
+
+.img-placeholder {
+  background-color: #E2E5EC;
+  border: 1px dashed #D4D8E1;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #6D7585;
+  font-size: 12px;
+  padding: 16px;
+  width: 100%;
+}
+
+.img-placeholder-step {
+  aspect-ratio: 16 / 10;
+}
+
+.img-placeholder-card {
+  aspect-ratio: 4 / 3;
+}
+
+.features-header {
+  text-align: center;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.card-grid {
+  max-width: 1080px;
+  margin: 24px auto 0 auto;
+  padding: 0 24px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+.card {
+  background-color: #FFFFFF;
+  border: 1px solid #D4D8E1;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.card h3 {
+  margin-top: 12px;
+  margin-bottom: 8px;
+}
+
+.card p {
+  margin-bottom: 0;
+}
+
+.features-footer {
+  max-width: 1080px;
+  margin: 24px auto 0 auto;
+  padding: 0 24px;
+}
+
+.who-list {
+  list-style: disc;
+  padding-left: 20px;
+}
+
+.who-list li {
+  margin-bottom: 8px;
+}
+
+.faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.faq-item h3 {
+  margin-bottom: 8px;
+}
+
+.faq-item p {
+  margin-bottom: 0;
+}
+
+#final-cta {
+  background-color: #F97316;
+  padding: 64px 0;
+  text-align: center;
+}
+
+#final-cta .cta-inner {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+#final-cta h2 {
+  color: #FFFFFF;
+  font-size: 24px;
+  font-weight: 800;
+  margin-bottom: 16px;
+}
+
+#final-cta p {
+  color: #FFFFFF;
+  font-size: 14px;
+  margin-bottom: 24px;
+}
+
+.cta-inverted {
+  display: inline-block;
+  background-color: #FFFFFF;
+  color: #EA580C;
+  font-weight: 700;
+  padding: 12px 32px;
+  border-radius: 6px;
+  font-size: 16px;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.cta-inverted:hover {
+  background-color: #f0f0f0;
+}
+
+footer {
+  text-align: center;
+  font-size: 12px;
+  color: #6D7585;
+  padding: 24px;
+  background-color: #F1F3F8;
+}
+
+footer p {
+  margin-bottom: 4px;
+}
+
+@media (min-width: 640px) {
+  .card-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .card-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  h1 {
+    font-size: 36px;
+  }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav-bar">
+  <span class="nav-logo">RC Football</span>
+  <div class="nav-right">
+    <a href="/" class="nav-login">Login</a>
+    <a href="/" class="nav-signup">Sign Up</a>
+  </div>
+</nav>
+
+<main>
+
+<section id="hero">
+  <div class="content-wrapper">
+    <h1>Your Football Play Library -- Saved, Tagged, and Ready to Go</h1>
+    <p>RC Football's football play library is where every play you design lives. Save plays across seasons, tag them by situation and concept, clone what's working, and share with your staff. Premium coaches get access to a global library of pre-made plays for just about any scenario.</p>
+    <a href="/plays" class="cta-primary">Open RC Football Play Library</a>
+    <a href="#how-it-works" class="cta-secondary">See how it works</a>
+  </div>
+</section>
+
+<section id="what-it-is" class="section-white">
+  <div class="content-wrapper">
+    <h2>The Football Play Library That Keeps Every Play Within Reach</h2>
+    <p>Designing plays is one thing. Finding them again when you need them is another.</p>
+    <p>RC Football's play library stores every play you create and keeps it organized. Tag plays by situation -- 3rd and long, goal line, two-minute drill -- and by concept -- screen pass, play-action, zone run. When Friday night comes and you need that specific red zone play you drew up in August, it's right where you left it, not buried in a screenshot folder or lost on a whiteboard that got erased three months ago.</p>
+    <p>The library carries over from season to season. Plays you built last year are still there this year. And if you're a premium user, you can browse the global library -- a collection of pre-made plays shared by coaches across the community -- and pull anything into your own collection.</p>
+    <p><a href="/football-play-designer" class="inline-link">Need to build new plays? Open the football play designer and start drawing.</a></p>
+    <h3>Key Capabilities</h3>
+    <ul class="capabilities-list">
+      <li>Save plays to your personal library and access them from any device, any season</li>
+      <li>Tag by situation (3rd and long, goal line, two-minute) for fast filtering on game day</li>
+      <li>Tag by concept (screen pass, play-action, zone run, RPO) to organize by scheme</li>
+      <li>Clone plays that are working so you can tweak without starting over</li>
+      <li>Share plays with assistant coaches or players for pre-game review</li>
+      <li>Browse the global library (premium) for pre-made plays you can pull into your own collection</li>
+    </ul>
+  </div>
+</section>
+
+<section id="how-it-works" class="section-gray">
+  <div class="content-wrapper">
+    <h2>How the Play Library Works</h2>
+    <ol class="steps-list">
+      <li class="step-item">
+        <h3>Save a Play</h3>
+        <p>Every play you design in the play designer can be saved to your library with one click. Give it a name and it's stored. You can also favorite plays to pin them to the top so your go-to calls are always visible.</p>
+        <div class="img-placeholder img-placeholder-step" role="img" aria-label="Saving a play to the RC Football play library with a custom name">Saving a play to the RC Football play library with a custom name</div>
+      </li>
+      <li class="step-item">
+        <h3>Tag and Organize</h3>
+        <p>Add situation tags (3rd and short, red zone, two-minute drill) and concept tags (play-action, screen, draw, RPO) to every play. When your library grows past 20 or 30 plays, tags are what make it usable. Filter by any tag and the plays that match surface instantly.</p>
+        <div class="img-placeholder img-placeholder-step" role="img" aria-label="Tagging a play with situation and concept labels in the football play library">Tagging a play with situation and concept labels in the football play library</div>
+      </li>
+      <li class="step-item">
+        <h3>Clone, Share, or Reuse</h3>
+        <p>Found a play that's been working? Clone it. The copy is ready to edit -- adjust a route, flip the formation, tweak the blocking scheme -- without touching the original. When your staff needs to see the play, share it directly. Players can pull it up on their phones for pre-game review.</p>
+        <div class="img-placeholder img-placeholder-step" role="img" aria-label="Cloning and sharing a saved play from the RC Football play library">Cloning and sharing a saved play from the RC Football play library</div>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<section id="features" class="section-white">
+  <div class="features-header">
+    <h2>What Your Play Library Can Do</h2>
+  </div>
+  <div class="card-grid">
+    <div class="card">
+      <div class="img-placeholder img-placeholder-card" role="img" aria-label="Personal play library showing saved plays with situation and concept tags">Personal play library showing saved plays with situation and concept tags</div>
+      <h3>Personal Library with Favorites and Tags</h3>
+      <p>Every play you save goes to your personal library. Favorite the plays you call most so they sit at the top. Tag everything by situation and concept. When you need to pull up every play-action pass in your playbook, one filter does it. The library persists across seasons -- what you built last year is still there when camp opens.</p>
+    </div>
+    <div class="card">
+      <div class="img-placeholder img-placeholder-card" role="img" aria-label="Browsing the global play library with pre-made plays from the coaching community">Browsing the global play library with pre-made plays from the coaching community</div>
+      <h3>Global Library for Premium Coaches</h3>
+      <p>Premium users get access to a global library of pre-made plays shared by coaches across the RC Football community. Browse by formation, concept, or situation. When you find something useful, pull it into your personal library with one click and customize it from there. It's a shortcut for coaches who want a starting point or need to expand their playbook fast.</p>
+    </div>
+    <div class="card">
+      <h3 style="margin-top: 0;">Clone and Share</h3>
+      <p>Cloning lets you duplicate a play so you can make adjustments without losing the original. Flip a formation, change a route, swap an assignment -- the clone is independent. Sharing pushes a play directly to assistant coaches or players. Your OC can review it before the install meeting. Your quarterback can study it on his phone before the game. No screenshots, no text threads, no lost files.</p>
+    </div>
+  </div>
+  <div class="features-footer">
+    <p><a href="/football-playbook-maker" class="inline-link">Organize your saved plays into a structured gameplan with the football playbook maker.</a></p>
+  </div>
+</section>
+
+<section id="who-its-for" class="section-gray">
+  <div class="content-wrapper">
+    <h2>Who Uses This Play Library</h2>
+    <ul class="who-list">
+      <li>Coaches who design plays all season and need a single place to store, find, and reuse them year after year</li>
+      <li>Offensive and defensive coordinators who tag plays by down-and-distance so they can filter on the sideline during games</li>
+      <li>Head coaches with large playbooks who need fast search and filtering instead of scrolling through folders</li>
+      <li>Youth coaches building a library for the first time who want to browse pre-made plays from the global collection</li>
+      <li>Coaching staffs that share play review duties and need every assistant looking at the same plays before game day</li>
+      <li>Coaches who tweak plays weekly and use cloning to iterate without losing their base designs</li>
+    </ul>
+  </div>
+</section>
+
+<section id="faq" class="section-white">
+  <div class="content-wrapper">
+    <h2>Frequently Asked Questions About the Play Library</h2>
+    <div class="faq-list">
+      <div class="faq-item">
+        <h3>Is the football play library free?</h3>
+        <p>Yes. Saving plays, tagging, cloning, and sharing are all free. The global library of pre-made community plays is available to premium users.</p>
+      </div>
+      <div class="faq-item">
+        <h3>Do my saved plays carry over between seasons?</h3>
+        <p>Yes. Your play library is permanent. Plays you saved last season, last year, or three years ago are still in your library. Nothing gets deleted unless you remove it.</p>
+      </div>
+      <div class="faq-item">
+        <h3>What's the difference between the play library and a playbook?</h3>
+        <p>The play library is your full collection of every play you've ever saved -- think of it as your filing cabinet. A playbook is a curated, ordered set of plays for a specific team or gameplan. You pull plays from your library into a playbook when you're building a gameplan.</p>
+      </div>
+      <div class="faq-item">
+        <h3>What is the global library?</h3>
+        <p>The global library is a shared collection of plays created by coaches in the RC Football community. Premium users can browse it by formation, concept, or situation and copy any play into their personal library.</p>
+      </div>
+      <div class="faq-item">
+        <h3>Can I share plays with players, not just coaches?</h3>
+        <p>Yes. Shared plays can be viewed by anyone you send them to. Players can open them on their phone or laptop for pre-game review. They see the diagram, the route labels, and any notes you've added.</p>
+      </div>
+      <div class="faq-item">
+        <h3>How does cloning work?</h3>
+        <p>Cloning duplicates a play into a new, independent copy. You can change anything on the clone -- routes, positions, labels, formation -- without affecting the original. Coaches use this to create variations of a base play without starting from scratch each time.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="final-cta">
+  <div class="cta-inner">
+    <h2>Start Building Your Play Library</h2>
+    <p>Save your first play, tag it, and see how fast your collection grows.</p>
+    <a href="/plays" class="cta-inverted">Open RC Football Play Library</a>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <p>&copy; 2025 RC Football. All rights reserved.</p>
+  <p>Follow Us: @RC_Football_</p>
+</footer>
+
+</body>
+</html>

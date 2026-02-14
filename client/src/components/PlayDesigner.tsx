@@ -4343,11 +4343,11 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                   Playbook Designer 101
                 </a>
                 <a
-                  href="#"
-                  className="flex items-center gap-2 text-xs text-muted-foreground"
-                  data-testid="link-resource-placeholder-3"
+                  href="/football-play-library"
+                  className="flex items-center gap-2 text-xs text-orange-400 underline"
+                  data-testid="link-resource-play-library"
                 >
-                  Resource 3 Placeholder
+                  How to Use the Play Library
                 </a>
               </div>
             </Card>
