@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Download, Copy, Plus, Trash2, Circle as CircleIcon, MoveHorizontal, PenTool, Square as SquareIcon, Type, Hexagon, RotateCcw, Flag, Camera, X, Loader2, Sparkles, Save, Heart, Tag, Magnet, StickyNote, FlipHorizontal2, ChevronDown, ChevronUp, ExternalLink, Eye, ArrowLeft } from "lucide-react";
+import { Download, Copy, Plus, Trash2, Circle as CircleIcon, MoveHorizontal, PenTool, Square as SquareIcon, Type, Hexagon, RotateCcw, Flag, Camera, X, Loader2, Sparkles, Save, Heart, Tag, Magnet, StickyNote, FlipHorizontal2, ChevronDown, ChevronUp, ExternalLink, Eye, ArrowLeft, BookOpen } from "lucide-react";
 import { toPng } from "html-to-image";
 import { useToast } from "@/hooks/use-toast";
 import { getQueryFn, apiRequest, queryClient } from "@/lib/queryClient";
@@ -4321,6 +4321,36 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                 Delete Selected (Del)
               </Button>
             )}
+
+            <Card className="p-3 space-y-2">
+              <h3 className="font-semibold text-sm text-foreground flex items-center gap-2">
+                <BookOpen className="h-4 w-4" />
+                Resources
+              </h3>
+              <div className="space-y-1">
+                <a
+                  href="/football-play-designer"
+                  className="flex items-center gap-2 text-xs text-orange-400 underline"
+                  data-testid="link-resource-play-designer"
+                >
+                  Football Play Designer Overview
+                </a>
+                <a
+                  href="#"
+                  className="flex items-center gap-2 text-xs text-muted-foreground"
+                  data-testid="link-resource-placeholder-2"
+                >
+                  Resource 2 Placeholder
+                </a>
+                <a
+                  href="#"
+                  className="flex items-center gap-2 text-xs text-muted-foreground"
+                  data-testid="link-resource-placeholder-3"
+                >
+                  Resource 3 Placeholder
+                </a>
+              </div>
+            </Card>
           </div>
         </div>
 
