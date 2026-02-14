@@ -1,0 +1,199 @@
+Build a third SEO landing page using the same approach as the previous two: a self-contained static HTML file served by Express at /football-play-library. Same architecture -- Express serves it before the SPA catch-all so Google gets fully-formed HTML on first request.
+The file should be named football-play-library.html.
+Use the exact same brand design tokens, nav bar, footer, and responsive approach as the football-play-designer and football-playbook-maker pages. Same fonts, colors, spacing, border radius, image placeholder styling, button styles. Do not redefine any of these -- match what already exists.
+Same rules: one HTML file, inline CSS, semantic HTML5, mobile-first, no frameworks, no animations beyond button hover, no improvisation.
+
+META TAGS
+html<title>Football Play Library -- Save, Tag & Share Plays | RC Football</title>
+<meta name="description" content="Save football plays to your personal library. Tag by situation and concept, clone winning plays, and share with coaches and players. Free for all coaches.">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="canonical" href="https://rcfootball.com/football-play-library">
+<meta property="og:title" content="Football Play Library -- Save, Tag & Share Plays | RC Football">
+<meta property="og:description" content="Save football plays to your personal library. Tag by situation and concept, clone winning plays, and share with coaches and players. Free for all coaches.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://rcfootball.com/football-play-library">
+
+PAGE STRUCTURE
+Same 7-section layout. Section 4 is "Features in Action" with feature cards (same as the playbook-maker page). This page has 3 feature cards, not 4.
+Alternate backgrounds: Hero (#FFFFFF), What It Is (#FFFFFF), How It Works (#F1F3F8), Features (#FFFFFF), Who It's For (#F1F3F8), FAQ (#FFFFFF), Final CTA (#F97316).
+
+PAGE CONTENT
+Use all copy verbatim. Do not rewrite.
+Section 1: Hero (ID: hero)
+H1: Your Football Play Library -- Saved, Tagged, and Ready to Go
+Intro paragraph: RC Football's football play library is where every play you design lives. Save plays across seasons, tag them by situation and concept, clone what's working, and share with your staff. Premium coaches get access to a global library of pre-made plays for just about any scenario.
+Primary CTA button: Open RC Football Play Library (link to: /play-library)
+Secondary link: See how it works (link to: #how-it-works)
+
+Section 2: What It Is (ID: what-it-is)
+H2: The Football Play Library That Keeps Every Play Within Reach
+Body copy (three paragraphs):
+Designing plays is one thing. Finding them again when you need them is another.
+RC Football's play library stores every play you create and keeps it organized. Tag plays by situation -- 3rd and long, goal line, two-minute drill -- and by concept -- screen pass, play-action, zone run. When Friday night comes and you need that specific red zone play you drew up in August, it's right where you left it, not buried in a screenshot folder or lost on a whiteboard that got erased three months ago.
+The library carries over from season to season. Plays you built last year are still there this year. And if you're a premium user, you can browse the global library -- a collection of pre-made plays shared by coaches across the community -- and pull anything into your own collection.
+Below the third paragraph, add this as an inline link styled in orange (#F97316, underline):
+Text: "Need to build new plays? Open the football play designer and start drawing."
+Link to: /football-play-designer
+H3: Key Capabilities
+List:
+
+Save plays to your personal library and access them from any device, any season
+Tag by situation (3rd and long, goal line, two-minute) for fast filtering on game day
+Tag by concept (screen pass, play-action, zone run, RPO) to organize by scheme
+Clone plays that are working so you can tweak without starting over
+Share plays with assistant coaches or players for pre-game review
+Browse the global library (premium) for pre-made plays you can pull into your own collection
+
+
+Section 3: How It Works (ID: how-it-works)
+H2: How the Play Library Works
+Step 1 -- H3: Save a Play
+Text: Every play you design in the play designer can be saved to your library with one click. Give it a name and it's stored. You can also favorite plays to pin them to the top so your go-to calls are always visible.
+Image placeholder alt text: Saving a play to the RC Football play library with a custom name
+Image dimensions: 800x500
+Step 2 -- H3: Tag and Organize
+Text: Add situation tags (3rd and short, red zone, two-minute drill) and concept tags (play-action, screen, draw, RPO) to every play. When your library grows past 20 or 30 plays, tags are what make it usable. Filter by any tag and the plays that match surface instantly.
+Image placeholder alt text: Tagging a play with situation and concept labels in the football play library
+Image dimensions: 800x500
+Step 3 -- H3: Clone, Share, or Reuse
+Text: Found a play that's been working? Clone it. The copy is ready to edit -- adjust a route, flip the formation, tweak the blocking scheme -- without touching the original. When your staff needs to see the play, share it directly. Players can pull it up on their phones for pre-game review.
+Image placeholder alt text: Cloning and sharing a saved play from the RC Football play library
+Image dimensions: 800x500
+
+Section 4: Features in Action (ID: features)
+H2: What Your Play Library Can Do
+No intro sentence. Go directly to the feature cards.
+Card grid: 1 column mobile, 3 columns at 1024px (3 cards, so 3-across works here).
+
+Card 1:
+
+Image placeholder alt text: Personal play library showing saved plays with situation and concept tags
+Image dimensions: full card width, 4:3 aspect ratio
+H3: Personal Library with Favorites and Tags
+Text: Every play you save goes to your personal library. Favorite the plays you call most so they sit at the top. Tag everything by situation and concept. When you need to pull up every play-action pass in your playbook, one filter does it. The library persists across seasons -- what you built last year is still there when camp opens.
+
+Card 2:
+
+Image placeholder alt text: Browsing the global play library with pre-made plays from the coaching community
+Image dimensions: full card width, 4:3 aspect ratio
+H3: Global Library for Premium Coaches
+Text: Premium users get access to a global library of pre-made plays shared by coaches across the RC Football community. Browse by formation, concept, or situation. When you find something useful, pull it into your personal library with one click and customize it from there. It's a shortcut for coaches who want a starting point or need to expand their playbook fast.
+
+Card 3:
+
+No image for this card
+H3: Clone and Share
+Text: Cloning lets you duplicate a play so you can make adjustments without losing the original. Flip a formation, change a route, swap an assignment -- the clone is independent. Sharing pushes a play directly to assistant coaches or players. Your OC can review it before the install meeting. Your quarterback can study it on his phone before the game. No screenshots, no text threads, no lost files.
+
+Below Card 3, add this as an inline link styled in orange (#F97316, underline):
+Text: "Organize your saved plays into a structured gameplan with the football playbook maker."
+Link to: /football-playbook-maker
+
+Section 5: Who It's For (ID: who-its-for)
+H2: Who Uses This Play Library
+List:
+
+Coaches who design plays all season and need a single place to store, find, and reuse them year after year
+Offensive and defensive coordinators who tag plays by down-and-distance so they can filter on the sideline during games
+Head coaches with large playbooks who need fast search and filtering instead of scrolling through folders
+Youth coaches building a library for the first time who want to browse pre-made plays from the global collection
+Coaching staffs that share play review duties and need every assistant looking at the same plays before game day
+Coaches who tweak plays weekly and use cloning to iterate without losing their base designs
+
+
+Section 6: FAQ (ID: faq)
+H2: Frequently Asked Questions About the Play Library
+Q1: Is the football play library free?
+A1: Yes. Saving plays, tagging, cloning, and sharing are all free. The global library of pre-made community plays is available to premium users.
+Q2: Do my saved plays carry over between seasons?
+A2: Yes. Your play library is permanent. Plays you saved last season, last year, or three years ago are still in your library. Nothing gets deleted unless you remove it.
+Q3: What's the difference between the play library and a playbook?
+A3: The play library is your full collection of every play you've ever saved -- think of it as your filing cabinet. A playbook is a curated, ordered set of plays for a specific team or gameplan. You pull plays from your library into a playbook when you're building a gameplan.
+Q4: What is the global library?
+A4: The global library is a shared collection of plays created by coaches in the RC Football community. Premium users can browse it by formation, concept, or situation and copy any play into their personal library.
+Q5: Can I share plays with players, not just coaches?
+A5: Yes. Shared plays can be viewed by anyone you send them to. Players can open them on their phone or laptop for pre-game review. They see the diagram, the route labels, and any notes you've added.
+Q6: How does cloning work?
+A6: Cloning duplicates a play into a new, independent copy. You can change anything on the clone -- routes, positions, labels, formation -- without affecting the original. Coaches use this to create variations of a base play without starting from scratch each time.
+
+Section 7: Final CTA (ID: final-cta)
+H2: Start Building Your Play Library
+Subtext: Save your first play, tag it, and see how fast your collection grows.
+CTA button: Open RC Football Play Library (link to: /play-library)
+
+JSON-LD STRUCTURED DATA
+Place this in the <head>:
+html<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Is the football play library free?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Saving plays, tagging, cloning, and sharing are all free. The global library of pre-made community plays is available to premium users."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do my saved plays carry over between seasons?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Your play library is permanent. Plays you saved last season, last year, or three years ago are still in your library. Nothing gets deleted unless you remove it."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What's the difference between the play library and a playbook?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The play library is your full collection of every play you've ever saved -- think of it as your filing cabinet. A playbook is a curated, ordered set of plays for a specific team or gameplan. You pull plays from your library into a playbook when you're building a gameplan."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the global library?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The global library is a shared collection of plays created by coaches in the RC Football community. Premium users can browse it by formation, concept, or situation and copy any play into their personal library."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I share plays with players, not just coaches?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Shared plays can be viewed by anyone you send them to. Players can open them on their phone or laptop for pre-game review. They see the diagram, the route labels, and any notes you've added."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How does cloning work?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Cloning duplicates a play into a new, independent copy. You can change anything on the clone -- routes, positions, labels, formation -- without affecting the original. Coaches use this to create variations of a base play without starting from scratch each time."
+      }
+    }
+  ]
+}
+</script>
+
+RULES
+Same rules as the previous pages:
+
+One HTML file, all CSS in a <style> tag
+No JavaScript unless required for responsive nav toggle
+No CSS frameworks
+No animations beyond button hover color changes
+Do not change the copy -- use it word for word
+Semantic HTML: header, nav, main, section, footer, h1-h3, p, ul, ol
+Every section must have the ID specified above
+Test that the #how-it-works anchor link from the hero scrolls to Section 3
+Reuse the same nav and footer from the previous pages
+Image placeholders: same styled divs (bg #E2E5EC, dashed border, centered alt text, correct aspect ratio)
+Feature Card 3 has NO image -- just text
+Feature card grid should be 3-across on desktop (3 cards fit cleanly in 3 columns)
+
+Confirm that /play-library is the correct internal route for the Play Library section of the app. The CTA buttons on this page link there. If the route is different, let me know before building.
