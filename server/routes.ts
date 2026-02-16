@@ -2209,7 +2209,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // The state passed to Google includes the nonce (for verification)
       // We use session userId on callback, not data from the state
       const authUrl = getAuthorizationUrl(randomNonce);
-      res.json({ authUrl });
+      
+      // Explicitly save session to ensure state is persisted before redirect to Google
+      req.session.save((err) => {
+        if (err) {
+          console.error("Failed to save OAuth state to session:", err);
+          return res.status(500).json({ error: "Failed to initiate authorization" });
+        }
+        console.log('OAuth state saved to session for user:', userId);
+        res.json({ authUrl });
+      });
     } catch (error: any) {
       console.error("Google Drive authorize error:", error);
       res.status(500).json({ error: error.message || "Failed to start authorization" });
@@ -2221,7 +2230,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { code, state, error: authError } = req.query;
       
+      console.log('OAuth Callback Received:', { code: code ? 'present' : 'missing', state: state ? 'present' : 'missing', error: authError });
+      console.log('User Session before token save:', { userId: req.session?.userId, hasState: !!(req.session as any)?.googleDriveOAuthState });
+      
       if (authError) {
+        console.error('Google Drive callback: User denied access or auth error:', authError);
         return res.redirect('/playbooks?error=google_drive_denied');
       }
       
@@ -2236,7 +2249,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // SECURITY: Verify the user is authenticated
       if (!req.session?.userId) {
-        console.error("Google Drive callback: No authenticated session");
+        console.error("Google Drive callback: No authenticated session - session may have been lost during redirect");
         return res.redirect('/playbooks?error=google_drive_not_authenticated');
       }
       
@@ -2244,7 +2257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // This prevents CSRF attacks - only the user who initiated the OAuth can complete it
       const storedState = (req.session as any).googleDriveOAuthState;
       if (!storedState || storedState !== state) {
-        console.error("Google Drive callback: State mismatch - possible CSRF attack");
+        console.error("Google Drive callback: State mismatch", { storedState: storedState ? 'present' : 'missing', receivedState: state ? 'present' : 'missing', match: storedState === state });
         return res.redirect('/playbooks?error=google_drive_invalid_state');
       }
       
@@ -2254,13 +2267,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Exchange code for tokens
       const { exchangeCodeForTokens } = await import("./google-drive");
       const tokens = await exchangeCodeForTokens(code);
+      console.log('Token exchange successful, saving to user:', req.session.userId);
       
       // Save tokens to the authenticated user's record
-      await db.update(users)
+      const storageResult = await db.update(users)
         .set({ googleDriveTokens: tokens })
         .where(eq(users.id, req.session.userId));
+      console.log('Token storage result:', { rowsAffected: storageResult?.rowCount ?? 'unknown' });
       
-      res.redirect('/playbooks?google_drive=connected');
+      // Explicitly save the session before redirecting to ensure changes persist
+      req.session.save((err) => {
+        if (err) {
+          console.error("Google Drive callback: Failed to save session:", err);
+          return res.redirect('/playbooks?error=google_drive_failed');
+        }
+        console.log('Session saved successfully, redirecting to /playbooks');
+        res.redirect('/playbooks?google_drive=connected');
+      });
     } catch (error: any) {
       console.error("Google Drive callback error:", error);
       res.redirect('/playbooks?error=google_drive_failed');

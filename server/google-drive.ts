@@ -41,7 +41,7 @@ function getOAuth2Client() {
     ? `https://${domain}/api/auth/google-drive/callback`
     : 'http://localhost:5000/api/auth/google-drive/callback';
   
-  console.log('Google Drive OAuth redirect URI:', redirectUri);
+  console.log('Google Drive OAuth redirect URI:', redirectUri, '| REPLIT_DEPLOYMENT:', process.env.REPLIT_DEPLOYMENT, '| domain:', domain);
   
   return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
 }
