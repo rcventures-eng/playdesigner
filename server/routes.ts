@@ -2226,10 +2226,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const randomNonce = crypto.randomBytes(32).toString('hex');
       
-      // Encode userId + nonce into the state parameter using HMAC signing
+      // Capture the domain the user is currently browsing on so we redirect back there
+      const originDomain = req.headers.host || '';
+      
+      // Encode userId + nonce + origin into the state parameter using HMAC signing
       // This makes the callback independent of session cookies (fixes cross-domain issues)
       const secret = process.env.SESSION_SECRET || "fallback-secret-for-dev";
-      const statePayload = JSON.stringify({ userId, nonce: randomNonce, ts: Date.now() });
+      const statePayload = JSON.stringify({ userId, nonce: randomNonce, ts: Date.now(), origin: originDomain });
       const stateB64 = Buffer.from(statePayload).toString('base64url');
       const hmac = crypto.createHmac('sha256', secret).update(stateB64).digest('base64url');
       const signedState = `${stateB64}.${hmac}`;
@@ -2300,7 +2303,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.redirect('/playbooks?error=state_mismatch');
       }
       
-      let stateData: { userId: string; nonce: string; ts: number };
+      let stateData: { userId: string; nonce: string; ts: number; origin?: string };
       try {
         stateData = JSON.parse(Buffer.from(stateB64, 'base64url').toString());
       } catch {
@@ -2308,15 +2311,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.redirect('/playbooks?error=state_mismatch');
       }
       
+      // Build redirect base URL using the original domain the user was browsing on
+      // This ensures they go back to rc-football.com (not the .replit.app domain)
+      // Validate against allowlist to prevent open redirect attacks
+      const originDomain = stateData.origin;
+      const allowedDomains = (process.env.REPLIT_DOMAINS?.split(',') || []).concat(['localhost:5000']);
+      const isAllowed = originDomain && allowedDomains.some(d => originDomain === d || originDomain === `www.${d}`);
+      const redirectBase = isAllowed ? `https://${originDomain}` : '';
+      
       // Check state is not too old (max 10 minutes)
       const ageMs = Date.now() - stateData.ts;
       if (ageMs > 10 * 60 * 1000) {
         console.error('Google Drive callback: State expired', { ageMinutes: Math.round(ageMs / 60000) });
-        return res.redirect('/playbooks?error=state_expired');
+        return res.redirect(`${redirectBase}/playbooks?error=state_expired`);
       }
       
       const userId = stateData.userId;
-      console.log('OAuth state verified for user:', userId, '| session userId:', req.session?.userId || 'none');
+      console.log('OAuth state verified for user:', userId, '| origin:', originDomain, '| session userId:', req.session?.userId || 'none');
       
       // Exchange code for tokens
       const { exchangeCodeForTokens } = await import("./google-drive");
@@ -2325,7 +2336,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         tokens = await exchangeCodeForTokens(code);
       } catch (tokenError: any) {
         console.error('Google Drive callback: Token exchange failed:', tokenError.message);
-        return res.redirect('/playbooks?error=token_exchange');
+        return res.redirect(`${redirectBase}/playbooks?error=token_exchange`);
       }
       console.log('Token exchange successful, saving to user:', userId);
       
@@ -2343,8 +2354,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      console.log('Google Drive connected successfully, redirecting to /playbooks');
-      res.redirect('/playbooks?success=true');
+      console.log('Google Drive connected successfully, redirecting to:', `${redirectBase}/playbooks`);
+      res.redirect(`${redirectBase}/playbooks?success=true`);
     } catch (error: any) {
       console.error("Google Drive callback error:", error);
       res.redirect('/playbooks?error=unknown');
