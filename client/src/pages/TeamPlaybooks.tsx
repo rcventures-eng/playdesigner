@@ -133,9 +133,20 @@ export default function TeamPlaybooks() {
       });
       window.history.replaceState({}, "", window.location.pathname);
     } else if (params.get("error")) {
+      const errorCode = params.get("error");
+      const errorMessages: Record<string, string> = {
+        auth_denied: "You cancelled the Google authorization. Please try again if this was unintentional.",
+        no_session: "Your login session expired during the Google connection process. Please log in again and retry.",
+        state_mismatch: "A security check failed during connection. Please try again.",
+        state_expired: "The connection request took too long. Please try again.",
+        token_exchange: "Google rejected the connection request. Please try again or contact RC Football support.",
+        session_save: "Connection succeeded but couldn't be saved. Please try again.",
+        no_code: "Google didn't provide an authorization code. Please try again.",
+        no_state: "A required security parameter was missing. Please try again.",
+      };
       toast({
         title: "False Start",
-        description: "There are issues connecting your account with Google. Please try again or contact RC Football support.",
+        description: errorMessages[errorCode || ""] || "There are issues connecting your account with Google. Please try again or contact RC Football support.",
         variant: "destructive",
       });
       window.history.replaceState({}, "", window.location.pathname);

@@ -2222,25 +2222,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.session.userId!;
       
       const { getAuthorizationUrl } = await import("./google-drive");
-      
-      // Generate a cryptographically random state token
       const crypto = await import("crypto");
+      
       const randomNonce = crypto.randomBytes(32).toString('hex');
       
-      // Store the nonce in the session for verification on callback
+      // Encode userId + nonce into the state parameter using HMAC signing
+      // This makes the callback independent of session cookies (fixes cross-domain issues)
+      const secret = process.env.SESSION_SECRET || "fallback-secret-for-dev";
+      const statePayload = JSON.stringify({ userId, nonce: randomNonce, ts: Date.now() });
+      const stateB64 = Buffer.from(statePayload).toString('base64url');
+      const hmac = crypto.createHmac('sha256', secret).update(stateB64).digest('base64url');
+      const signedState = `${stateB64}.${hmac}`;
+      
+      // Also store in session as a backup verification
       (req.session as any).googleDriveOAuthState = randomNonce;
       
-      // The state passed to Google includes the nonce (for verification)
-      // We use session userId on callback, not data from the state
-      const authUrl = getAuthorizationUrl(randomNonce);
+      const authUrl = getAuthorizationUrl(signedState);
       
-      // Explicitly save session to ensure state is persisted before redirect to Google
       req.session.save((err) => {
         if (err) {
           console.error("Failed to save OAuth state to session:", err);
-          return res.status(500).json({ error: "Failed to initiate authorization" });
         }
-        console.log('OAuth state saved to session for user:', userId);
+        console.log('OAuth state saved for user:', userId, '| nonce:', randomNonce.substring(0, 8) + '...');
         res.json({ authUrl });
       });
     } catch (error: any) {
@@ -2253,64 +2256,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/auth/google-drive/callback", async (req, res) => {
     try {
       const { code, state, error: authError } = req.query;
+      const crypto = await import("crypto");
       
-      console.log('OAuth Callback Received:', { code: code ? 'present' : 'missing', state: state ? 'present' : 'missing', error: authError });
-      console.log('User Session before token save:', { userId: req.session?.userId, hasState: !!(req.session as any)?.googleDriveOAuthState });
+      console.log('OAuth Callback Received:', { 
+        code: code ? 'present' : 'missing', 
+        state: state ? 'present' : 'missing', 
+        error: authError,
+        sessionUserId: req.session?.userId || 'none',
+        cookies: req.headers.cookie ? 'present' : 'missing',
+        host: req.headers.host
+      });
       
       if (authError) {
         console.error('Google Drive callback: User denied access or auth error:', authError);
-        return res.redirect('/playbooks?error=auth_failed');
+        return res.redirect('/playbooks?error=auth_denied');
       }
       
       if (!code || typeof code !== 'string') {
-        return res.redirect('/playbooks?error=auth_failed');
+        console.error('Google Drive callback: Missing authorization code');
+        return res.redirect('/playbooks?error=no_code');
       }
       
-      // Verify state parameter exists
       if (!state || typeof state !== 'string') {
-        return res.redirect('/playbooks?error=auth_failed');
+        console.error('Google Drive callback: Missing state parameter');
+        return res.redirect('/playbooks?error=no_state');
       }
       
-      // SECURITY: Verify the user is authenticated
-      if (!req.session?.userId) {
-        console.error("Google Drive callback: No authenticated session - session may have been lost during redirect");
-        return res.redirect('/playbooks?error=auth_failed');
+      // Verify signed state parameter (contains userId, independent of session cookies)
+      const secret = process.env.SESSION_SECRET || "fallback-secret-for-dev";
+      const parts = (state as string).split('.');
+      if (parts.length !== 2) {
+        console.error('Google Drive callback: Invalid state format');
+        return res.redirect('/playbooks?error=state_mismatch');
       }
       
-      // SECURITY: Verify the state matches what we stored in the session
-      // This prevents CSRF attacks - only the user who initiated the OAuth can complete it
-      const storedState = (req.session as any).googleDriveOAuthState;
-      if (!storedState || storedState !== state) {
-        console.error("Google Drive callback: State mismatch", { storedState: storedState ? 'present' : 'missing', receivedState: state ? 'present' : 'missing', match: storedState === state });
-        return res.redirect('/playbooks?error=auth_failed');
+      const [stateB64, receivedHmac] = parts;
+      const expectedHmac = crypto.createHmac('sha256', secret).update(stateB64).digest('base64url');
+      
+      const receivedBuf = Buffer.from(receivedHmac);
+      const expectedBuf = Buffer.from(expectedHmac);
+      if (receivedBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(receivedBuf, expectedBuf)) {
+        console.error('Google Drive callback: HMAC signature verification failed');
+        return res.redirect('/playbooks?error=state_mismatch');
       }
       
-      // Clear the stored state to prevent reuse
-      delete (req.session as any).googleDriveOAuthState;
+      let stateData: { userId: string; nonce: string; ts: number };
+      try {
+        stateData = JSON.parse(Buffer.from(stateB64, 'base64url').toString());
+      } catch {
+        console.error('Google Drive callback: Could not parse state payload');
+        return res.redirect('/playbooks?error=state_mismatch');
+      }
+      
+      // Check state is not too old (max 10 minutes)
+      const ageMs = Date.now() - stateData.ts;
+      if (ageMs > 10 * 60 * 1000) {
+        console.error('Google Drive callback: State expired', { ageMinutes: Math.round(ageMs / 60000) });
+        return res.redirect('/playbooks?error=state_expired');
+      }
+      
+      const userId = stateData.userId;
+      console.log('OAuth state verified for user:', userId, '| session userId:', req.session?.userId || 'none');
       
       // Exchange code for tokens
       const { exchangeCodeForTokens } = await import("./google-drive");
-      const tokens = await exchangeCodeForTokens(code);
-      console.log('Token exchange successful, saving to user:', req.session.userId);
+      let tokens;
+      try {
+        tokens = await exchangeCodeForTokens(code);
+      } catch (tokenError: any) {
+        console.error('Google Drive callback: Token exchange failed:', tokenError.message);
+        return res.redirect('/playbooks?error=token_exchange');
+      }
+      console.log('Token exchange successful, saving to user:', userId);
       
-      // Save tokens to the authenticated user's record
+      // Save tokens using the userId from the signed state (not from session)
       const storageResult = await db.update(users)
         .set({ googleDriveTokens: tokens })
-        .where(eq(users.id, req.session.userId));
+        .where(eq(users.id, userId));
       console.log('Token storage result:', { rowsAffected: storageResult?.rowCount ?? 'unknown' });
       
-      // Explicitly save the session before redirecting to ensure changes persist
-      req.session.save((err) => {
-        if (err) {
-          console.error("Google Drive callback: Failed to save session:", err);
-          return res.redirect('/playbooks?error=auth_failed');
-        }
-        console.log('Session saved successfully, redirecting to /playbooks');
-        res.redirect('/playbooks?success=true');
-      });
+      // If we have a valid session, clean up the OAuth state
+      if (req.session?.userId) {
+        delete (req.session as any).googleDriveOAuthState;
+        req.session.save((err) => {
+          if (err) console.error("Non-critical: session save after OAuth cleanup failed:", err);
+        });
+      }
+      
+      console.log('Google Drive connected successfully, redirecting to /playbooks');
+      res.redirect('/playbooks?success=true');
     } catch (error: any) {
       console.error("Google Drive callback error:", error);
-      res.redirect('/playbooks?error=auth_failed');
+      res.redirect('/playbooks?error=unknown');
     }
   });
   
