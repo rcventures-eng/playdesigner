@@ -123,6 +123,23 @@ export default function TeamPlaybooks() {
         setSelectedTeamId(teamId);
       }
     }
+
+    if (params.get("success") === "true") {
+      toast({
+        title: "Touchdown!",
+        description: "Your Google Drive and RC Football are now connected. You can now export your playbooks.",
+        variant: "default",
+        className: "bg-green-600 text-white border-green-700",
+      });
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (params.get("error")) {
+      toast({
+        title: "False Start",
+        description: "There are issues connecting your account with Google. Please try again or contact RC Football support.",
+        variant: "destructive",
+      });
+      window.history.replaceState({}, "", window.location.pathname);
+    }
   }, []);
 
   const { data: user, isLoading: userLoading } = useQuery<{

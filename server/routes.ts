@@ -2235,22 +2235,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (authError) {
         console.error('Google Drive callback: User denied access or auth error:', authError);
-        return res.redirect('/playbooks?error=google_drive_denied');
+        return res.redirect('/playbooks?error=auth_failed');
       }
       
       if (!code || typeof code !== 'string') {
-        return res.redirect('/playbooks?error=google_drive_no_code');
+        return res.redirect('/playbooks?error=auth_failed');
       }
       
       // Verify state parameter exists
       if (!state || typeof state !== 'string') {
-        return res.redirect('/playbooks?error=google_drive_invalid_state');
+        return res.redirect('/playbooks?error=auth_failed');
       }
       
       // SECURITY: Verify the user is authenticated
       if (!req.session?.userId) {
         console.error("Google Drive callback: No authenticated session - session may have been lost during redirect");
-        return res.redirect('/playbooks?error=google_drive_not_authenticated');
+        return res.redirect('/playbooks?error=auth_failed');
       }
       
       // SECURITY: Verify the state matches what we stored in the session
@@ -2258,7 +2258,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const storedState = (req.session as any).googleDriveOAuthState;
       if (!storedState || storedState !== state) {
         console.error("Google Drive callback: State mismatch", { storedState: storedState ? 'present' : 'missing', receivedState: state ? 'present' : 'missing', match: storedState === state });
-        return res.redirect('/playbooks?error=google_drive_invalid_state');
+        return res.redirect('/playbooks?error=auth_failed');
       }
       
       // Clear the stored state to prevent reuse
@@ -2279,14 +2279,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       req.session.save((err) => {
         if (err) {
           console.error("Google Drive callback: Failed to save session:", err);
-          return res.redirect('/playbooks?error=google_drive_failed');
+          return res.redirect('/playbooks?error=auth_failed');
         }
         console.log('Session saved successfully, redirecting to /playbooks');
-        res.redirect('/playbooks?google_drive=connected');
+        res.redirect('/playbooks?success=true');
       });
     } catch (error: any) {
       console.error("Google Drive callback error:", error);
-      res.redirect('/playbooks?error=google_drive_failed');
+      res.redirect('/playbooks?error=auth_failed');
     }
   });
   
