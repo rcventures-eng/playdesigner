@@ -14,6 +14,28 @@ export interface GoogleDriveTokens {
   scope: string;
 }
 
+// Get the resolved redirect URI for OAuth - exported so diagnostic endpoints can use it
+export function getResolvedRedirectUri(): { redirectUri: string; domain: string | undefined; allDomains: string | undefined; isProduction: boolean } {
+  let domain: string | undefined;
+  const isProduction = process.env.REPLIT_DEPLOYMENT === '1' || !process.env.REPLIT_DEV_DOMAIN;
+  const allDomains = process.env.REPLIT_DOMAINS;
+  
+  if (isProduction) {
+    const domains = allDomains?.split(',') || [];
+    // Prefer .replit.app domain for consistency with Google Cloud Console registration
+    // Custom domains may not be registered as redirect URIs
+    domain = domains.find(d => d.endsWith('.replit.app')) || domains[0];
+  } else {
+    domain = process.env.REPLIT_DEV_DOMAIN;
+  }
+  
+  const redirectUri = domain 
+    ? `https://${domain}/api/auth/google-drive/callback`
+    : 'http://localhost:5000/api/auth/google-drive/callback';
+  
+  return { redirectUri, domain, allDomains, isProduction };
+}
+
 // Get OAuth2 client configured with app credentials
 function getOAuth2Client() {
   const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -23,25 +45,9 @@ function getOAuth2Client() {
     throw new Error('Google OAuth credentials not configured');
   }
   
-  // Determine the redirect URI based on environment
-  // In production (published apps), use REPLIT_DOMAINS which contains the production/custom domain
-  // In development, fall back to REPLIT_DEV_DOMAIN
-  // REPLIT_DEPLOYMENT is set when the app is deployed/published
-  let domain: string | undefined;
+  const { redirectUri, domain, allDomains, isProduction } = getResolvedRedirectUri();
   
-  if (process.env.REPLIT_DEPLOYMENT === '1' || !process.env.REPLIT_DEV_DOMAIN) {
-    // Production mode: use the first domain from REPLIT_DOMAINS (usually the custom domain or .replit.app)
-    domain = process.env.REPLIT_DOMAINS?.split(',')[0];
-  } else {
-    // Development mode: use the dev domain
-    domain = process.env.REPLIT_DEV_DOMAIN;
-  }
-  
-  const redirectUri = domain 
-    ? `https://${domain}/api/auth/google-drive/callback`
-    : 'http://localhost:5000/api/auth/google-drive/callback';
-  
-  console.log('Google Drive OAuth redirect URI:', redirectUri, '| REPLIT_DEPLOYMENT:', process.env.REPLIT_DEPLOYMENT, '| domain:', domain);
+  console.log('Google Drive OAuth redirect URI:', redirectUri, '| production:', isProduction, '| domain:', domain, '| all domains:', allDomains);
   
   return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
 }

@@ -2192,6 +2192,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Diagnostic endpoint: show OAuth config (admin only)
+  app.get("/api/debug/oauth-config", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      
+      const { getResolvedRedirectUri } = await import("./google-drive");
+      const uriInfo = getResolvedRedirectUri();
+      
+      res.json({
+        redirectUri: uriInfo.redirectUri,
+        resolvedDomain: uriInfo.domain,
+        allDomains: uriInfo.allDomains,
+        isProduction: uriInfo.isProduction,
+        note: "This redirect URI MUST be registered in Google Cloud Console under OAuth 2.0 Client > Authorized redirect URIs"
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Start Google Drive OAuth flow
   app.get("/api/auth/google-drive/authorize", requireAuth, async (req, res) => {
     try {
