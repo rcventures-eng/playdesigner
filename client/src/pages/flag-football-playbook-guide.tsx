@@ -1,5 +1,5 @@
 import { Helmet } from "react-helmet-async";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import TopNav from "@/components/TopNav";
 
 const sections = [
@@ -156,6 +156,16 @@ export default function FlagFootballPlaybookGuide() {
               <span className="text-slate-300 text-sm">{m}</span>
             </div>
           ))}
+        </div>
+
+        <div className="border border-slate-700 rounded-lg p-6 mb-6">
+          <h2 className="text-base font-semibold text-white mb-4">Related guides</h2>
+          <ul className="space-y-2">
+            <li><Link href="/how-to-design-flag-football-plays" className="text-orange-400 hover:text-orange-300 text-sm transition-colors">How to Design Flag Football Plays — Step-by-Step</Link></li>
+            <li><Link href="/flag-football-formations" className="text-orange-400 hover:text-orange-300 text-sm transition-colors">Flag Football Formations: Complete 5v5 and 7v7 Guide</Link></li>
+            <li><Link href="/what-is-a-flag-football-play-designer" className="text-orange-400 hover:text-orange-300 text-sm transition-colors">What Is a Flag Football Play Designer?</Link></li>
+            <li><Link href="/flag-football-faq" className="text-orange-400 hover:text-orange-300 text-sm transition-colors">Flag Football FAQ</Link></li>
+          </ul>
         </div>
 
         <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-6">
