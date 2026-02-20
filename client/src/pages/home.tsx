@@ -12,7 +12,7 @@ export default function Home({ isAdmin, setIsAdmin, showSignUp, setShowSignUp }:
   return (
     <>
       <Helmet>
-        <title>Football Play Designer — Free Playbook Tool for Coaches | RC Football</title>
+        <title>Flag Football Play Designer — Free Playbook Tool for Coaches | RC Football</title>
         <meta name="description" content="Design flag football plays and build your playbook online — free. Drag-and-drop play designer built for flag football coaches at every level." />
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",

@@ -41,7 +41,7 @@ export default function About() {
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100">
       <Helmet>
-        <title>About RC Football — Free Football Play Designer for Coaches</title>
+        <title>About RC Football — Free Flag Football Play Designer for Coaches</title>
         <meta name="description" content="RC Football is a free flag football play design tool built by a coach, for coaches. Learn how it works and who it's for." />
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",

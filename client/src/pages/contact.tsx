@@ -8,7 +8,7 @@ export default function Contact() {
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100">
       <Helmet>
-        <title>Contact RC Football — Get in Touch</title>
+        <title>Contact RC Football — Flag Football Play Design Tool</title>
         <meta name="description" content="Get in touch with the RC Football team. Questions about the play designer or playbook tool? We'd love to hear from you." />
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
