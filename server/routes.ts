@@ -3608,7 +3608,7 @@ Return ONLY the JSON object, no markdown formatting or explanation.`;
   const ghostSitemaps = [
     "/sitemap_index.xml", "/sitemap-index.xml", "/sitemaps.xml",
     "/sitemap1.xml", "/post-sitemap.xml", "/page-sitemap.xml",
-    "/category-sitemap.xml", "/tag-sitemap.xml",
+    "/category-sitemap.xml", "/tag-sitemap.xml", "/news-sitemap.xml",
   ];
   ghostSitemaps.forEach((p) => {
     app.get(p, (_req, res) => res.status(404).send("Not found"));
