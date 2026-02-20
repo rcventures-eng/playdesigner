@@ -3604,6 +3604,16 @@ Return ONLY the JSON object, no markdown formatting or explanation.`;
     }
   });
 
+  // Return 404 for ghost sitemap URLs that crawlers probe by default
+  const ghostSitemaps = [
+    "/sitemap_index.xml", "/sitemap-index.xml", "/sitemaps.xml",
+    "/sitemap1.xml", "/post-sitemap.xml", "/page-sitemap.xml",
+    "/category-sitemap.xml", "/tag-sitemap.xml",
+  ];
+  ghostSitemaps.forEach((p) => {
+    app.get(p, (_req, res) => res.status(404).send("Not found"));
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
