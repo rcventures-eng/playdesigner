@@ -39,6 +39,15 @@ app.get('/health', (_req, res) => {
 // Trust proxy for Replit - needed to correctly detect https from X-Forwarded-Proto
 app.set('trust proxy', 1);
 
+// Redirect www to non-www (canonical domain is rc-football.com)
+app.use((req, res, next) => {
+  if (req.hostname && req.hostname.startsWith('www.')) {
+    const nonWwwHost = req.hostname.slice(4);
+    return res.redirect(301, `https://${nonWwwHost}${req.originalUrl}`);
+  }
+  next();
+});
+
 declare module 'http' {
   interface IncomingMessage {
     rawBody: unknown
