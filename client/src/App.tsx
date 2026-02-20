@@ -17,6 +17,11 @@ import MobileDesignerPage from "@/pages/mobile-designer";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import About from "@/pages/about";
 import Contact from "@/pages/contact";
+import WhatIsFlagFootballPlayDesigner from "@/pages/what-is-flag-football-play-designer";
+import HowToDesignFlagFootballPlays from "@/pages/how-to-design-flag-football-plays";
+import FlagFootballFormations from "@/pages/flag-football-formations";
+import FlagFootballFaq from "@/pages/flag-football-faq";
+import FlagFootballPlaybookGuide from "@/pages/flag-football-playbook-guide";
 
 function App() {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -62,6 +67,21 @@ function App() {
           </Route>
           <Route path="/contact">
             <Contact />
+          </Route>
+          <Route path="/what-is-a-flag-football-play-designer">
+            <WhatIsFlagFootballPlayDesigner />
+          </Route>
+          <Route path="/how-to-design-flag-football-plays">
+            <HowToDesignFlagFootballPlays />
+          </Route>
+          <Route path="/flag-football-formations">
+            <FlagFootballFormations />
+          </Route>
+          <Route path="/flag-football-faq">
+            <FlagFootballFaq />
+          </Route>
+          <Route path="/flag-football-playbook-guide">
+            <FlagFootballPlaybookGuide />
           </Route>
           <Route component={NotFound} />
         </Switch>
