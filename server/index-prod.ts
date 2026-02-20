@@ -23,7 +23,7 @@ export async function serveStatic(app: Express, _server: Server) {
     );
   }
 
-  app.use(express.static(distPath));
+  app.use(express.static(distPath, { extensions: ['html'] }));
 
   // fall through to index.html if the file doesn't exist
   app.use("*", (_req, res) => {
