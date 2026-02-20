@@ -1,3 +1,4 @@
+import { Helmet } from "react-helmet-async";
 import { useLocation } from "wouter";
 import TopNav from "@/components/TopNav";
 
@@ -39,6 +40,10 @@ export default function About() {
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100">
+      <Helmet>
+        <title>About RC Football — Free Football Play Designer for Coaches</title>
+        <meta name="description" content="Learn about RC Football, the free web app built for amateur flag football coaches to design plays, manage teams, and export playbooks." />
+      </Helmet>
       <TopNav />
       <div className="max-w-3xl mx-auto px-6 py-12">
         <button

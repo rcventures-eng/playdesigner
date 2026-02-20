@@ -1,3 +1,4 @@
+import { Helmet } from "react-helmet-async";
 import { useLocation } from "wouter";
 import TopNav from "@/components/TopNav";
 
@@ -6,6 +7,10 @@ export default function PrivacyPolicy() {
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100">
+      <Helmet>
+        <title>Privacy Policy — RC Football</title>
+        <meta name="description" content="Read the RC Football privacy policy to learn how we collect, use, and protect your data." />
+      </Helmet>
       <TopNav />
       <div className="max-w-3xl mx-auto px-6 py-12">
         <button

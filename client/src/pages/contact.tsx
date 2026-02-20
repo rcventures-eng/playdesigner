@@ -1,3 +1,4 @@
+import { Helmet } from "react-helmet-async";
 import { useLocation } from "wouter";
 import TopNav from "@/components/TopNav";
 
@@ -6,6 +7,10 @@ export default function Contact() {
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100">
+      <Helmet>
+        <title>Contact RC Football — Get in Touch</title>
+        <meta name="description" content="Have a question or feedback about RC Football? Get in touch with the team." />
+      </Helmet>
       <TopNav />
       <div className="max-w-xl mx-auto px-6 py-12">
         <button
