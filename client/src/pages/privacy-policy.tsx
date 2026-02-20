@@ -10,6 +10,24 @@ export default function PrivacyPolicy() {
       <Helmet>
         <title>Privacy Policy — RC Football</title>
         <meta name="description" content="Read the RC Football privacy policy to learn how we collect, use, and protect your data." />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Home",
+              "item": "https://rc-football.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Privacy Policy",
+              "item": "https://rc-football.com/privacy-policy"
+            }
+          ]
+        })}</script>
       </Helmet>
       <TopNav />
       <div className="max-w-3xl mx-auto px-6 py-12">

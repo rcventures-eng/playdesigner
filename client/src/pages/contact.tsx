@@ -10,6 +10,24 @@ export default function Contact() {
       <Helmet>
         <title>Contact RC Football — Get in Touch</title>
         <meta name="description" content="Have a question or feedback about RC Football? Get in touch with the team." />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Home",
+              "item": "https://rc-football.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Contact",
+              "item": "https://rc-football.com/contact"
+            }
+          ]
+        })}</script>
       </Helmet>
       <TopNav />
       <div className="max-w-xl mx-auto px-6 py-12">

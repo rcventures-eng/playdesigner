@@ -43,6 +43,24 @@ export default function About() {
       <Helmet>
         <title>About RC Football — Free Football Play Designer for Coaches</title>
         <meta name="description" content="Learn about RC Football, the free web app built for amateur flag football coaches to design plays, manage teams, and export playbooks." />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Home",
+              "item": "https://rc-football.com"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "About",
+              "item": "https://rc-football.com/about"
+            }
+          ]
+        })}</script>
       </Helmet>
       <TopNav />
       <div className="max-w-3xl mx-auto px-6 py-12">
