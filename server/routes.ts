@@ -3604,14 +3604,9 @@ Return ONLY the JSON object, no markdown formatting or explanation.`;
     }
   });
 
-  // Return 404 for ghost sitemap URLs that crawlers probe by default
-  const ghostSitemaps = [
-    "/sitemap_index.xml", "/sitemap-index.xml", "/sitemaps.xml",
-    "/sitemap1.xml", "/post-sitemap.xml", "/page-sitemap.xml",
-    "/category-sitemap.xml", "/tag-sitemap.xml", "/news-sitemap.xml",
-  ];
-  ghostSitemaps.forEach((p) => {
-    app.get(p, (_req, res) => res.status(404).send("Not found"));
+  // Return 404 for any .xml request that isn't the real sitemap
+  app.get(/^\/(?!sitemap\.xml).*\.xml$/, (_req, res) => {
+    res.status(404).send("Not found");
   });
 
   const httpServer = createServer(app);
