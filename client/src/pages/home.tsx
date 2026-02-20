@@ -13,7 +13,7 @@ export default function Home({ isAdmin, setIsAdmin, showSignUp, setShowSignUp }:
     <>
       <Helmet>
         <title>Football Play Designer — Free Playbook Tool for Coaches | RC Football</title>
-        <meta name="description" content="Free drag-and-drop football play designer for amateur coaches. Design offensive and defensive plays for 5v5, 7v7, and 11v11 football with easy export options." />
+        <meta name="description" content="Design flag football plays and build your playbook online — free. Drag-and-drop play designer built for flag football coaches at every level." />
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
           "@graph": [
