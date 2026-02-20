@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import rcFootballLogo from "@assets/RC_Football_1765082048330.png";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -502,6 +502,21 @@ export default function TopNav({ isAdmin, setIsAdmin, showSignUp, setShowSignUp,
 
       {/* Sign Up Modal */}
       <SignUpModal open={isSignUpOpen} onOpenChange={handleSignUpChange} customMessage={signUpMessage} />
+
+      {/* Site Footer */}
+      <footer className="bg-slate-900 border-t border-slate-800 py-3 px-6 text-center">
+        <div className="flex items-center justify-center gap-6 text-xs text-slate-500">
+          <Link href="/about" className="hover:text-orange-400 transition-colors">
+            About
+          </Link>
+          <Link href="/contact" className="hover:text-orange-400 transition-colors">
+            Contact
+          </Link>
+          <Link href="/privacy-policy" className="hover:text-orange-400 transition-colors">
+            Privacy Policy
+          </Link>
+        </div>
+      </footer>
     </>
   );
 }

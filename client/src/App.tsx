@@ -14,6 +14,9 @@ import PlayLibrary from "@/pages/PlayLibrary";
 import TeamPlaybooks from "@/pages/TeamPlaybooks";
 import CoachProfile from "@/pages/CoachProfile";
 import MobileDesignerPage from "@/pages/mobile-designer";
+import PrivacyPolicy from "@/pages/privacy-policy";
+import About from "@/pages/about";
+import Contact from "@/pages/contact";
 
 function App() {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -50,6 +53,15 @@ function App() {
           </Route>
           <Route path="/mobile">
             <MobileDesignerPage />
+          </Route>
+          <Route path="/privacy-policy">
+            <PrivacyPolicy />
+          </Route>
+          <Route path="/about">
+            <About />
+          </Route>
+          <Route path="/contact">
+            <Contact />
           </Route>
           <Route component={NotFound} />
         </Switch>

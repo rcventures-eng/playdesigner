@@ -3401,7 +3401,8 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden">
       <TopNav isAdmin={isAdmin} setIsAdmin={setIsAdmin} showSignUp={showSignUp} setShowSignUp={handleShowSignUpChange} signUpMessage={signUpMessage} />
-      
+      <h1 className="sr-only">Football Play Designer — Free Playbook Tool for Coaches</h1>
+
       {/* Mode banner - Review mode or Read-only mode */}
       {(isReviewMode || isViewOnly) && fromPlaybookId && (
         <div className={`${isReviewMode ? 'bg-blue-500/90' : 'bg-amber-500/90'} text-white px-4 py-2 flex items-center justify-between`}>
@@ -3434,7 +3435,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
         </div>
       )}
       
-      <div className={`flex-1 bg-slate-950 px-10 pb-10 pt-3 flex flex-col gap-4 overflow-hidden ${isLongPressHolding || longPressMenuOpen ? "select-none" : ""}`}>
+      <div id="main-content" role="main" className={`flex-1 bg-slate-950 px-10 pb-10 pt-3 flex flex-col gap-4 overflow-hidden ${isLongPressHolding || longPressMenuOpen ? "select-none" : ""}`}>
         {(metadata.name || metadata.formation || metadata.concept || metadata.defenseConcept || metadata.personnel || metadata.situation) && (
         <div className="bg-gradient-to-r from-[#1a2332] to-[#2a3342] rounded-2xl border border-white/10 px-6 py-3 flex items-center gap-3 flex-wrap">
           {metadata.name && (
