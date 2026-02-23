@@ -291,7 +291,6 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
   const [isDraggingStraightRoute, setIsDraggingStraightRoute] = useState(false);
   // Click-to-place waypoint mode for straight routes
   const [straightRoutePreviewPoint, setStraightRoutePreviewPoint] = useState<{ x: number; y: number } | null>(null);
-  const straightClickHistoryRef = useRef<{ time: number; pointIndex: number; x: number; y: number }[]>([]);
   
   // Magnetic snap state
   const [snapEnabled, setSnapEnabled] = useState(true);
@@ -1694,7 +1693,6 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
         setTool("route");
         setIsDrawingRoute(true);
         setIsDraggingStraightRoute(true);
-        straightClickHistoryRef.current = [];
         setSelectedPlayer(playerId);
         setSelectedElements({ players: [], routes: [] });
         
@@ -1810,7 +1808,6 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
       e.stopPropagation();
       setIsDrawingRoute(true);
       setIsDraggingStraightRoute(true);
-      straightClickHistoryRef.current = [];
       setSelectedPlayer(playerId);
       setSelectedElements({ players: [], routes: [] });
       const player = players.find(p => p.id === playerId);
@@ -1962,7 +1959,6 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     setTool("route");
     setIsDrawingRoute(true);
     setIsDraggingStraightRoute(true);
-    straightClickHistoryRef.current = [];
     setSelectedPlayer(playerId);
     setSelectedElements({ players: [], routes: [] });
     
@@ -2433,6 +2429,7 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
         const y = (e.clientY - rect.top) / scale;
         const newPoint = { x, y };
         
+        // Minimum distance check to prevent micro-segments (e.g., from double-click)
         const MIN_WAYPOINT_DISTANCE = 15;
         const lastPoint = currentRoutePointsRef.current[currentRoutePointsRef.current.length - 1];
         if (lastPoint) {
@@ -2441,51 +2438,31 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
             Math.pow(newPoint.y - lastPoint.y, 2)
           );
           if (dist < MIN_WAYPOINT_DISTANCE) {
+            // Ignore clicks too close to the last waypoint
             return;
           }
         }
         
+        // Add the clicked point as a new waypoint
         const newPoints = [...currentRoutePointsRef.current, newPoint];
         setCurrentRoutePoints(newPoints);
         currentRoutePointsRef.current = newPoints;
-        straightClickHistoryRef.current.push({ time: Date.now(), pointIndex: newPoints.length - 1, x, y });
       }
     }
   };
 
   const handleCanvasDoubleClick = (e: React.MouseEvent) => {
+    // Block interactions in view-only mode
     if (isViewOnly) {
       return;
     }
     
+    // Finish straight route on double-click
     if (tool === "route" && isDraggingStraightRoute && isDrawingRoute && routeStyle === "straight") {
       e.preventDefault();
       e.stopPropagation();
       
-      const rect = canvasRef.current?.getBoundingClientRect();
-      const dblX = rect ? (e.clientX - rect.left) / scale : 0;
-      const dblY = rect ? (e.clientY - rect.top) / scale : 0;
-      
-      const now = Date.now();
-      const DBLCLICK_WINDOW = 500;
-      const DBLCLICK_RADIUS = 30;
-      
-      const dblClickClicks = straightClickHistoryRef.current.filter(c => {
-        if (now - c.time > DBLCLICK_WINDOW) return false;
-        const dist = Math.sqrt(Math.pow(c.x - dblX, 2) + Math.pow(c.y - dblY, 2));
-        return dist < DBLCLICK_RADIUS;
-      });
-      
-      if (dblClickClicks.length > 0) {
-        const earliestIndex = Math.min(...dblClickClicks.map(c => c.pointIndex));
-        if (earliestIndex > 0 && earliestIndex < currentRoutePointsRef.current.length) {
-          currentRoutePointsRef.current = currentRoutePointsRef.current.slice(0, earliestIndex);
-          setCurrentRoutePoints([...currentRoutePointsRef.current]);
-        }
-      }
-      
-      straightClickHistoryRef.current = [];
-      
+      // Only finish if we have at least 2 points (start + 1 waypoint)
       if (currentRoutePointsRef.current.length >= 2) {
         finishRoute();
         setIsDraggingStraightRoute(false);
@@ -2598,13 +2575,16 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
         finalPoints = simplifyPoints(finalPoints, 5);
       }
       
+      // Clean up micro-segments at the end (from double-click jitter)
+      // Only apply to straight routes - curved routes need their dense points preserved
       if (routeStyle === "straight") {
-        const MIN_SEGMENT_LENGTH = 10;
+        const MIN_SEGMENT_LENGTH = 15;
         while (finalPoints.length > 2) {
-          const lastP = finalPoints[finalPoints.length - 1];
-          const prevP = finalPoints[finalPoints.length - 2];
+          const lastPoint = finalPoints[finalPoints.length - 1];
+          const secondLast = finalPoints[finalPoints.length - 2];
           const dist = Math.sqrt(
-            Math.pow(lastP.x - prevP.x, 2) + Math.pow(lastP.y - prevP.y, 2)
+            Math.pow(lastPoint.x - secondLast.x, 2) + 
+            Math.pow(lastPoint.y - secondLast.y, 2)
           );
           if (dist < MIN_SEGMENT_LENGTH) {
             finalPoints.pop();
