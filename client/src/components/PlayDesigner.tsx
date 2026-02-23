@@ -3091,9 +3091,22 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     }
   };
 
+  const deduplicatePoints = (points: { x: number; y: number }[], minDist = 2) => {
+    if (points.length <= 1) return points;
+    const result = [points[0]];
+    for (let i = 1; i < points.length; i++) {
+      const prev = result[result.length - 1];
+      const dist = Math.sqrt((points[i].x - prev.x) ** 2 + (points[i].y - prev.y) ** 2);
+      if (dist >= minDist) {
+        result.push(points[i]);
+      }
+    }
+    return result.length >= 2 ? result : points;
+  };
+
   const getRoutePath = (route: Route) => {
     if (route.points.length < 2) return "";
-    const points = route.points;
+    const points = deduplicatePoints(route.points);
     if (route.style === "straight") {
       return `M ${points[0].x} ${points[0].y} ` + points.slice(1).map(p => `L ${p.x} ${p.y}`).join(" ");
     } else {
@@ -3176,17 +3189,17 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
     return { belowLOS, aboveLOS };
   };
 
-  // Generate path string for a subset of points using route style
   const getRoutePathForPoints = (points: { x: number; y: number }[], style: string) => {
-    if (points.length < 2) return "";
+    const cleaned = deduplicatePoints(points);
+    if (cleaned.length < 2) return "";
     if (style === "straight") {
-      return `M ${points[0].x} ${points[0].y} ` + points.slice(1).map(p => `L ${p.x} ${p.y}`).join(" ");
+      return `M ${cleaned[0].x} ${cleaned[0].y} ` + cleaned.slice(1).map(p => `L ${p.x} ${p.y}`).join(" ");
     } else {
-      let path = `M ${points[0].x} ${points[0].y}`;
-      for (let i = 1; i < points.length; i++) {
-        const prev = points[i - 1];
-        const curr = points[i];
-        const next = points[i + 1];
+      let path = `M ${cleaned[0].x} ${cleaned[0].y}`;
+      for (let i = 1; i < cleaned.length; i++) {
+        const prev = cleaned[i - 1];
+        const curr = cleaned[i];
+        const next = cleaned[i + 1];
         if (next) {
           const cp1x = prev.x + (curr.x - prev.x) * 0.5;
           const cp1y = prev.y + (curr.y - prev.y) * 0.5;
@@ -5156,6 +5169,19 @@ export default function PlayDesigner({ isAdmin, setIsAdmin, showSignUp, setShowS
                                 fill="none"
                                 markerEnd={crossedLOS ? `url(#arrowhead-${previewColor.replace('#', '')})` : undefined}
                                 opacity="0.5"
+                              />
+                            )}
+                            {routeStyle === "straight" && straightRoutePreviewPoint && currentRoutePoints.length >= 1 && (
+                              <line
+                                x1={currentRoutePoints[currentRoutePoints.length - 1].x}
+                                y1={currentRoutePoints[currentRoutePoints.length - 1].y}
+                                x2={straightRoutePreviewPoint.x}
+                                y2={straightRoutePreviewPoint.y}
+                                stroke={previewColor}
+                                strokeWidth="3.6"
+                                strokeDasharray={straightRoutePreviewPoint.y >= FIELD.LOS_Y ? "5,5" : "8,4"}
+                                opacity="0.6"
+                                markerEnd={`url(#arrowhead-${previewColor.replace('#', '')})`}
                               />
                             )}
                           </>

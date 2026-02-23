@@ -444,8 +444,16 @@ function PlaySVGForExport({
             ? generateCurvedPath(route.points)
             : route.points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
           
-          const lastPoint = route.points[route.points.length - 1];
-          const secondLastPoint = route.points[route.points.length - 2];
+          let lastPoint = route.points[route.points.length - 1];
+          let secondLastPoint = route.points[route.points.length - 2];
+          for (let i = route.points.length - 2; i >= 0; i--) {
+            const dx = lastPoint.x - route.points[i].x;
+            const dy = lastPoint.y - route.points[i].y;
+            if (Math.sqrt(dx * dx + dy * dy) >= 2) {
+              secondLastPoint = route.points[i];
+              break;
+            }
+          }
           const angle = Math.atan2(lastPoint.y - secondLastPoint.y, lastPoint.x - secondLastPoint.x);
           
           return (

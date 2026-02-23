@@ -902,9 +902,21 @@ export function MobileCanvas({
         ctx.stroke();
       };
       
-      // Helper to draw arrowhead
+      const findMeaningfulPrev = (points: { x: number; y: number }[], endIdx: number) => {
+        const last = points[endIdx];
+        for (let i = endIdx - 1; i >= 0; i--) {
+          const dx = last.x - points[i].x;
+          const dy = last.y - points[i].y;
+          if (Math.sqrt(dx * dx + dy * dy) >= 2) return points[i];
+        }
+        return points[Math.max(0, endIdx - 1)];
+      };
+
       const drawArrow = (last: { x: number; y: number }, prev: { x: number; y: number }) => {
-        const angle = Math.atan2(last.y - prev.y, last.x - prev.x);
+        const dx = last.x - prev.x;
+        const dy = last.y - prev.y;
+        if (Math.sqrt(dx * dx + dy * dy) < 1) return;
+        const angle = Math.atan2(dy, dx);
         const arrowSize = 10;
         ctx.beginPath();
         ctx.moveTo(last.x, last.y);
@@ -968,22 +980,19 @@ export function MobileCanvas({
           drawSmoothCurve(aboveLOS);
         }
         
-        // Draw arrowhead at the final point of the route
         const last = route.points[route.points.length - 1];
-        const prev = route.points[route.points.length - 2];
+        const prev = findMeaningfulPrev(route.points, route.points.length - 1);
         ctx.setLineDash([]);
         drawArrow(last, prev);
       } else {
-        // Regular route - use dashed line for Man coverage
         if (route.routeType === "man") {
-          ctx.setLineDash([6, 4]); // Dashed line for Man coverage
+          ctx.setLineDash([6, 4]);
         }
         drawSmoothCurve(route.points);
-        ctx.setLineDash([]); // Reset dash pattern
+        ctx.setLineDash([]);
         
-        // Draw arrowhead at end
         const last = route.points[route.points.length - 1];
-        const prev = route.points[route.points.length - 2];
+        const prev = findMeaningfulPrev(route.points, route.points.length - 1);
         drawArrow(last, prev);
       }
       
