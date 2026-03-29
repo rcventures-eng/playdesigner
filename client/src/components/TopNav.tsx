@@ -205,8 +205,15 @@ export default function TopNav({ isAdmin, setIsAdmin, showSignUp, setShowSignUp,
           </span>
         </div>
 
-        {/* Right Side - Auth Actions */}
+        {/* Right Side - Nav links + Auth Actions */}
         <div className="flex items-center gap-4">
+          <Link
+            href="/showcase"
+            className="text-white/80 hover:text-white text-sm font-medium transition-colors hidden md:block"
+            data-testid="link-nav-showcase"
+          >
+            See it in Action
+          </Link>
           {userLoading ? (
             <div className="w-8 h-8 rounded-full bg-white/20 animate-pulse" />
           ) : isLoggedIn ? (

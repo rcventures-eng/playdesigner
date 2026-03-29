@@ -141,7 +141,7 @@ function FeatureBlock({ feature }: { feature: FeatureSection }) {
   return (
     <div
       ref={ref}
-      className={`flex flex-col ${feature.flip ? "lg:flex-row-reverse" : "lg:flex-row"} items-center gap-10 lg:gap-16 py-20 lg:py-28 border-b border-slate-800 transition-all duration-700 ease-out ${
+      className={`flex flex-col ${feature.flip ? "lg:flex-row-reverse" : "lg:flex-row"} items-center gap-10 lg:gap-16 py-20 lg:min-h-screen lg:py-0 border-b border-slate-800 transition-all duration-700 ease-out ${
         visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-12"
       }`}
     >
@@ -322,7 +322,7 @@ export default function ShowcasePage() {
                   className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-bold text-lg px-8 py-3.5 rounded-full transition-colors shadow-lg shadow-orange-500/30"
                   data-testid="button-hero-signup"
                 >
-                  Create Free Account
+                  Get Started Free
                   <ArrowRight className="w-5 h-5" />
                 </button>
                 <Link
@@ -465,7 +465,7 @@ export default function ShowcasePage() {
                 className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-bold text-xl px-10 py-4 rounded-full transition-colors shadow-xl shadow-orange-500/30"
                 data-testid="button-cta-signup"
               >
-                Create Your Free Account
+                Get Started Free
                 <ArrowRight className="w-6 h-6" />
               </button>
             )}
