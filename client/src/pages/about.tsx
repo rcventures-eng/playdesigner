@@ -1,5 +1,5 @@
 import { Helmet } from "react-helmet-async";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import TopNav from "@/components/TopNav";
 
 const features = [
@@ -92,7 +92,23 @@ export default function About() {
           ))}
         </div>
 
-        <div className="mt-12 bg-orange-500/10 border border-orange-500/30 rounded-lg p-6">
+        <div className="mt-10 bg-slate-800 border border-slate-700 rounded-lg p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="flex-1">
+            <h2 className="text-white font-semibold mb-1">See RC Football in action</h2>
+            <p className="text-slate-400 text-sm leading-relaxed">
+              Watch a full feature walkthrough — play design, playbook building, team management, and Google Drive export.
+            </p>
+          </div>
+          <Link
+            href="/showcase"
+            className="flex-shrink-0 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-colors whitespace-nowrap"
+            data-testid="link-see-in-action"
+          >
+            Watch the Showcase
+          </Link>
+        </div>
+
+        <div className="mt-6 bg-orange-500/10 border border-orange-500/30 rounded-lg p-6">
           <h2 className="text-lg font-semibold text-orange-400 mb-2">Built by a Coach, for Coaches</h2>
           <p className="text-slate-300 text-sm leading-relaxed">
             RC Football was created by RC Ventures to give amateur flag football coaches the

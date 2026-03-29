@@ -505,7 +505,10 @@ export default function TopNav({ isAdmin, setIsAdmin, showSignUp, setShowSignUp,
 
       {/* Site Footer */}
       <footer className="bg-slate-900 border-t border-slate-800 py-3 px-6 text-center">
-        <div className="flex items-center justify-center gap-6 text-xs text-slate-500">
+        <div className="flex flex-wrap items-center justify-center gap-6 text-xs text-slate-500">
+          <Link href="/showcase" className="hover:text-orange-400 transition-colors">
+            See it in Action
+          </Link>
           <Link href="/about" className="hover:text-orange-400 transition-colors">
             About
           </Link>

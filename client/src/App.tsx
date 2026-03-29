@@ -22,6 +22,7 @@ import HowToDesignFlagFootballPlays from "@/pages/how-to-design-flag-football-pl
 import FlagFootballFormations from "@/pages/flag-football-formations";
 import FlagFootballFaq from "@/pages/flag-football-faq";
 import FlagFootballPlaybookGuide from "@/pages/flag-football-playbook-guide";
+import ShowcasePage from "@/pages/showcase";
 
 function App() {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -82,6 +83,9 @@ function App() {
           </Route>
           <Route path="/flag-football-playbook-guide">
             <FlagFootballPlaybookGuide />
+          </Route>
+          <Route path="/showcase">
+            <ShowcasePage />
           </Route>
           <Route component={NotFound} />
         </Switch>
