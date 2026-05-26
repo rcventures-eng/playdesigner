@@ -21,7 +21,9 @@ import {
   Eye,
   LayoutGrid,
   Globe,
-  Lock
+  Lock,
+  Trash2,
+  AlertTriangle
 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
@@ -140,6 +142,7 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
   const [feedbackNotes, setFeedbackNotes] = useState("");
   const [correctDiagramUpload, setCorrectDiagramUpload] = useState<string | null>(null);
   const [playsPage, setPlaysPage] = useState(1);
+  const [deleteUserTarget, setDeleteUserTarget] = useState<AdminUser | null>(null);
   const { toast } = useToast();
 
   // Check admin status from server (secure endpoint)
@@ -314,6 +317,30 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Delete user mutation
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to delete user");
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({ title: "User deleted", description: data.message });
+      setDeleteUserTarget(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"], exact: false });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      setDeleteUserTarget(null);
     },
   });
 
@@ -987,6 +1014,17 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
                                     <Key className="w-3 h-3 mr-1" />
                                     Reset
                                   </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setDeleteUserTarget(user)}
+                                    disabled={user.isAdmin}
+                                    className="border-red-800 text-red-400 hover:bg-red-950 hover:text-red-300 disabled:opacity-30"
+                                    data-testid={`button-delete-${user.id}`}
+                                  >
+                                    <Trash2 className="w-3 h-3 mr-1" />
+                                    Delete
+                                  </Button>
                                 </div>
                               </td>
                             </tr>
@@ -1329,6 +1367,54 @@ export default function AdminDashboard({ isAdmin, setIsAdmin }: AdminDashboardPr
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete User Confirmation Dialog */}
+      <Dialog open={!!deleteUserTarget} onOpenChange={(open) => { if (!open) setDeleteUserTarget(null); }}>
+        <DialogContent className="bg-slate-900 border-slate-700 text-white sm:max-w-md" data-testid="modal-delete-user">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-400">
+              <AlertTriangle className="w-5 h-5" />
+              Delete User Account
+            </DialogTitle>
+            <DialogDescription className="text-slate-400">
+              This action is permanent and cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="bg-red-950/40 border border-red-800/50 rounded-lg p-4 space-y-2">
+              <p className="text-sm text-slate-300 font-medium">
+                You are about to permanently delete:
+              </p>
+              <p className="text-orange-300 font-mono text-sm break-all" data-testid="text-delete-user-email">
+                {deleteUserTarget?.email}
+              </p>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                This will delete their account along with all their plays, teams, team rosters, playbooks, and AI logs. There is no way to recover this data.
+              </p>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setDeleteUserTarget(null)}
+                disabled={deleteUserMutation.isPending}
+                className="border-slate-600 text-slate-300 hover:bg-slate-800"
+                data-testid="button-cancel-delete"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => deleteUserTarget && deleteUserMutation.mutate(deleteUserTarget.id)}
+                disabled={deleteUserMutation.isPending}
+                className="bg-red-600 hover:bg-red-700 text-white font-bold"
+                data-testid="button-confirm-delete"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                {deleteUserMutation.isPending ? "Deleting..." : "Yes, Delete Everything"}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

@@ -2061,6 +2061,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin: Delete a user and all their data
+  app.delete("/api/admin/users/:id", verifyAdmin, async (req, res) => {
+    try {
+      const userId = req.params.id;
+      if (!userId) {
+        return res.status(400).json({ error: "User ID is required" });
+      }
+
+      // Confirm the user exists
+      const [targetUser] = await db.select({ id: users.id, email: users.email, isAdmin: users.isAdmin })
+        .from(users).where(eq(users.id, userId)).limit(1);
+
+      if (!targetUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (targetUser.isAdmin) {
+        return res.status(403).json({ error: "Cannot delete an admin account" });
+      }
+
+      // 1. Delete AI logs
+      await db.delete(aiGenerationLogs).where(eq(aiGenerationLogs.userId, userId));
+
+      // 2. Delete feature requests
+      await db.delete(featureRequests).where(eq(featureRequests.userId, userId));
+
+      // 3. Delete password reset tokens
+      await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, userId));
+
+      // 4. Remove user as a coach or player on any team
+      await db.delete(teamCoaches).where(eq(teamCoaches.userId, userId));
+      await db.delete(teamPlayers).where(eq(teamPlayers.userId, userId));
+
+      // 5. Delete the user's plays (first remove play-team associations)
+      const userPlays = await db.select({ id: plays.id }).from(plays).where(eq(plays.userId, userId));
+      for (const play of userPlays) {
+        await db.delete(playTeams).where(eq(playTeams.playId, play.id));
+      }
+      await db.delete(plays).where(eq(plays.userId, userId));
+
+      // 6. Delete the user's teams (sub-records first)
+      const userTeams = await db.select({ id: teams.id }).from(teams).where(eq(teams.ownerId, userId));
+      for (const team of userTeams) {
+        await db.delete(teamCoaches).where(eq(teamCoaches.teamId, team.id));
+        await db.delete(teamPlayers).where(eq(teamPlayers.teamId, team.id));
+        await db.delete(teamSplits).where(eq(teamSplits.teamId, team.id));
+        await db.delete(teamBlankPages).where(eq(teamBlankPages.teamId, team.id));
+        await db.delete(playTeams).where(eq(playTeams.teamId, team.id));
+      }
+      await db.delete(teams).where(eq(teams.ownerId, userId));
+
+      // 7. Finally delete the user
+      await db.delete(users).where(eq(users.id, userId));
+
+      res.json({ success: true, message: `User ${targetUser.email} and all their data have been permanently deleted` });
+    } catch (error: any) {
+      console.error("Admin delete user error:", error);
+      res.status(500).json({ error: error.message || "Failed to delete user" });
+    }
+  });
+
   // Admin: Delete a play by name (useful for debugging/cleanup)
   app.delete("/api/admin/plays/by-name/:name", verifyAdmin, async (req, res) => {
     try {
